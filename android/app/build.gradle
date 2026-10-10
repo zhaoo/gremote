@@ -1,0 +1,67 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+android {
+    namespace = "com.izhaoo.gremote"
+    compileSdk = 34
+    ndkVersion = "27.0.12077973"
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_17
+    }
+
+    defaultConfig {
+        applicationId = "com.izhaoo.gremote"
+        minSdk = 26
+        targetSdk = 34
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+        ndk {
+            abiFilters "arm64-v8a"
+        }
+        externalNativeBuild {
+            cmake {
+                targets "gremote_imaging"
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path "../../native/imaging/CMakeLists.txt"
+            version "3.22.1"
+        }
+    }
+
+    buildTypes {
+        release {
+            // Gate 1 is side-loaded for hardware validation; production signing
+            // is configured only in the release plan and never committed.
+            signingConfig = signingConfigs.debug
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1"
+    implementation "com.squareup.okhttp3:okhttp:4.12.0"
+    implementation "androidx.exifinterface:exifinterface:1.3.7"
+    testImplementation "junit:junit:4.13.2"
+    testImplementation "com.squareup.okhttp3:mockwebserver:4.12.0"
+    // android.jar ships org.json as stubs on the JVM.
+    testImplementation "org.json:json:20240303"
+    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1"
+}
