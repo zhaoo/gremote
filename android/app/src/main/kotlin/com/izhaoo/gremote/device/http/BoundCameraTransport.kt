@@ -1,6 +1,8 @@
 package com.izhaoo.gremote.device.http
 
 import android.net.Network
+import android.os.SystemClock
+import android.util.Log
 import android.content.ContentValues
 import android.content.Context
 import android.os.Build
@@ -67,6 +69,11 @@ class BoundCameraTransport(
         })
         .connectTimeout(3, TimeUnit.SECONDS)
         .readTimeout(8, TimeUnit.SECONDS)
+        .build()
+    private val photoCalls = PhotoTransferCalls()
+    private val downloadClient = client.newBuilder()
+        .readTimeout(120, TimeUnit.SECONDS)
+        .callTimeout(0, TimeUnit.SECONDS)
         .build()
     private val changeSocket = ChangeSocketClient(
         client = client.newBuilder().readTimeout(0, TimeUnit.SECONDS).build(),
@@ -146,63 +153,68 @@ class BoundCameraTransport(
             val mime = if (isDng) "image/x-adobe-dng" else "image/jpeg"
             val path = "/v1/photos/$directory/$fileName?size=full"
             val request = Request.Builder().url(resolve(path)).get().build()
-            val downloadClient = client.newBuilder()
-                .readTimeout(120, TimeUnit.SECONDS)
-                .callTimeout(0, TimeUnit.SECONDS)
-                .build()
-            val response = downloadClient.newCall(request).execute()
-            response.use {
-                if (!it.isSuccessful) {
-                    throw CameraTransportException("cameraHttpStatus", "Camera returned HTTP ${it.code}")
-                }
-                val body = it.body ?: throw CameraTransportException("emptyPhoto", "Camera returned no photo")
-                if (body.contentType()?.type == "application" && body.contentType()?.subtype == "json") {
-                    throw CameraTransportException("invalidPhoto", "Camera returned JSON instead of a photo")
-                }
-                val values = ContentValues().apply {
-                    put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-                    put(MediaStore.MediaColumns.MIME_TYPE, mime)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        put(MediaStore.MediaColumns.RELATIVE_PATH,
-                            "${Environment.DIRECTORY_PICTURES}/GRemote/${if (isDng) "DNG" else "JPEG"}")
-                        put(MediaStore.MediaColumns.IS_PENDING, 1)
-                    } else {
-                        @Suppress("DEPRECATION")
-                        val root = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-                        val folder = File(root, "GRemote/${if (isDng) "DNG" else "JPEG"}")
-                        if (!folder.isDirectory && !folder.mkdirs()) {
-                            throw CameraTransportException("publishFailed", "Cannot create photo directory")
+            val call = downloadClient.newCall(request)
+            photoCalls.add(call)
+            val started = SystemClock.elapsedRealtime()
+            try {
+                val response = call.execute()
+                response.use {
+                    if (!it.isSuccessful) {
+                        throw CameraTransportException("cameraHttpStatus", "Camera returned HTTP ${it.code}")
+                    }
+                    val body = it.body ?: throw CameraTransportException("emptyPhoto", "Camera returned no photo")
+                    if (body.contentType()?.type == "application" && body.contentType()?.subtype == "json") {
+                        throw CameraTransportException("invalidPhoto", "Camera returned JSON instead of a photo")
+                    }
+                    val values = ContentValues().apply {
+                        put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                        put(MediaStore.MediaColumns.MIME_TYPE, mime)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            put(MediaStore.MediaColumns.RELATIVE_PATH,
+                                "${Environment.DIRECTORY_PICTURES}/GRemote/${if (isDng) "DNG" else "JPEG"}")
+                            put(MediaStore.MediaColumns.IS_PENDING, 1)
+                        } else {
+                            @Suppress("DEPRECATION")
+                            val root = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                            val folder = File(root, "GRemote/${if (isDng) "DNG" else "JPEG"}")
+                            if (!folder.isDirectory && !folder.mkdirs()) {
+                                throw CameraTransportException("publishFailed", "Cannot create photo directory")
+                            }
+                            val destination = generateSequence(0) { number -> number + 1 }
+                                .map { number ->
+                                    File(folder, if (number == 0) fileName else
+                                        fileName.substringBeforeLast('.') + "_$number." + fileName.substringAfterLast('.'))
+                                }.first { !it.exists() }
+                            @Suppress("DEPRECATION")
+                            put(MediaStore.MediaColumns.DATA, destination.absolutePath)
                         }
-                        val destination = generateSequence(0) { number -> number + 1 }
-                            .map { number ->
-                                File(folder, if (number == 0) fileName else
-                                    fileName.substringBeforeLast('.') + "_$number." + fileName.substringAfterLast('.'))
-                            }.first { !it.exists() }
-                        @Suppress("DEPRECATION")
-                        put(MediaStore.MediaColumns.DATA, destination.absolutePath)
+                    }
+                    val resolver = context.contentResolver
+                    val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                        ?: throw CameraTransportException("publishFailed", "Cannot create media entry")
+                    try {
+                        val output = resolver.openOutputStream(uri)
+                            ?: throw CameraTransportException("publishFailed", "Cannot open media entry")
+                        val copied = output.use { body.byteStream().use { input -> copyPhotoStream(input, it) } }
+                        if (copied <= 0L) throw CameraTransportException("emptyPhoto", "Camera returned empty photo")
+                        if (body.contentLength() >= 0 && copied != body.contentLength()) {
+                            throw CameraTransportException("incompletePhoto", "Camera photo transfer was incomplete")
+                        }
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            resolver.update(uri, ContentValues().apply {
+                                put(MediaStore.MediaColumns.IS_PENDING, 0)
+                            }, null, null)
+                        }
+                        val elapsed = (SystemClock.elapsedRealtime() - started).coerceAtLeast(1)
+                        Log.i("GRemotePhotoTransfer", "format=${if (isDng) "DNG" else "JPEG"} bytes=$copied elapsedMs=$elapsed bytesPerSecond=${copied * 1000 / elapsed}")
+                        uri.toString()
+                    } catch (error: Throwable) {
+                        resolver.delete(uri, null, null)
+                        throw error
                     }
                 }
-                val resolver = context.contentResolver
-                val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-                    ?: throw CameraTransportException("publishFailed", "Cannot create media entry")
-                try {
-                    val output = resolver.openOutputStream(uri)
-                        ?: throw CameraTransportException("publishFailed", "Cannot open media entry")
-                    val copied = output.use { body.byteStream().use { input -> input.copyTo(it) } }
-                    if (copied <= 0L) throw CameraTransportException("emptyPhoto", "Camera returned empty photo")
-                    if (body.contentLength() >= 0 && copied != body.contentLength()) {
-                        throw CameraTransportException("incompletePhoto", "Camera photo transfer was incomplete")
-                    }
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        resolver.update(uri, ContentValues().apply {
-                            put(MediaStore.MediaColumns.IS_PENDING, 0)
-                        }, null, null)
-                    }
-                    uri.toString()
-                } catch (error: Throwable) {
-                    resolver.delete(uri, null, null)
-                    throw error
-                }
+            } finally {
+                photoCalls.remove(call)
             }
         }
 
@@ -265,6 +277,7 @@ class BoundCameraTransport(
     fun closeChangeSocket() = changeSocket.close()
 
     fun close() {
+        photoCalls.close()
         stopLiveView()
         changeSocket.close()
         client.dispatcher.cancelAll()

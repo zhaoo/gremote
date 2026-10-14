@@ -65,8 +65,13 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                     ButtonSegment(value: _Source.camera, label: Text('相机')),
                   ],
                   selected: {_source},
-                  onSelectionChanged: (value) =>
-                      setState(() => _source = value.single),
+                  onSelectionChanged: (value) {
+                    final next = value.single;
+                    if (_source != _Source.local && next == _Source.local) {
+                      unawaited(_controller.refresh());
+                    }
+                    setState(() => _source = next);
+                  },
                 ),
               ]),
             ),

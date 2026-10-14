@@ -34,7 +34,7 @@ class CameraHarness {
     final container = ProviderContainer(overrides: [
       cameraGatewaysProvider.overrideWithValue(gateways),
       cameraPermissionGateProvider.overrideWithValue(
-          const CameraPermissionGate(GrantedCameraPermissionAdapter())),
+          CameraPermissionGate(const GrantedCameraPermissionAdapter())),
       databaseProvider.overrideWithValue(db),
       diagnosticStoreProvider.overrideWithValue(diagnostics),
       ...overrides,

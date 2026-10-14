@@ -172,11 +172,11 @@ abstract final class FramePalette {
   static const classicText = 0xFF151515;
   static const classicMuted = 0xFF707070;
   static const streetBackground = 0xFF0C100E;
-  static const streetGold = 0xFFC7A86F;
+  static const streetGold = 0xFFBCA57F;
   static const streetMuted = 0xFF9C9A90;
   static const contactBackground = 0xFF111111;
-  static const contactEdge = 0xFFE0913C;
-  static const contactHoles = 0xFFE6E0D2;
+  static const contactEdge = 0xFFC4A06D;
+  static const contactHoles = 0xFF8B867A;
   static const contactMuted = 0xFFB8B2A4;
 }
 
@@ -191,6 +191,13 @@ FrameLayout computeFrameLayout({
     FrameStyle.classic => _classic(photoWidth, photoHeight, content),
     FrameStyle.street => _street(photoWidth, photoHeight, content),
     FrameStyle.contact => _contact(photoWidth, photoHeight, content),
+    FrameStyle.none => FrameLayout(
+        canvasWidth: photoWidth,
+        canvasHeight: photoHeight,
+        background: FramePalette.classicBackground,
+        photo: PixelRect(0, 0, photoWidth, photoHeight),
+        overlays: const [],
+      ),
   };
   final aspect = ratio.aspect;
   if (aspect == null) return base;
@@ -215,171 +222,149 @@ FrameLayout computeFrameLayout({
   );
 }
 
-int _long(int w, int h) => w > h ? w : h;
-
-FrameLayout _classic(int pw, int ph, FrameContent content) {
-  final l = _long(pw, ph);
-  final side = (0.035 * l).round();
-  final bar = (0.11 * l).round();
-  final b = bar.toDouble();
-  final elements = <FrameElement>[
-    if (content.model != null)
+// The caption is deliberately quieter than the photo. A personal title leads
+// the first row; camera and exposure details sit on a separate baseline.
+List<FrameElement> _caption(int width, int height, FrameContent content,
+    {required int primary, required int muted}) {
+  final w = width.toDouble(), h = height.toDouble();
+  final headline = content.titleLine ?? content.model;
+  final hasTitle = content.titleLine != null;
+  return [
+    if (headline != null)
       FrameText(
-          text: content.model!,
-          x: 0,
-          y: 0.24 * b,
-          fontSize: 0.2 * b,
-          color: FramePalette.classicText,
-          maxWidth: pw * 0.55,
-          font: FrameFont.serif,
-          bold: true),
-    if (content.titleLine != null)
-      FrameText(
-          text: content.titleLine!,
-          x: 0,
-          y: 0.56 * b,
-          fontSize: 0.12 * b,
-          color: FramePalette.classicMuted,
-          maxWidth: pw * 0.55),
-    if (content.params != null)
-      FrameText(
-          text: content.params!,
-          x: pw.toDouble(),
-          y: 0.27 * b,
-          fontSize: 0.14 * b,
-          color: FramePalette.classicText,
-          maxWidth: pw * 0.43,
-          font: FrameFont.mono,
-          align: FrameAlign.right),
+        text: headline,
+        x: 0,
+        y: h * 0.18,
+        fontSize: h * 0.22,
+        color: primary,
+        maxWidth: content.date == null ? w : w * 0.70,
+        bold: hasTitle,
+      ),
     if (content.date != null)
       FrameText(
-          text: content.date!,
-          x: pw.toDouble(),
-          y: 0.56 * b,
-          fontSize: 0.12 * b,
-          color: FramePalette.classicMuted,
-          maxWidth: pw * 0.43,
-          font: FrameFont.mono,
-          align: FrameAlign.right),
+        text: content.date!,
+        x: w,
+        y: h * 0.22,
+        fontSize: h * 0.135,
+        color: muted,
+        maxWidth: headline == null ? w : w * 0.27,
+        align: FrameAlign.right,
+      ),
+    if (hasTitle && content.model != null)
+      FrameText(
+        text: content.model!,
+        x: 0,
+        y: h * 0.57,
+        fontSize: h * 0.15,
+        color: muted,
+        maxWidth: content.params == null ? w : w * 0.35,
+      ),
+    if (content.params != null)
+      FrameText(
+        text: content.params!,
+        x: hasTitle && content.model != null ? w : 0,
+        y: h * 0.57,
+        fontSize: h * 0.15,
+        color: muted,
+        maxWidth: hasTitle && content.model != null ? w * 0.62 : w,
+        font: FrameFont.mono,
+        align: hasTitle && content.model != null
+            ? FrameAlign.right
+            : FrameAlign.left,
+      ),
   ];
+}
+
+bool _hasCaption(FrameContent content) => [
+      content.titleLine,
+      content.model,
+      content.params,
+      content.date
+    ].any((value) => value != null && value.isNotEmpty);
+
+int _pixels(double value) => value.round().clamp(1, 1 << 30);
+int _short(int w, int h) => w < h ? w : h;
+
+FrameLayout _classic(int pw, int ph, FrameContent content) {
+  final unit = _short(pw, ph);
+  final side = _pixels(0.035 * unit);
+  final bar = _hasCaption(content) ? _pixels(0.115 * unit) : side;
   return FrameLayout(
     canvasWidth: pw + 2 * side,
     canvasHeight: side + ph + bar,
     background: FramePalette.classicBackground,
     photo: PixelRect(side, side, pw, ph),
-    overlays: [OverlayRegion(PixelRect(side, side + ph, pw, bar), elements)],
+    overlays: [
+      if (_hasCaption(content))
+        OverlayRegion(
+            PixelRect(side, side + ph, pw, bar),
+            _caption(pw, bar, content,
+                primary: FramePalette.classicText,
+                muted: FramePalette.classicMuted)),
+    ],
   );
 }
 
 FrameLayout _street(int pw, int ph, FrameContent content) {
-  final l = _long(pw, ph);
-  final margin = (0.045 * l).round();
-  final bar = (0.12 * l).round();
-  final line = (0.0012 * l).round() < 2 ? 2 : (0.0012 * l).round();
-  final gap = (0.008 * l).round();
-  final outer = PixelRect(margin - gap - line, margin - gap - line,
-      pw + 2 * (gap + line), ph + 2 * (gap + line));
-  OverlayRegion hairline(PixelRect rect) => OverlayRegion(rect, [
-        FrameRect(
-            PixelRect(0, 0, rect.width, rect.height), FramePalette.streetGold)
-      ]);
-  final infoTop = margin + ph + gap + line;
-  final infoHeight = margin + ph + bar - infoTop;
-  final h = infoHeight.toDouble();
-  final elements = <FrameElement>[
-    if (content.model != null)
-      FrameText(
-          text: content.model!,
-          x: 0,
-          y: 0.3 * h,
-          fontSize: 0.2 * h,
-          color: FramePalette.streetGold,
-          maxWidth: pw * 0.55,
-          font: FrameFont.serif),
-    if (content.titleLine != null)
-      FrameText(
-          text: content.titleLine!,
-          x: 0,
-          y: 0.6 * h,
-          fontSize: 0.12 * h,
-          color: FramePalette.streetMuted,
-          maxWidth: pw * 0.55),
-    if (content.params != null)
-      FrameText(
-          text: content.params!,
-          x: pw.toDouble(),
-          y: 0.33 * h,
-          fontSize: 0.13 * h,
-          color: FramePalette.streetGold,
-          maxWidth: pw * 0.43,
-          font: FrameFont.mono,
-          align: FrameAlign.right),
-    if (content.date != null)
-      FrameText(
-          text: content.date!,
-          x: pw.toDouble(),
-          y: 0.6 * h,
-          fontSize: 0.11 * h,
-          color: FramePalette.streetMuted,
-          maxWidth: pw * 0.43,
-          font: FrameFont.mono,
-          align: FrameAlign.right),
-  ];
+  final unit = _short(pw, ph);
+  final margin = _pixels(0.035 * unit);
+  final bar = _hasCaption(content) ? _pixels(0.115 * unit) : margin;
+  // One short accent replaces the four bright rules surrounding the photo.
+  final line = _pixels(unit * 0.001);
+  final accent = _pixels(pw * 0.045);
+  final info = _caption(pw, bar, content,
+      primary: FramePalette.streetGold, muted: FramePalette.streetMuted);
   return FrameLayout(
     canvasWidth: pw + 2 * margin,
     canvasHeight: margin + ph + bar,
     background: FramePalette.streetBackground,
     photo: PixelRect(margin, margin, pw, ph),
     overlays: [
-      hairline(PixelRect(outer.x, outer.y, outer.width, line)),
-      hairline(PixelRect(outer.x, outer.bottom - line, outer.width, line)),
-      hairline(
-          PixelRect(outer.x, outer.y + line, line, outer.height - 2 * line)),
-      hairline(PixelRect(
-          outer.right - line, outer.y + line, line, outer.height - 2 * line)),
-      OverlayRegion(PixelRect(margin, infoTop, pw, infoHeight), elements),
+      if (_hasCaption(content))
+        OverlayRegion(PixelRect(margin, margin + ph, pw, bar), [
+          FrameRect(PixelRect(0, _pixels(bar * 0.07), accent, line),
+              FramePalette.streetGold),
+          ...info,
+        ]),
     ],
   );
 }
 
 FrameLayout _contact(int pw, int ph, FrameContent content) {
-  final l = _long(pw, ph);
-  final side = (0.03 * l).round();
-  final strip = (0.085 * l).round();
+  final unit = _short(pw, ph);
+  final side = _pixels(0.035 * unit);
+  final strip = _pixels(0.10 * unit);
   final width = pw + 2 * side;
   final s = strip.toDouble();
-  final holeBand = (0.34 * s).round();
-  final edge = [
-    'GRemote',
-    content.model,
-    content.params,
-    content.date,
-    '01',
-  ].whereType<String>().join(' · ');
+  final holeBand = _pixels(0.18 * s);
+  final edge = [content.model, content.params, content.date]
+      .whereType<String>()
+      .join('  ·  ');
   final top = <FrameElement>[
     FrameSprockets(
-        band: PixelRect(0, (0.16 * s).round(), width, holeBand),
+        band: PixelRect(side, _pixels(0.13 * s), pw, holeBand),
         color: FramePalette.contactHoles),
     if (content.titleLine != null)
       FrameText(
           text: content.titleLine!,
           x: side.toDouble(),
-          y: 0.6 * s,
-          fontSize: 0.16 * s,
+          y: 0.50 * s,
+          fontSize: 0.22 * s,
           color: FramePalette.contactMuted,
           maxWidth: pw.toDouble()),
   ];
   final bottom = <FrameElement>[
-    FrameText(
-        text: edge,
-        x: side.toDouble(),
-        y: 0.12 * s,
-        fontSize: 0.16 * s,
-        color: FramePalette.contactEdge,
-        maxWidth: pw.toDouble(),
-        font: FrameFont.mono),
+    if (edge.isNotEmpty)
+      FrameText(
+          text: edge,
+          x: side.toDouble(),
+          y: 0.18 * s,
+          fontSize: 0.15 * s,
+          color: FramePalette.contactEdge,
+          maxWidth: pw.toDouble(),
+          font: FrameFont.mono),
     FrameSprockets(
-        band: PixelRect(0, (0.5 * s).round(), width, holeBand),
+        band: PixelRect(side, _pixels(0.63 * s), pw, holeBand),
         color: FramePalette.contactHoles),
   ];
   return FrameLayout(

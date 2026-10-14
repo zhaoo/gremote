@@ -5,6 +5,7 @@ import 'package:gremote/app/app.dart';
 import 'package:gremote/app/router.dart';
 import 'package:gremote/camera/connection/connection_controller.dart';
 import 'package:gremote/camera/gateway/fake_gateways.dart';
+import 'package:gremote/camera/live/live_view_controller.dart';
 import 'package:gremote/platform/camera_permission_gate.dart';
 
 import '../support/test_darkroom.dart';
@@ -26,7 +27,7 @@ void main() {
           ...env.overrides,
           cameraGatewaysProvider.overrideWithValue(gateways),
           cameraPermissionGateProvider.overrideWithValue(
-            const CameraPermissionGate(GrantedCameraPermissionAdapter()),
+            CameraPermissionGate(const GrantedCameraPermissionAdapter()),
           ),
         ],
         child: const GRemoteApp(),
@@ -40,7 +41,14 @@ void main() {
 
     await tester.tap(find.text('进入实景遥控'));
     await tester.pumpAndSettle();
-    expect(find.byType(Image), findsOneWidget);
+    final context =
+        tester.element(find.byKey(const Key('live-view-focus-surface')));
+    final frame =
+        ProviderScope.containerOf(context).read(liveViewControllerProvider);
+    expect(frame, isNotNull);
+    await tester.runAsync(() => precacheImage(MemoryImage(frame!), context));
+    await tester.pumpAndSettle();
+    expect(find.byType(RawImage), findsOneWidget);
 
     final shutter = find.byKey(const Key('shutter-button'));
     final gesture = await tester.startGesture(tester.getCenter(shutter));

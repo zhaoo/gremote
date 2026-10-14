@@ -68,6 +68,16 @@ void main() {
     expect(() => api.focus(x: 50, y: 101), throwsArgumentError);
   });
 
+  test('focus reports camera refusal even with HTTP 200', () async {
+    final transport = _FakeTransport()
+      ..responses.add(_jsonResponse(200, {'errCode': 400, 'errMsg': 'Busy'}));
+    await expectLater(
+        CameraApi(transport).focus(x: 50, y: 50),
+        throwsA(isA<CameraApiException>()
+            .having((e) => e.cameraCode, 'cameraCode', '400')));
+    expect(transport.requests.single.path, '/v1/lens/focus?pos=50,50');
+  });
+
   test('non-success preserves typed camera error without response bytes',
       () async {
     final transport = _FakeTransport()

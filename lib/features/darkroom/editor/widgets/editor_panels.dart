@@ -1,11 +1,144 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../darkroom/frame/frame_layout.dart';
+import '../../../../darkroom/frame/frame_painter.dart';
 import '../../../../darkroom/model/edit_document.dart';
 import '../../../../darkroom/model/export_recipe.dart';
 import '../editor_controller.dart';
 
 const _hint = TextStyle(color: GRemoteColors.muted, fontSize: 12);
+
+class FrameStylePanel extends StatelessWidget {
+  const FrameStylePanel(
+      {required this.state, required this.controller, super.key});
+
+  final EditorState state;
+  final EditorController controller;
+
+  static String _description(FrameStyle style) => switch (style) {
+        FrameStyle.none => '不添加边框和文字',
+        FrameStyle.classic => '干净留白，轻量注释',
+        FrameStyle.street => '深色衬底，低调暖金',
+        FrameStyle.contact => '细窄片孔，胶片印样',
+      };
+
+  @override
+  Widget build(BuildContext context) => ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        children: [
+          Wrap(spacing: 10, runSpacing: 10, children: [
+            for (final style in [
+              FrameStyle.none,
+              FrameStyle.classic,
+              FrameStyle.street,
+              FrameStyle.contact
+            ])
+              LayoutBuilder(builder: (context, constraints) {
+                final selected = state.recipe.frame == style;
+                return Semantics(
+                  button: true,
+                  selected: selected,
+                  child: SizedBox(
+                    width: (constraints.maxWidth - 10) / 2,
+                    child: Material(
+                      color:
+                          selected ? GRemoteColors.raised : GRemoteColors.navy,
+                      borderRadius: BorderRadius.circular(12),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () => controller.setFrame(style),
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                                color: selected
+                                    ? GRemoteColors.gold
+                                    : GRemoteColors.divider),
+                          ),
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(children: [
+                                  SizedBox(
+                                      width: 44,
+                                      height: 28,
+                                      child: CustomPaint(
+                                          painter: _FrameSwatch(style))),
+                                  const Spacer(),
+                                  if (selected)
+                                    const Icon(Icons.check_circle_rounded,
+                                        color: GRemoteColors.gold, size: 17),
+                                ]),
+                                const SizedBox(height: 7),
+                                Text(style.label,
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600)),
+                                const SizedBox(height: 2),
+                                Text(_description(style),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        color: GRemoteColors.muted,
+                                        fontSize: 10)),
+                              ]),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+          ]),
+        ],
+      );
+}
+
+class _FrameSwatch extends CustomPainter {
+  const _FrameSwatch(this.style);
+  final FrameStyle style;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final layout = computeFrameLayout(
+        photoWidth: 240,
+        photoHeight: 160,
+        style: style,
+        ratio: FrameRatio.original,
+        content: const FrameContent(model: 'RICOH GR III'));
+    final scale = math.min(
+        size.width / layout.canvasWidth, size.height / layout.canvasHeight);
+    canvas.save();
+    canvas.translate((size.width - layout.canvasWidth * scale) / 2,
+        (size.height - layout.canvasHeight * scale) / 2);
+    canvas.scale(scale);
+    canvas.drawRect(
+        Rect.fromLTWH(0, 0, layout.canvasWidth.toDouble(),
+            layout.canvasHeight.toDouble()),
+        Paint()..color = Color(layout.background));
+    final photo = layout.photo;
+    canvas.drawRect(
+        Rect.fromLTWH(photo.x.toDouble(), photo.y.toDouble(),
+            photo.width.toDouble(), photo.height.toDouble()),
+        Paint()
+          ..shader = const LinearGradient(
+                  colors: [Color(0xFFADB4AC), Color(0xFF454C48)])
+              .createShader(const Rect.fromLTWH(0, 0, 240, 160)));
+    for (final overlay in layout.overlays) {
+      canvas.save();
+      canvas.translate(overlay.rect.x.toDouble(), overlay.rect.y.toDouble());
+      FramePainter.paintOverlay(canvas, overlay);
+      canvas.restore();
+    }
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_FrameSwatch oldDelegate) => oldDelegate.style != style;
+}
 
 class LutPanel extends StatelessWidget {
   const LutPanel({required this.state, required this.controller, super.key});

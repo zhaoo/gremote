@@ -128,4 +128,34 @@ void main() {
     expect(engine.jobs, hasLength(4));
     expect(engine.jobs.last.outputPath, contains('export-2-'));
   });
+
+  test('bad saved edit fails only that photo and can be retried after repair',
+      () async {
+    final store = DarkroomStore(db);
+    final edit = EditDocument(
+        mediaId: 2, title: '海边', location: '上海', updatedAt: DateTime(2026));
+    await store.saveEdit(edit);
+    await db.update('edit_documents', {'recipe_json': 'broken json'},
+        where: 'media_id = ?', whereArgs: [2]);
+
+    await queue().start([photo(1), photo(2), photo(3)], const ExportRecipe());
+
+    expect(statuses(), [
+      ExportItemStatus.done,
+      ExportItemStatus.failed,
+      ExportItemStatus.done,
+    ]);
+    expect(container.read(exportQueueProvider).running, isFalse);
+    expect(container.read(exportQueueProvider).items[1].failure?.code,
+        'edit_read_failed');
+    expect(engine.jobs, hasLength(2));
+
+    await store.saveEdit(edit);
+    await queue().retryFailed();
+
+    expect(statuses(), everyElement(ExportItemStatus.done));
+    expect(engine.jobs, hasLength(3));
+    expect(container.read(exportQueueProvider).items[1].doc.title, '海边');
+    expect(container.read(exportQueueProvider).items[1].doc.location, '上海');
+  });
 }

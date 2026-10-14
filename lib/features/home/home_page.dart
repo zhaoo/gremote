@@ -276,7 +276,8 @@ class _StatusCell extends StatelessWidget {
                   ?.copyWith(color: GRemoteColors.text)),
           const Spacer(),
           Text(value,
-              style: GRemoteType.numeric.copyWith(color: GRemoteColors.goldSoft)),
+              style:
+                  GRemoteType.numeric.copyWith(color: GRemoteColors.goldSoft)),
         ],
       ),
     );

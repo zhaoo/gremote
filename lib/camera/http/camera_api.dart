@@ -46,7 +46,23 @@ class CameraApi {
   Future<Map<String, Object?>> focus({required int x, required int y}) {
     RangeError.checkValueInInterval(x, 0, 100, 'x');
     RangeError.checkValueInInterval(y, 0, 100, 'y');
-    return _requestJson('POST', '/v1/lens/focus?pos=$x,$y');
+    return _focus(x, y);
+  }
+
+  Future<Map<String, Object?>> _focus(int x, int y) async {
+    final path = '/v1/lens/focus?pos=$x,$y';
+    final response = await _requestJson('POST', path);
+    final code = response['errCode'];
+    if (code != null && '$code' != '200') {
+      throw CameraApiException(
+        code: 'cameraError',
+        path: _pathOnly(path),
+        statusCode: 200,
+        cameraCode: '$code',
+        cameraMessage: _stringField(response, 'errMsg'),
+      );
+    }
+    return response;
   }
 
   Future<Map<String, Object?>> shoot({required bool autoFocus}) => _requestJson(

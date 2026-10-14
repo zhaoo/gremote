@@ -23,6 +23,17 @@ class ShutterButton extends StatefulWidget {
 class _ShutterButtonState extends State<ShutterButton> {
   var _pressed = false;
   Future<void>? _pressOperation;
+  var _gestureEpoch = 0;
+
+  @override
+  void didUpdateWidget(covariant ShutterButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.enabled && !widget.enabled) {
+      _gestureEpoch++;
+      _pressed = false;
+      _pressOperation = null;
+    }
+  }
 
   void _press() {
     if (!widget.enabled || _pressed) return;
@@ -37,12 +48,13 @@ class _ShutterButtonState extends State<ShutterButton> {
     setState(() => _pressed = false);
     final pressOperation = _pressOperation;
     _pressOperation = null;
-    unawaited(_releaseAfter(pressOperation));
+    unawaited(_releaseAfter(pressOperation, _gestureEpoch));
   }
 
-  Future<void> _releaseAfter(Future<void>? pressOperation) async {
+  Future<void> _releaseAfter(Future<void>? pressOperation, int epoch) async {
     try {
       await pressOperation;
+      if (!mounted || epoch != _gestureEpoch || !widget.enabled) return;
       await widget.onReleased();
     } catch (_) {
       // 上层状态负责展示平台错误；此处只保证手势 Future 不会泄漏。
@@ -78,7 +90,9 @@ class _ShutterButtonState extends State<ShutterButton> {
               shape: BoxShape.circle,
               color: GRemoteColors.night,
               border: Border.all(
-                color: widget.enabled ? GRemoteColors.goldSoft : GRemoteColors.muted,
+                color: widget.enabled
+                    ? GRemoteColors.goldSoft
+                    : GRemoteColors.muted,
                 width: 2.5,
               ),
               boxShadow: widget.enabled

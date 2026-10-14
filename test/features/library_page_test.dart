@@ -121,4 +121,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('等待 GR III 连接'), findsOneWidget);
   });
+
+  testWidgets('returning from camera rescans newly saved local photos',
+      (tester) async {
+    final gateway = library();
+    await pumpLibrary(tester, gateway: gateway);
+    await tester.tap(find.text('相机'));
+    await tester.pumpAndSettle();
+    gateway.entries = [...gateway.entries, mediaEntry(4)];
+    gateway.exif = {...gateway.exif, 4: grMeta()};
+    await tester.tap(find.text('本机'));
+    await tester.pumpAndSettle();
+    expect(tile(4), findsOneWidget);
+  });
 }

@@ -14,8 +14,8 @@ import '../support/fake_media_gateway.dart';
 import '../support/test_darkroom.dart';
 
 Future<(TestDarkroom, ProviderContainer)> pumpEditor(WidgetTester tester,
-    {bool locationAccess = true}) async {
-  tester.view.physicalSize = const Size(390, 844);
+    {bool locationAccess = true, Size size = const Size(390, 844)}) async {
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -32,8 +32,8 @@ Future<(TestDarkroom, ProviderContainer)> pumpEditor(WidgetTester tester,
   await container.read(localMediaRepositoryProvider).scan().drain<void>();
   await tester.pumpWidget(UncontrolledProviderScope(
     container: container,
-    child:
-        MaterialApp(theme: GRemoteTheme.dark, home: const EditorPage(mediaId: 3)),
+    child: MaterialApp(
+        theme: GRemoteTheme.dark, home: const EditorPage(mediaId: 3)),
   ));
   await tester.pumpAndSettle();
   return (env, container);
@@ -51,6 +51,17 @@ Future<void> openTab(WidgetTester tester, String label) async {
 }
 
 void main() {
+  testWidgets('frame cards remain usable on a compact screen with large text',
+      (tester) async {
+    tester.binding.platformDispatcher.textScaleFactorTestValue = 1.4;
+    addTearDown(
+        tester.binding.platformDispatcher.clearTextScaleFactorTestValue);
+    await pumpEditor(tester, size: const Size(320, 568));
+    await openTab(tester, '边框');
+    expect(find.text('无边框'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('decodes a preview of the photo on open', (tester) async {
     final (env, _) = await pumpEditor(tester);
     expect(find.byKey(const ValueKey('frame-preview')), findsOneWidget);
@@ -74,6 +85,19 @@ void main() {
     await tester.pumpAndSettle();
     expect(previewAspect(tester), 1);
     expect(before, isNot(1));
+  });
+
+  testWidgets('choosing unframed preserves photo and saves the choice',
+      (tester) async {
+    final (env, container) = await pumpEditor(tester);
+    await openTab(tester, '边框');
+    await tester.tap(find.text('无边框'));
+    await tester.pumpAndSettle();
+    final layout = container.read(editorProvider(3)).layout!;
+    expect(layout.overlays, isEmpty);
+    expect(previewAspect(tester), 1.5);
+    expect((await env.store.loadEdit(3))?.recipe.frame.name, 'none');
+    expect(find.textContaining('不添加边框和文字'), findsOneWidget);
   });
 
   testWidgets('hidden fields disappear from the frame', (tester) async {

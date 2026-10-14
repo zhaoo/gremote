@@ -23,6 +23,7 @@ import '../../camera/sync/camera_state.dart';
 import '../../camera/sync/camera_state_controller.dart';
 import '../../darkroom/darkroom_providers.dart';
 import 'shoot_mode.dart';
+import 'shoot_labels.dart';
 import 'widgets/bottom_bar.dart';
 import 'widgets/dim_overlay.dart';
 import 'widgets/drive_options.dart';
@@ -56,6 +57,11 @@ class _ShootPageState extends ConsumerState<ShootPage> {
   var _histogram = false;
   var _dimmed = false;
   var _attached = false;
+  var _focusing = false;
+  Offset? _focusPoint;
+  var _focusFailed = false;
+  var _shutterHeld = false;
+  var _shutterEpoch = 0;
 
   @override
   void initState() {
@@ -97,6 +103,13 @@ class _ShootPageState extends ConsumerState<ShootPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(connectionControllerProvider, (_, next) {
+      if (next is! ConnectionReady) {
+        _shutterEpoch++;
+        _shutterHeld = false;
+        _focusPoint = null;
+      }
+    });
     final connection = ref.watch(connectionControllerProvider);
     final connected = connection is ConnectionReady;
     final camera = ref.watch(cameraStateControllerProvider);
@@ -157,6 +170,15 @@ class _ShootPageState extends ConsumerState<ShootPage> {
                               frame: frame,
                               connected: connected,
                               onConnect: _goHome,
+                              focusPoint: _focusPoint,
+                              focusing: _focusing,
+                              focusFailed: _focusFailed,
+                              onFocus: connected &&
+                                      !programActive &&
+                                      !_focusing &&
+                                      !_shutterHeld
+                                  ? (point) => unawaited(_tapAf(point: point))
+                                  : null,
                               overlay: Stack(children: [
                                 if (_histogram) HistogramOverlay(_stats),
                                 if (programActive)
@@ -173,7 +195,7 @@ class _ShootPageState extends ConsumerState<ShootPage> {
                                             horizontal: 8, vertical: 4),
                                         child: Text(
                                           '${program.done}/${program.total}'
-                                          '${program.reason == null ? '' : ' · ${program.reason}'}',
+                                          '${program.reason == null ? '' : ' · ${shootReasonLabel(program.reason!)}'}',
                                           style: const TextStyle(fontSize: 10),
                                         ),
                                       ),
@@ -213,6 +235,8 @@ class _ShootPageState extends ConsumerState<ShootPage> {
               ),
               ShootBottomBar(
                 connected: connected,
+                focusing: _focusing,
+                shutterHeld: _shutterHeld,
                 program: program,
                 onPressed: _pressShutter,
                 onReleased: _releaseShutter,
@@ -221,7 +245,6 @@ class _ShootPageState extends ConsumerState<ShootPage> {
                 onPause: ref.read(programControllerProvider.notifier).pause,
                 onResume: () => unawaited(
                     ref.read(programControllerProvider.notifier).resume()),
-                onAf: () => unawaited(_tapAf()),
                 onLibrary: () => context.go('/library'),
               ),
             ]),
@@ -252,18 +275,69 @@ class _ShootPageState extends ConsumerState<ShootPage> {
     context.go('/home');
   }
 
-  Future<void> _pressShutter() =>
-      ref.read(connectionControllerProvider.notifier).pressShutter();
-
-  Future<void> _releaseShutter() async {
-    await ref.read(connectionControllerProvider.notifier).releaseShutter();
-    unawaited(ref.read(cameraStateControllerProvider.notifier).trackAppShot());
+  Future<void> _pressShutter() async {
+    if (_focusing || _shutterHeld) return;
+    final epoch = _shutterEpoch;
+    setState(() => _shutterHeld = true);
+    try {
+      await ref.read(connectionControllerProvider.notifier).pressShutter();
+    } catch (_) {
+      if (mounted && epoch == _shutterEpoch) {
+        setState(() => _shutterHeld = false);
+        _feedback('拍摄请求失败，请检查相机连接');
+      }
+      rethrow;
+    }
   }
 
-  Future<void> _tapAf() async {
-    await _pressShutter();
-    await Future<void>.delayed(const Duration(milliseconds: 120));
-    await ref.read(connectionControllerProvider.notifier).releaseShutter();
+  Future<void> _releaseShutter() async {
+    if (!_shutterHeld) return;
+    final epoch = _shutterEpoch;
+    try {
+      await ref.read(connectionControllerProvider.notifier).releaseShutter();
+      if (mounted &&
+          epoch == _shutterEpoch &&
+          ref.read(connectionControllerProvider) is ConnectionReady) {
+        unawaited(
+            ref.read(cameraStateControllerProvider.notifier).trackAppShot());
+      }
+    } finally {
+      if (mounted && epoch == _shutterEpoch) {
+        setState(() => _shutterHeld = false);
+      }
+    }
+  }
+
+  Future<void> _tapAf({Offset point = const Offset(.5, .5)}) async {
+    final program = ref.read(programControllerProvider);
+    if (program.phase == RunPhase.running || program.phase == RunPhase.paused) {
+      return;
+    }
+    if (_focusing ||
+        _shutterHeld ||
+        ref.read(connectionControllerProvider) is! ConnectionReady) return;
+    setState(() {
+      _focusing = true;
+      _focusFailed = false;
+      _focusPoint = point;
+    });
+    try {
+      await ref
+          .read(connectionControllerProvider.notifier)
+          .focus(x: (point.dx * 100).round(), y: (point.dy * 100).round());
+    } catch (_) {
+      if (mounted) {
+        setState(() => _focusFailed = true);
+        _feedback('对焦请求失败，相机可能不支持或已断开连接');
+      }
+    } finally {
+      if (mounted) setState(() => _focusing = false);
+    }
+  }
+
+  void _feedback(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _cycleTimer(CameraState camera) {
@@ -375,10 +449,19 @@ class _ShootPageState extends ConsumerState<ShootPage> {
           padding: const EdgeInsets.all(18),
           children: [
             Text('更多参数', style: Theme.of(context).textTheme.titleLarge),
-            for (final param in camera.extras)
+            for (final param in camera.params.values.where((param) => !{
+                  'av',
+                  'tv',
+                  'sv',
+                  'xv',
+                  'WBMode',
+                  'meteringMode',
+                  'aspectRatio',
+                  'exposureMode'
+                }.contains(param.wireKey)))
               ListTile(
-                title: Text(param.wireKey),
-                trailing: Text(param.current ?? '—'),
+                title: Text(shootParamLabel(param.wireKey)),
+                trailing: Text(shootValueLabel(param.wireKey, param.current)),
                 onTap: param.writable
                     ? () {
                         Navigator.pop(context);

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../shoot_labels.dart';
+
 import '../../../app/theme/app_colors.dart';
 import '../../../camera/recipe/combo_recipe.dart';
 import '../../../camera/recipe/recipe_session.dart';
@@ -34,7 +36,8 @@ class RecipeStrip extends StatelessWidget {
                 width: 74,
                 child: Center(
                   child: Text('＋ 新建',
-                      style: TextStyle(color: GRemoteColors.gold, fontSize: 11)),
+                      style:
+                          TextStyle(color: GRemoteColors.gold, fontSize: 11)),
                 ),
               ),
             ),
@@ -62,7 +65,8 @@ class RecipeStrip extends StatelessWidget {
               ),
             ),
             child: Center(
-              child: Text(recipe.effect?.substring(0, 1).toUpperCase() ?? 'R',
+              child: Text(
+                  shootValueLabel('effect', recipe.effect).substring(0, 1),
                   style: const TextStyle(fontSize: 9)),
             ),
           ),

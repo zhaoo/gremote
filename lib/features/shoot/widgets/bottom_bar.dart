@@ -7,25 +7,27 @@ import 'shutter_button.dart';
 class ShootBottomBar extends StatelessWidget {
   const ShootBottomBar({
     required this.connected,
+    this.focusing = false,
+    this.shutterHeld = false,
     required this.program,
     required this.onPressed,
     required this.onReleased,
     required this.onStop,
     required this.onPause,
     required this.onResume,
-    required this.onAf,
     required this.onLibrary,
     super.key,
   });
 
   final bool connected;
+  final bool focusing;
+  final bool shutterHeld;
   final ProgramRunState program;
   final Future<void> Function() onPressed;
   final Future<void> Function() onReleased;
   final VoidCallback onStop;
   final VoidCallback onPause;
   final VoidCallback onResume;
-  final VoidCallback onAf;
   final VoidCallback onLibrary;
 
   bool get _active =>
@@ -77,29 +79,25 @@ class ShootBottomBar extends StatelessWidget {
             Transform.scale(
               scale: .82,
               child: ShutterButton(
-                enabled: connected,
+                enabled: connected && !focusing,
                 onPressed: onPressed,
                 onReleased: onReleased,
               ),
             ),
-          IconButton.filledTonal(
-            key: const Key('af-button'),
-            onPressed: !connected
-                ? null
-                : program.phase == RunPhase.running
-                    ? onPause
-                    : program.phase == RunPhase.paused
-                        ? onResume
-                        : onAf,
-            icon: Text(
-              program.phase == RunPhase.running
-                  ? 'Ⅱ'
-                  : program.phase == RunPhase.paused
-                      ? '▶'
-                      : 'AF',
-              style: const TextStyle(fontSize: 11),
-            ),
-          ),
+          if (_active)
+            IconButton.filledTonal(
+              key: const Key('program-pause-button'),
+              onPressed: !connected || focusing || shutterHeld
+                  ? null
+                  : program.phase == RunPhase.running
+                      ? onPause
+                      : onResume,
+              tooltip: program.phase == RunPhase.running ? '暂停' : '继续',
+              icon: Text(program.phase == RunPhase.running ? 'Ⅱ' : '▶',
+                  style: const TextStyle(fontSize: 11)),
+            )
+          else
+            const SizedBox(width: 48, height: 48),
         ]),
       );
 }

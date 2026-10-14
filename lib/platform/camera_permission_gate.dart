@@ -37,11 +37,31 @@ class CameraPermissionException implements Exception {
 }
 
 class CameraPermissionGate {
-  const CameraPermissionGate(this._adapter);
+  CameraPermissionGate(this._adapter);
 
   final CameraPermissionAdapter _adapter;
 
-  Future<void> ensureGranted() async {
+  Future<void>? _grantInFlight;
+  Future<void>? _wifiGrantInFlight;
+
+  // A system permission prompt outlives cancellation of a connection attempt.
+  // Keep sharing it until Android completes it, including across reconnects.
+  Future<void> ensureGranted() {
+    final pending = _grantInFlight;
+    if (pending != null) return pending;
+    late final Future<void> attempt;
+    attempt = Future<void>.sync(() async {
+      final wifiPending = _wifiGrantInFlight;
+      if (wifiPending != null) await wifiPending;
+      await _ensureGranted();
+    }).whenComplete(() {
+      if (identical(_grantInFlight, attempt)) _grantInFlight = null;
+    });
+    _grantInFlight = attempt;
+    return attempt;
+  }
+
+  Future<void> _ensureGranted() async {
     final sdk = await _adapter.androidSdkInt();
     for (final permission in _requiredPermissions(sdk)) {
       final status = await _adapter.request(permission);
@@ -64,7 +84,31 @@ class CameraPermissionGate {
     }
   }
 
-  Future<void> ensureWifiGranted() async {
+  Future<void> ensureWifiGranted() {
+    final pending = _wifiGrantInFlight;
+    if (pending != null) return pending;
+    final bluetoothPending = _grantInFlight;
+    late final Future<void> attempt;
+    attempt = _ensureWifiAfterBluetooth(bluetoothPending).whenComplete(() {
+      if (identical(_wifiGrantInFlight, attempt)) _wifiGrantInFlight = null;
+    });
+    _wifiGrantInFlight = attempt;
+    return attempt;
+  }
+
+  Future<void> _ensureWifiAfterBluetooth(Future<void>? bluetoothPending) async {
+    if (bluetoothPending != null) {
+      try {
+        await bluetoothPending;
+      } on CameraPermissionException {
+        // Bluetooth denial must not deny a separate Wi-Fi-only connection.
+        // The system prompt has settled, so checking Wi-Fi is now safe.
+      }
+    }
+    await _ensureWifiGranted();
+  }
+
+  Future<void> _ensureWifiGranted() async {
     final sdk = await _adapter.androidSdkInt();
     final permission = sdk >= 33
         ? CameraRuntimePermission.nearbyWifi

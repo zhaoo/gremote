@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../shoot_labels.dart';
+
 import '../../../app/theme/app_colors.dart';
 
 class ShootTopBar extends StatelessWidget {
@@ -38,14 +40,17 @@ class ShootTopBar extends StatelessWidget {
               icon: const Icon(Icons.arrow_back_ios_new, size: 19),
               tooltip: '返回首页',
             ),
-            Text(exposureMode,
-                style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1)),
+            Flexible(
+                child: Text(shootValueLabel('exposureMode', exposureMode),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1))),
             const Spacer(),
             if (!compact) _topButton('⚡', null),
-            if (!compact) _topButton('HDR', null, small: true),
+            if (!compact) _topButton('高动态', null, small: true),
             _topButton('⏱', onTimer),
             Stack(clipBehavior: Clip.none, children: [
               _topButton('◍', onRecipe, key: const Key('recipe-toggle')),

@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 
+import '../shoot_labels.dart';
+
 import '../../../app/theme/app_colors.dart';
 import '../../../camera/params/camera_param.dart';
 import '../../../camera/sync/camera_state.dart';
 
 const _params = <(ParamKey, String)>[
-  (ParamKey.whiteBalance, 'WB'),
-  (ParamKey.aperture, 'F'),
-  (ParamKey.shutter, 'S'),
-  (ParamKey.iso, 'ISO'),
-  (ParamKey.exposureComp, 'EV'),
+  (ParamKey.whiteBalance, '白平衡'),
+  (ParamKey.aperture, '光圈'),
+  (ParamKey.shutter, '快门'),
+  (ParamKey.iso, '感光度'),
+  (ParamKey.exposureComp, '补偿'),
   (ParamKey.metering, '测光'),
 ];
 
@@ -55,7 +57,7 @@ class CameraParamRow extends StatelessWidget {
         const SizedBox(height: 2),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Flexible(
-            child: Text(param?.current ?? '—',
+            child: Text(shootValueLabel(key.wireKey, param?.current),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(

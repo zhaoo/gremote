@@ -2,6 +2,14 @@
 
 本门禁用于小米 14 与 RICOH GR III 固件 2.10 的人工验证。记录中禁止包含 Wi‑Fi 密码、相机序列号、完整 BLE 地址、照片内容或精确 GPS 坐标。
 
+## 2026-10-13 软件回归补充
+
+- `scripts/build_android.sh`：原生 CTest、`flutter analyze`、260 个 Flutter 测试、Android 单元测试与 arm64 debug APK 构建通过。
+- 新增 UI 连贯流程：连接模拟相机 → 专业模式修改 ISO → 新建三种配方 → 三张配方包围 → 校验逐张配方标记与参数恢复；见 `test/features/shoot_recipe_test.dart`。
+- Android 集成测试显式注入模拟相机与已授权权限适配器，并使用独立数据库，避免依赖 `GREMOTE_FAKE_CAMERA` 编译开关或操作正常应用数据库。
+- APK：`gremote-0.2.0+2-arm64-debug-20261013-134052.apk`；SHA-256：`e60d4927d5a44765416d317e6b9da1da9533740cd8bdfd5da0b01758ddeedff2`。
+- `adb devices -l` 无设备；Android 集成测试和相机真机验收仍为 `not-run`。以下早期构建记录保留为历史证据。
+
 ## 构建信息
 
 | 字段 | 值 | 状态 |

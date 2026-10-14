@@ -84,12 +84,7 @@ class _EditorPageState extends ConsumerState<EditorPage> {
                     height: 220,
                     child: TabBarView(children: [
                       LutPanel(state: state, controller: _controller),
-                      ChoicePanel<FrameStyle>(
-                        values: FrameStyle.values,
-                        selected: state.recipe.frame,
-                        label: (v) => v.label,
-                        onSelected: _controller.setFrame,
-                      ),
+                      FrameStylePanel(state: state, controller: _controller),
                       ChoicePanel<FrameRatio>(
                         values: FrameRatio.values,
                         selected: state.recipe.ratio,

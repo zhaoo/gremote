@@ -10,20 +10,6 @@ const content = FrameContent(
   date: '2026.10.10',
 );
 
-bool allPixelsAre(ExportOverlay overlay, int argb) {
-  final r = (argb >> 16) & 0xff, g = (argb >> 8) & 0xff, b = argb & 0xff;
-  for (var i = 0; i < overlay.rgba.length; i += 4) {
-    final a = overlay.rgba[i + 3];
-    if (a == 0) continue;
-    if (overlay.rgba[i] != r ||
-        overlay.rgba[i + 1] != g ||
-        overlay.rgba[i + 2] != b) {
-      return false;
-    }
-  }
-  return true;
-}
-
 bool hasOpaquePixels(ExportOverlay overlay) {
   for (var i = 3; i < overlay.rgba.length; i += 4) {
     if (overlay.rgba[i] > 0) return true;
@@ -61,7 +47,7 @@ void main() {
     expect(overlays, isEmpty);
   });
 
-  testWidgets('paints sprockets and hairlines in their colours',
+  testWidgets('paints sprockets and the caption accent within their regions',
       (tester) async {
     final contact = computeFrameLayout(
         photoWidth: 600,
@@ -79,12 +65,14 @@ void main() {
         photoHeight: 400,
         style: FrameStyle.street,
         ratio: FrameRatio.original,
-        content: const FrameContent());
+        content: content);
     final lines = await tester
         .runAsync(() => const OverlayRasterizer().rasterize(street));
-    expect(lines, hasLength(4));
-    for (final line in lines!) {
-      expect(allPixelsAre(line, FramePalette.streetGold), isTrue);
-    }
+    expect(lines, hasLength(1));
+    expect(hasOpaquePixels(lines!.single), isTrue);
+    final accent =
+        street.overlays.single.elements.whereType<FrameRect>().single;
+    final offset = (accent.rect.y * lines.single.width + accent.rect.x) * 4;
+    expect(lines.single.rgba.sublist(offset, offset + 4), [188, 165, 127, 255]);
   });
 }

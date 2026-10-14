@@ -80,14 +80,12 @@ class ExportQueueController extends Notifier<ExportQueueState> {
     if (state.running) throw StateError('export queue is busy');
     _cancelRequested = false;
     state = const ExportQueueState(running: true);
-    final store = ref.read(darkroomStoreProvider);
     final now = DateTime.now();
     state = ExportQueueState(running: true, items: [
       for (final (item, recipe) in jobs)
         ExportQueueItem(
           item: item,
-          doc: (await store.loadEdit(item.id))?.copyWith(recipe: recipe) ??
-              EditDocument(mediaId: item.id, recipe: recipe, updatedAt: now),
+          doc: EditDocument(mediaId: item.id, recipe: recipe, updatedAt: now),
         ),
     ]);
     await _run();
@@ -117,7 +115,7 @@ class ExportQueueController extends Notifier<ExportQueueState> {
   Future<void> _run() async {
     final service = ref.read(exportServiceProvider);
     for (var i = 0; i < state.items.length; i++) {
-      final entry = state.items[i];
+      var entry = state.items[i];
       if (entry.status != ExportItemStatus.pending) continue;
       if (_cancelRequested) {
         _update(i, entry.withStatus(ExportItemStatus.cancelled));
@@ -126,6 +124,24 @@ class ExportQueueController extends Notifier<ExportQueueState> {
       _update(i, entry.withStatus(ExportItemStatus.running));
       final token = _token = ImagingCancelToken();
       try {
+        try {
+          final saved =
+              await ref.read(darkroomStoreProvider).loadEdit(entry.item.id);
+          if (saved != null) {
+            entry = ExportQueueItem(
+              item: entry.item,
+              doc: saved.copyWith(recipe: entry.doc.recipe),
+            );
+            _update(i, entry.withStatus(ExportItemStatus.running));
+          }
+        } catch (error) {
+          throw ExportFailure(
+            stage: ExportStage.read,
+            fileName: entry.item.displayName,
+            code: 'edit_read_failed',
+            reason: '无法读取已保存的编辑：$error',
+          );
+        }
         final outcome =
             await service.export(entry.item, entry.doc, cancel: token);
         _update(i, entry.withStatus(ExportItemStatus.done, outcome: outcome));

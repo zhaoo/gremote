@@ -30,7 +30,7 @@ final cameraGatewaysProvider = Provider<CameraGatewayBundle>((ref) {
 
 final cameraPermissionGateProvider = Provider<CameraPermissionGate>((ref) {
   if (useFakeCamera) {
-    return const CameraPermissionGate(GrantedCameraPermissionAdapter());
+    return CameraPermissionGate(const GrantedCameraPermissionAdapter());
   }
   return CameraPermissionGate(PermissionHandlerCameraPermissionAdapter());
 });
@@ -87,6 +87,8 @@ class ConnectionController extends Notifier<CameraConnectionState> {
   BleDeviceCandidate? _selectedDevice;
   CameraBootstrap? _bootstrap;
   CameraSnapshot? _snapshot;
+  Future<void>? _focusInFlight;
+  Future<void>? _connectionInFlight;
 
   @override
   CameraConnectionState build() {
@@ -108,7 +110,21 @@ class ConnectionController extends Notifier<CameraConnectionState> {
       _providedWifi == null ||
       _providedTransport == null;
 
-  Future<void> connect({String? deviceId}) async {
+  Future<void> connect({String? deviceId}) =>
+      _startConnection(() => _connect(deviceId));
+
+  Future<void> _startConnection(Future<void> Function() action) {
+    final pending = _connectionInFlight;
+    if (pending != null) return pending;
+    late final Future<void> attempt;
+    attempt = Future<void>.sync(action).whenComplete(() {
+      if (identical(_connectionInFlight, attempt)) _connectionInFlight = null;
+    });
+    _connectionInFlight = attempt;
+    return attempt;
+  }
+
+  Future<void> _connect(String? deviceId) async {
     final generation = ++_generation;
     _selectedDevice = null;
     _bootstrap = null;
@@ -130,14 +146,17 @@ class ConnectionController extends Notifier<CameraConnectionState> {
   Future<void> connectWifiManually({
     required String ssid,
     required String passphrase,
-  }) async {
+  }) =>
+      _startConnection(() => _connectWifiManually(ssid, passphrase));
+
+  Future<void> _connectWifiManually(String ssid, String passphrase) async {
     final generation = ++_generation;
     _selectedDevice = null;
     _bootstrap = null;
     _snapshot = null;
     _retryCount = 0;
     try {
-      _activeStage = ConnectionStage.wifiRequesting;
+      _setState(generation, const ConnectionPermissions());
       await _permissionGate.ensureWifiGranted();
       _check(generation);
       _setState(generation, const ConnectionWifiManualRequesting());
@@ -199,6 +218,23 @@ class ConnectionController extends Notifier<CameraConnectionState> {
     await _run(++_generation, _retryStep);
   }
 
+  /// Uses the firmware-derived lens API, never a capture operation or fallback.
+  Future<void> focus({int x = 50, int y = 50}) {
+    RangeError.checkValueInInterval(x, 0, 100, 'x');
+    RangeError.checkValueInInterval(y, 0, 100, 'y');
+    if (state is! ConnectionReady) return Future.value();
+    return _focusInFlight ??= _focus(_generation, x, y);
+  }
+
+  Future<void> _focus(int generation, int x, int y) async {
+    try {
+      await _api.focus(x: x, y: y);
+      _check(generation);
+    } finally {
+      _focusInFlight = null;
+    }
+  }
+
   Future<void> pressShutter() async {
     final current = state;
     if (current is! ConnectionReady) return;
@@ -238,6 +274,7 @@ class ConnectionController extends Notifier<CameraConnectionState> {
 
   Future<void> cancel() async {
     final generation = ++_generation;
+    _connectionInFlight = null;
     _retryStep = _ConnectionStep.permissions;
     await _transport.stopLiveView();
     await _wifi.disconnect();
@@ -255,7 +292,7 @@ class ConnectionController extends Notifier<CameraConnectionState> {
       if (step.index <= _ConnectionStep.permissions.index) {
         step = _ConnectionStep.permissions;
         _retryStep = step;
-        _activeStage = ConnectionStage.idle;
+        _setState(generation, const ConnectionPermissions());
         await _permissionGate.ensureGranted();
         _check(generation);
       }

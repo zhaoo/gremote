@@ -1,7 +1,75 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gremote/platform/camera_permission_gate.dart';
 
 void main() {
+  test('concurrent permission checks share the pending system request',
+      () async {
+    final adapter = _PendingPermissionAdapter();
+    final gate = CameraPermissionGate(adapter);
+    final first = gate.ensureGranted();
+    final second = gate.ensureGranted();
+    await Future<void>.delayed(Duration.zero);
+    expect(adapter.requested, [CameraRuntimePermission.bluetoothScan]);
+    adapter.approval.complete(CameraPermissionStatus.granted);
+    await Future.wait([first, second]);
+    expect(adapter.requested, [
+      CameraRuntimePermission.bluetoothScan,
+      CameraRuntimePermission.bluetoothConnect,
+      CameraRuntimePermission.nearbyWifi,
+    ]);
+  });
+
+  test('manual Wi-Fi waits for the in-flight Bluetooth permission sequence',
+      () async {
+    final adapter = _PendingPermissionAdapter();
+    final gate = CameraPermissionGate(adapter);
+    final first = gate.ensureGranted();
+    final manual = gate.ensureWifiGranted();
+    await Future<void>.delayed(Duration.zero);
+    expect(adapter.requested, [CameraRuntimePermission.bluetoothScan]);
+    adapter.approval.complete(CameraPermissionStatus.granted);
+    await Future.wait([first, manual]);
+  });
+
+  test('Bluetooth check after a pending Wi-Fi check still requests Bluetooth',
+      () async {
+    final adapter = _PendingPermissionAdapter();
+    final gate = CameraPermissionGate(adapter);
+    final wifi = gate.ensureWifiGranted();
+    final bluetooth = gate.ensureGranted();
+    await Future<void>.delayed(Duration.zero);
+    expect(adapter.requested, [CameraRuntimePermission.nearbyWifi]);
+    adapter.approval.complete(CameraPermissionStatus.granted);
+    await Future.wait([wifi, bluetooth]);
+    expect(adapter.requested, [
+      CameraRuntimePermission.nearbyWifi,
+      CameraRuntimePermission.bluetoothScan,
+      CameraRuntimePermission.bluetoothConnect,
+      CameraRuntimePermission.nearbyWifi,
+    ]);
+  });
+
+  test(
+      'manual Wi-Fi can grant after the overlapping Bluetooth prompt is denied',
+      () async {
+    final adapter = _BluetoothDeniedPermissionAdapter();
+    final gate = CameraPermissionGate(adapter);
+    final bluetooth = _capture(gate.ensureGranted);
+    final wifi = _capture(gate.ensureWifiGranted);
+    await Future<void>.delayed(Duration.zero);
+    expect(adapter.requested, [CameraRuntimePermission.bluetoothScan]);
+    adapter.bluetoothDecision.complete(CameraPermissionStatus.denied);
+
+    expect(await bluetooth, isA<CameraPermissionException>());
+    expect(await wifi, isNull);
+    expect(adapter.requested, [
+      CameraRuntimePermission.bluetoothScan,
+      CameraRuntimePermission.nearbyWifi,
+    ]);
+  });
+
   test('SDK 33+ requests Bluetooth and nearby Wi-Fi permissions', () async {
     final adapter = _FakePermissionAdapter(34);
 
@@ -103,5 +171,35 @@ class _FakePermissionAdapter implements CameraPermissionAdapter {
   ) async {
     requested.add(permission);
     return status;
+  }
+}
+
+class _PendingPermissionAdapter implements CameraPermissionAdapter {
+  final approval = Completer<CameraPermissionStatus>();
+  final requested = <CameraRuntimePermission>[];
+
+  @override
+  Future<int> androidSdkInt() async => 34;
+
+  @override
+  Future<CameraPermissionStatus> request(CameraRuntimePermission permission) {
+    requested.add(permission);
+    return approval.future;
+  }
+}
+
+class _BluetoothDeniedPermissionAdapter implements CameraPermissionAdapter {
+  final bluetoothDecision = Completer<CameraPermissionStatus>();
+  final requested = <CameraRuntimePermission>[];
+
+  @override
+  Future<int> androidSdkInt() async => 34;
+
+  @override
+  Future<CameraPermissionStatus> request(CameraRuntimePermission permission) {
+    requested.add(permission);
+    return permission == CameraRuntimePermission.bluetoothScan
+        ? bluetoothDecision.future
+        : Future.value(CameraPermissionStatus.granted);
   }
 }

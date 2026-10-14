@@ -145,16 +145,71 @@ void main() {
   });
 
   group('FrameLayout', () {
-    test('classic margins follow the long edge', () {
+    test('unframed export keeps original pixels without captions or padding',
+        () {
+      final layout = computeFrameLayout(
+          photoWidth: 6000,
+          photoHeight: 4000,
+          style: FrameStyle.none,
+          ratio: FrameRatio.original,
+          content: content);
+      expect(layout.photo, const PixelRect(0, 0, 6000, 4000));
+      expect(layout.canvasWidth, 6000);
+      expect(layout.canvasHeight, 4000);
+      expect(layout.overlays, isEmpty);
+    });
+
+    test('caption title leads metadata in both clean frame styles', () {
+      for (final style in [FrameStyle.classic, FrameStyle.street]) {
+        final layout = computeFrameLayout(
+            photoWidth: 4000,
+            photoHeight: 6000,
+            style: style,
+            ratio: FrameRatio.original,
+            content: content);
+        final caption = texts(layout).singleWhere((t) => t.text == '雨后 · 上海');
+        final model =
+            texts(layout).singleWhere((t) => t.text == 'RICOH GR III');
+        expect(caption.fontSize, greaterThan(model.fontSize));
+        expect(caption.y, lessThan(model.y));
+        expect(caption.maxWidth, greaterThan(layout.photo.width * 0.6));
+      }
+    });
+
+    test('hidden captions leave a balanced plain border', () {
+      final layout = computeFrameLayout(
+          photoWidth: 6000,
+          photoHeight: 4000,
+          style: FrameStyle.classic,
+          ratio: FrameRatio.original,
+          content: const FrameContent());
+      expect(layout.canvasHeight - layout.photo.bottom, layout.photo.y);
+      expect(layout.overlays, isEmpty);
+    });
+
+    test('contact captions contain user metadata without forced brand or index',
+        () {
+      final layout = computeFrameLayout(
+          photoWidth: 6000,
+          photoHeight: 4000,
+          style: FrameStyle.contact,
+          ratio: FrameRatio.original,
+          content: content);
+      expect(texts(layout).any((t) => t.text.contains('GRemote')), isFalse);
+      expect(texts(layout).any((t) => t.text.endsWith('01')), isFalse);
+      expect(texts(layout).any((t) => t.text == '雨后 · 上海'), isTrue);
+    });
+
+    test('classic margins and caption scale with the short edge', () {
       final layout = computeFrameLayout(
           photoWidth: 6000,
           photoHeight: 4000,
           style: FrameStyle.classic,
           ratio: FrameRatio.original,
           content: content);
-      expect(layout.photo, const PixelRect(210, 210, 6000, 4000));
-      expect(layout.canvasWidth, 6420);
-      expect(layout.canvasHeight, 210 + 4000 + 660);
+      expect(layout.photo, const PixelRect(140, 140, 6000, 4000));
+      expect(layout.canvasWidth, 6280);
+      expect(layout.canvasHeight, 4600);
       expect(layout.background, 0xFFFFFFFF);
       expect(
           texts(layout).map((t) => t.text),
@@ -162,20 +217,20 @@ void main() {
               ['RICOH GR III', '28mm f/2.8 1/250s ISO200', '2026.10.10']));
     });
 
-    test('street style adds a hairline around the photo', () {
+    test('street style has one quiet caption accent', () {
       final layout = computeFrameLayout(
           photoWidth: 4000,
           photoHeight: 6000,
           style: FrameStyle.street,
           ratio: FrameRatio.original,
           content: content);
-      expect(layout.photo.x, 270);
-      expect(layout.canvasHeight, 270 + 6000 + 720);
+      expect(layout.photo.x, 140);
+      expect(layout.canvasHeight, 6600);
       final rects = layout.overlays
           .expand((o) => o.elements)
           .whereType<FrameRect>()
           .toList();
-      expect(rects, hasLength(4));
+      expect(rects, hasLength(1));
     });
 
     test('contact sheet places sprocket strips above and below', () {
@@ -185,13 +240,12 @@ void main() {
           style: FrameStyle.contact,
           ratio: FrameRatio.original,
           content: content);
-      expect(layout.photo, const PixelRect(180, 510, 6000, 4000));
-      expect(layout.canvasHeight, 4000 + 2 * 510);
+      expect(layout.photo, const PixelRect(140, 400, 6000, 4000));
+      expect(layout.canvasHeight, 4800);
       expect(
           layout.overlays.expand((o) => o.elements).whereType<FrameSprockets>(),
           hasLength(2));
-      expect(texts(layout).any((t) => t.text.contains('GRemote · RICOH GR III')),
-          isTrue);
+      expect(texts(layout).any((t) => t.text.contains('RICOH GR III')), isTrue);
     });
 
     for (final style in FrameStyle.values) {
@@ -215,14 +269,14 @@ void main() {
       }
     }
 
-    test('hidden fields keep the info region without text', () {
+    test('hidden fields remove the unused info region', () {
       final layout = computeFrameLayout(
           photoWidth: 6000,
           photoHeight: 4000,
           style: FrameStyle.classic,
           ratio: FrameRatio.original,
           content: const FrameContent());
-      expect(layout.canvasHeight, 210 + 4000 + 660);
+      expect(layout.canvasHeight, 4280);
       expect(texts(layout), isEmpty);
     });
   });

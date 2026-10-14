@@ -24,12 +24,27 @@ void main() {
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
   });
 
+  testWidgets('pending app permissions disables the connect action',
+      (tester) async {
+    await _pumpCard(tester, const ConnectionPermissions());
+    expect(find.text('连接 GR III'), findsNothing);
+    expect(find.text('选择 Wi-Fi 连接'), findsNothing);
+    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    expect(find.text('正在确认连接权限'), findsOneWidget);
+  });
+
+  testWidgets('manual Wi-Fi shows network approval guidance', (tester) async {
+    await _pumpCard(tester, const ConnectionWifiManualRequesting());
+    expect(find.text('正在连接相机 Wi-Fi'), findsOneWidget);
+    expect(find.textContaining('已允许后请等待连接'), findsOneWidget);
+  });
+
   testWidgets('manual Wi-Fi is available when BLE is idle or fails',
       (tester) async {
     var opened = 0;
     await _pumpCard(tester, const ConnectionIdle(),
         onManualWifi: () => opened++);
-    await tester.tap(find.text('手动连接 Wi-Fi'));
+    await tester.tap(find.text('选择 Wi-Fi 连接'));
     expect(opened, 1);
 
     await _pumpCard(
@@ -44,7 +59,7 @@ void main() {
       onManualWifi: () => opened++,
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('手动连接 Wi-Fi'));
+    await tester.tap(find.text('选择 Wi-Fi 连接'));
     expect(opened, 2);
   });
 
@@ -52,7 +67,7 @@ void main() {
       (tester) async {
     await _pumpCard(tester, const ConnectionWifiRequesting(_snapshot));
 
-    expect(find.textContaining('系统弹窗'), findsOneWidget);
+    expect(find.textContaining('系统连接提示'), findsOneWidget);
     expect(find.textContaining('允许'), findsWidgets);
   });
 

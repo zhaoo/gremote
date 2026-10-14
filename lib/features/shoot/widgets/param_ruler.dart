@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../shoot_labels.dart';
+
 import '../../../app/theme/app_colors.dart';
 import '../../../camera/params/camera_param.dart';
 
@@ -35,9 +37,10 @@ class ParamRuler extends StatelessWidget {
                 return TextButton(
                   key: value == 'auto' ? const Key('ruler-auto') : null,
                   onPressed: () => onChanged(value),
-                  child: Text(value,
+                  child: Text(shootValueLabel(param.wireKey, value),
                       style: TextStyle(
-                        color: selected ? GRemoteColors.gold : GRemoteColors.text,
+                        color:
+                            selected ? GRemoteColors.gold : GRemoteColors.text,
                         fontWeight:
                             selected ? FontWeight.w700 : FontWeight.w400,
                       )),

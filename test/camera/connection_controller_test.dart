@@ -37,6 +37,65 @@ void main() {
     expect(harness.state, isA<ConnectionReady>());
   });
 
+  test('first permission prompt leaves idle and continues after approval',
+      () async {
+    final permission = _PendingPermissionAdapter();
+    final harness = _Harness(permissionAdapter: permission);
+    final attempt = harness.controller.connect();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(harness.state, isNot(isA<ConnectionIdle>()));
+    expect(harness.trace, isEmpty);
+    permission.approval.complete(CameraPermissionStatus.granted);
+    await attempt;
+    expect(harness.state, isA<ConnectionReady>());
+  });
+
+  test('repeated connect during first permission prompt shares the attempt',
+      () async {
+    final permission = _PendingPermissionAdapter();
+    final harness = _Harness(permissionAdapter: permission);
+    final first = harness.controller.connect();
+    final second = harness.controller.connect();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(identical(first, second), isTrue);
+    permission.approval.complete(CameraPermissionStatus.granted);
+    await Future.wait([first, second]);
+    expect(harness.state, isA<ConnectionReady>());
+    expect(harness.trace.where((entry) => entry == 'scan'), hasLength(1));
+  });
+
+  test(
+      'reconnect during an outstanding permission prompt resumes only the new attempt',
+      () async {
+    final permission = _PendingPermissionAdapter();
+    final harness = _Harness(permissionAdapter: permission);
+    final first = harness.controller.connect();
+    await Future<void>.delayed(Duration.zero);
+    await harness.controller.cancel();
+    final second = harness.controller.connect();
+    permission.approval.complete(CameraPermissionStatus.granted);
+    await Future.wait([first, second]);
+
+    expect(harness.state, isA<ConnectionReady>());
+    expect(harness.trace.where((entry) => entry == 'scan'), hasLength(1));
+  });
+
+  test('cancel during permission prompt does not resume BLE after approval',
+      () async {
+    final permission = _PendingPermissionAdapter();
+    final harness = _Harness(permissionAdapter: permission);
+    final attempt = harness.controller.connect();
+    await Future<void>.delayed(Duration.zero);
+    await harness.controller.cancel();
+    permission.approval.complete(CameraPermissionStatus.granted);
+    await attempt;
+
+    expect(harness.state, isA<ConnectionIdle>());
+    expect(harness.trace, isNot(contains('scan')));
+  });
+
   test('permission denial prevents BLE and Wi-Fi calls', () async {
     final harness = _Harness(
       permissionStatus: CameraPermissionStatus.denied,
@@ -151,6 +210,95 @@ void main() {
 
     expect(harness.state, isA<ConnectionIdle>());
     expect(harness.trace, isNot(contains('connectBle')));
+  });
+
+  for (final wifiOnly in [false, true]) {
+    test('focus uses only lens endpoint (wifiOnly=$wifiOnly)', () async {
+      final harness = _Harness()
+        ..ble.operationFailure = PlatformException(code: 'unsupported');
+      if (wifiOnly) {
+        await harness.controller
+            .connectWifiManually(ssid: 'GR_TEST', passphrase: '12345678');
+      } else {
+        await harness.controller.connect();
+      }
+      harness.trace.clear();
+      await harness.controller.focus();
+      expect(harness.trace, ['/v1/lens/focus?pos=50,50']);
+    });
+  }
+
+  test('focus propagates selected point and validates before deduplication',
+      () async {
+    final harness = _Harness();
+    await harness.controller.connect();
+    harness.trace.clear();
+    final response = Completer<CameraResponse>();
+    harness.transport.focusResponse = response;
+    final focus = harness.controller.focus(x: 25, y: 75);
+    expect(() => harness.controller.focus(x: -1, y: 75), throwsArgumentError);
+    response.complete(harness.transport._response(200, {}));
+    await focus;
+    expect(harness.trace, ['/v1/lens/focus?pos=25,75']);
+  });
+
+  test('focus ignores disconnected calls', () async {
+    final harness = _Harness();
+    await harness.controller.focus();
+    expect(harness.trace, isEmpty);
+  });
+
+  test(
+      'duplicate focus requests share the in-flight request and recover after refusal',
+      () async {
+    final harness = _Harness();
+    await harness.controller.connect();
+    final response = Completer<CameraResponse>();
+    harness.transport.focusResponse = response;
+    final first = harness.controller.focus();
+    final second = harness.controller.focus();
+    final firstError = expectLater(first, throwsA(isA<Exception>()));
+    final secondError = expectLater(second, throwsA(isA<Exception>()));
+    response.complete(harness.transport._response(200, {'errCode': 400}));
+    await Future.wait([firstError, secondError]);
+    expect(harness.trace.where((path) => path.startsWith('/v1/lens/focus')),
+        hasLength(1));
+    harness.transport.focusResponse = null;
+    await harness.controller.focus();
+    expect(harness.trace.where((path) => path.startsWith('/v1/lens/focus')),
+        hasLength(2));
+    expect(
+        harness.trace.any(
+            (path) => path.contains('shoot') || path.startsWith('operation:')),
+        isFalse);
+  });
+
+  test('unsupported lens endpoint never falls back to shutter', () async {
+    final harness = _Harness();
+    await harness.controller.connect();
+    final response = Completer<CameraResponse>();
+    harness.transport.focusResponse = response;
+    final result = harness.controller.focus();
+    final failure = expectLater(result, throwsA(isA<Exception>()));
+    response.complete(harness.transport._response(404, {}));
+    await failure;
+    expect(
+        harness.trace.any(
+            (path) => path.contains('shoot') || path.startsWith('operation:')),
+        isFalse);
+  });
+
+  test('focus completion from a cancelled connection is rejected', () async {
+    final harness = _Harness();
+    await harness.controller.connect();
+    final response = Completer<CameraResponse>();
+    harness.transport.focusResponse = response;
+    final result = harness.controller.focus();
+    final failure = expectLater(result, throwsA(isA<Exception>()));
+    await harness.controller.cancel();
+    response.complete(harness.transport._response(200, {}));
+    await failure;
+    expect(harness.state, isA<ConnectionIdle>());
   });
 
   test('shutter uses BLE press and release when supported', () async {
@@ -297,6 +445,7 @@ void main() {
 class _Harness {
   _Harness({
     CameraPermissionStatus permissionStatus = CameraPermissionStatus.granted,
+    CameraPermissionAdapter? permissionAdapter,
   }) {
     ble = _Ble(trace);
     wifi = _Wifi(trace);
@@ -304,7 +453,7 @@ class _Harness {
     provider = NotifierProvider<ConnectionController, CameraConnectionState>(
       () => ConnectionController(
         permissionGate: CameraPermissionGate(
-          _PermissionAdapter(permissionStatus),
+          permissionAdapter ?? _PermissionAdapter(permissionStatus),
         ),
         ble: ble,
         wifi: wifi,
@@ -423,6 +572,7 @@ class _Transport implements CameraTransport {
 
   final List<String> trace;
   int pingStatus = 200;
+  Completer<CameraResponse>? focusResponse;
   bool failPropsOnce = false;
   String model = 'RICOH GR III';
   bool useCameraProps = false;
@@ -455,6 +605,9 @@ class _Transport implements CameraTransport {
               : {'model': model, 'firmware': '2.10', 'batteryLevel': 87});
     }
     trace.add(path);
+    if (path.startsWith('/v1/lens/focus') && focusResponse != null) {
+      return focusResponse!.future;
+    }
     return _response(200, {});
   }
 
@@ -469,4 +622,15 @@ class _Transport implements CameraTransport {
         headers: const {'content-type': 'application/json'},
         body: Uint8List.fromList(utf8.encode(jsonEncode(value))),
       );
+}
+
+class _PendingPermissionAdapter implements CameraPermissionAdapter {
+  final approval = Completer<CameraPermissionStatus>();
+
+  @override
+  Future<int> androidSdkInt() async => 34;
+
+  @override
+  Future<CameraPermissionStatus> request(CameraRuntimePermission permission) =>
+      approval.future;
 }

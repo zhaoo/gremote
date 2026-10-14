@@ -27,18 +27,19 @@ abstract final class FramePainter {
 
   static TextStyle _style(FrameText text, double scale) {
     final base = switch (text.font) {
-      FrameFont.serif => const TextStyle(
+      FrameFont.serif => TextStyle(
           fontFamily: 'GRemoteEditorial',
-          fontFamilyFallback: ['Noto Serif CJK SC', 'serif'],
-          letterSpacing: 0.6,
+          fontFamilyFallback: const ['Noto Serif CJK SC', 'serif'],
+          letterSpacing: 0.6 * scale,
         ),
       FrameFont.sans => const TextStyle(
+          fontFamily: 'sans-serif',
           fontFamilyFallback: ['MiSans', 'Noto Sans CJK SC', 'PingFang SC'],
         ),
-      FrameFont.mono => const TextStyle(
+      FrameFont.mono => TextStyle(
           fontFamily: 'monospace',
-          fontFeatures: [ui.FontFeature.tabularFigures()],
-          letterSpacing: 0.4,
+          fontFeatures: const [ui.FontFeature.tabularFigures()],
+          letterSpacing: 0.4 * scale,
         ),
     };
     return base.copyWith(

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../shoot_labels.dart';
+
 import '../../../camera/recipe/recipe_store.dart';
 import '../../../darkroom/store/darkroom_store.dart';
 
@@ -55,7 +57,9 @@ class _RecipeEditorDialogState extends State<RecipeEditorDialog> {
               onTap: () => FocusScope.of(context).unfocus(),
               items: [
                 for (final effect in widget.effects)
-                  DropdownMenuItem(value: effect, child: Text(effect)),
+                  DropdownMenuItem(
+                      value: effect,
+                      child: Text(shootValueLabel('effect', effect))),
               ],
               onChanged: (value) {
                 FocusManager.instance.primaryFocus?.unfocus();

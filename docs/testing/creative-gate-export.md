@@ -2,6 +2,14 @@
 
 状态：已开发／待核心相机功能门禁通过后验收。测试对象为 Android 13/14 真机与 RICOH GR III 原生 JPEG；每项记录机型、系统版本、APK SHA-256、开始/结束时间和结果。
 
+## 2026-10-13 软件回归
+
+修复批量导出准备阶段的错误隔离：读取某张照片的已保存编辑失败（例如损坏的 JSON）时，该照片标为失败，其他照片继续处理，队列结束后可重试。重试会重新读取已修复的编辑，保留标题、地点并使用本次选择的导出方案。对应回归测试位于 `test/darkroom/export_queue_test.dart`。
+
+本次 `scripts/build_android.sh` 已通过原生 CTest、Flutter 静态分析、260 个 Flutter 测试、Android 单元测试和 arm64 debug APK 构建。产物为 `gremote-0.2.0+2-arm64-debug-20261013-134052.apk`，SHA-256：`e60d4927d5a44765416d317e6b9da1da9533740cd8bdfd5da0b01758ddeedff2`。
+
+未连接 Android 设备，下面的真机项目仍未执行。
+
 ## 准备
 
 - 安装 `dist/gremote-0.2.0+2-arm64-debug-*.apk`，首次启动授予照片权限。

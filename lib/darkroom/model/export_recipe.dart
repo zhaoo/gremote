@@ -3,7 +3,8 @@ import 'package:meta/meta.dart';
 enum FrameStyle {
   classic('经典白边'),
   street('街拍暗金'),
-  contact('胶片印样');
+  contact('胶片印样'),
+  none('无边框');
 
   const FrameStyle(this.label);
   final String label;

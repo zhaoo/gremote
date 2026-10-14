@@ -95,7 +95,7 @@ class ConnectionCard extends StatelessWidget {
             if (onManualWifi != null)
               TextButton(
                 onPressed: onManualWifi,
-                child: const Text('手动连接 Wi-Fi'),
+                child: const Text('选择 Wi-Fi 连接'),
               ),
           ])
         else ...[
@@ -122,6 +122,11 @@ class ConnectionCard extends StatelessWidget {
             title: '连接相机',
             detail: '连接你的 RICOH GR III，开始街头拍摄。',
           ),
+        ConnectionPermissions() => const _ConnectionPresentation(
+            status: '权限',
+            title: '正在确认连接权限',
+            detail: '首次连接需要附近设备或定位权限，请在系统提示中允许。',
+          ),
         ConnectionScanning() => const _ConnectionPresentation(
             status: 'BLE',
             title: '正在扫描附近相机',
@@ -147,10 +152,12 @@ class ConnectionCard extends StatelessWidget {
             title: '正在开启相机热点',
             detail: '相机正在切换到无线连接模式。',
           ),
-        ConnectionWifiRequesting() => const _ConnectionPresentation(
+        ConnectionWifiRequesting() ||
+        ConnectionWifiManualRequesting() =>
+          const _ConnectionPresentation(
             status: 'Wi-Fi',
-            title: '请在系统弹窗中允许连接',
-            detail: '选择允许后，移动数据仍会保持可用。',
+            title: '正在连接相机 Wi-Fi',
+            detail: '如出现系统连接提示，请选择允许；已允许后请等待连接。',
           ),
         ConnectionWifiBound() => const _ConnectionPresentation(
             status: 'Wi-Fi 已绑定',
@@ -289,10 +296,8 @@ class _CameraSummary extends StatelessWidget {
                     Text(detail,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(color: GRemoteColors.muted, fontSize: 10)),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: GRemoteColors.muted, fontSize: 10)),
                   ],
                 ),
               ),
@@ -439,7 +444,7 @@ class _FailureContent extends StatelessWidget {
             Center(
               child: TextButton(
                 onPressed: onManualWifi,
-                child: const Text('手动连接 Wi-Fi'),
+                child: const Text('选择 Wi-Fi 连接'),
               ),
             ),
           const SizedBox(height: 4),
@@ -493,7 +498,8 @@ class _Fact extends StatelessWidget {
           Text(label, style: Theme.of(context).textTheme.bodySmall),
           const SizedBox(height: 4),
           Text(value,
-              style: GRemoteType.numeric.copyWith(color: GRemoteColors.goldSoft)),
+              style:
+                  GRemoteType.numeric.copyWith(color: GRemoteColors.goldSoft)),
         ],
       );
 }

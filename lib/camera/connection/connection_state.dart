@@ -3,6 +3,7 @@ import '../model/camera_snapshot.dart';
 
 enum ConnectionStage {
   idle,
+  permissions,
   scanning,
   deviceChoice,
   pairing,
@@ -58,6 +59,13 @@ final class ConnectionIdle extends CameraConnectionState {
 
   @override
   ConnectionStage get stage => ConnectionStage.idle;
+}
+
+final class ConnectionPermissions extends CameraConnectionState {
+  const ConnectionPermissions();
+
+  @override
+  ConnectionStage get stage => ConnectionStage.permissions;
 }
 
 final class ConnectionScanning extends CameraConnectionState {
