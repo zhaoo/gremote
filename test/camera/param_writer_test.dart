@@ -47,6 +47,23 @@ class _Harness {
 }
 
 void main() {
+  test('drain waits for timed out underlying requests before restoration', () {
+    fakeAsync((async) {
+      final h = _Harness()..gate = true;
+      WriteOutcome? outcome;
+      var drained = false;
+      h.writer.write(_av, '4.0').then((value) => outcome = value);
+      h.writer.drain().then((_) => drained = true);
+      async.elapse(const Duration(seconds: 4));
+      expect(outcome, isA<WriteTimedOut>());
+      expect(drained, isFalse);
+      h.gates.single.complete();
+      async.flushMicrotasks();
+      expect(drained, isTrue);
+      expect(h.camera['av'], '4.0');
+    });
+  });
+
   test('confirmed when readback equals the target', () async {
     final h = _Harness();
     expect(await h.writer.write(_av, '4.0'), isA<WriteConfirmed>());

@@ -29,6 +29,12 @@ GRemote 想把拍摄现场和照片后期放在一处：通过蓝牙与相机 Wi
 
 界面以中文为主，所有编辑和导出流程以本地文件为核心。原始照片不应被覆盖；导出结果写入新文件。有关设备与隐私验证的具体状态，请看下方的「验证状态」。
 
+## 下载
+
+[下载 GRemote 1.0.0 Android arm64 APK](https://github.com/zhaoo/gremote/releases/download/v1.0.0/gremote-1.0.0-android-arm64.apk) · [发布说明与校验文件](https://github.com/zhaoo/gremote/releases/tag/v1.0.0)
+
+最低 Android 8.0。功能和真机验证范围见 [1.0.0 发布记录](docs/releases/v1.0.0.md)。
+
 ## 快速开始
 
 ### 环境

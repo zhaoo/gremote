@@ -11,6 +11,9 @@ import '../../camera/connection/connection_state.dart';
 import '../../diagnostics/diagnostic_store.dart';
 import 'widgets/connection_card.dart';
 import 'widgets/manual_wifi_dialog.dart';
+import 'import_history.dart';
+import '../../location/location_recording.dart';
+import '../../location/location_controls.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -231,55 +234,73 @@ class _EditorialHero extends StatelessWidget {
       );
 }
 
-class _QuickStatus extends StatelessWidget {
+class _QuickStatus extends ConsumerWidget {
   const _QuickStatus();
 
   @override
-  Widget build(BuildContext context) {
-    return const Column(
-      children: [
-        _StatusCell(
-            icon: Icons.file_download_outlined, label: '今日导入', value: '—'),
-        SizedBox(height: 6),
-        _StatusCell(
-            icon: Icons.location_on_outlined, label: '位置记录', value: '关闭'),
-      ],
-    );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final location = ref.watch(locationRecordingProvider);
+    return Column(children: [
+      const ImportStatusTile(),
+      const SizedBox(height: 6),
+      _StatusCell(
+          icon: Icons.location_on_outlined,
+          label: '位置记录',
+          value: location.error != null
+              ? '需检查'
+              : location.active
+                  ? '记录中'
+                  : location.enabled
+                      ? '待拍摄'
+                      : '关闭',
+          onTap: () => showModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: GRemoteColors.navy,
+              builder: (_) => const LocationControls())),
+    ]);
   }
 }
 
 class _StatusCell extends StatelessWidget {
   const _StatusCell(
-      {required this.icon, required this.label, required this.value});
+      {required this.icon,
+      required this.label,
+      required this.value,
+      this.onTap});
 
   final IconData icon;
   final String label;
   final String value;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-      decoration: BoxDecoration(
-        color: GRemoteColors.navy,
+    return InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: GRemoteColors.divider),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 19, color: GRemoteColors.goldSoft),
-          const SizedBox(width: 12),
-          Text(label,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: GRemoteColors.text)),
-          const Spacer(),
-          Text(value,
-              style:
-                  GRemoteType.numeric.copyWith(color: GRemoteColors.goldSoft)),
-        ],
-      ),
-    );
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          decoration: BoxDecoration(
+            color: GRemoteColors.navy,
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(color: GRemoteColors.divider),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 19, color: GRemoteColors.goldSoft),
+              const SizedBox(width: 12),
+              Text(label,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(color: GRemoteColors.text)),
+              const Spacer(),
+              Text(value,
+                  style: GRemoteType.numeric
+                      .copyWith(color: GRemoteColors.goldSoft)),
+            ],
+          ),
+        ));
   }
 }

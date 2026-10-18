@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'app_presence.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/darkroom/darkroom_page.dart';
@@ -34,7 +36,14 @@ final appRouter = GoRouter(
         StatefulShellBranch(
           navigatorKey: _shootKey,
           routes: [
-            GoRoute(path: '/shoot', builder: (_, __) => const ShootPage()),
+            GoRoute(
+                path: '/shoot',
+                builder: (_, __) => const ShootPage(),
+                onExit: (context, _) async {
+                  final handler = ProviderScope.containerOf(context)
+                      .read(shootExitHandlerProvider);
+                  return await handler?.call() ?? true;
+                }),
           ],
         ),
         StatefulShellBranch(

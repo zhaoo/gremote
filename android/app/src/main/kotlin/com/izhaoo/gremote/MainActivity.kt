@@ -1,33 +1,45 @@
 package com.izhaoo.gremote
 
 import android.view.WindowManager
+import com.izhaoo.gremote.location.ForegroundLocation
 import com.izhaoo.gremote.device.wifi.WifiScanController
 import com.izhaoo.gremote.device.CameraDeviceFlutterApi
 import com.izhaoo.gremote.device.CameraDeviceHostApi
 import com.izhaoo.gremote.device.GRemoteDeviceHostApi
 import com.izhaoo.gremote.media.GRemoteMediaHostApi
 import com.izhaoo.gremote.media.MediaHostApi
+import com.izhaoo.gremote.media.CameraImportHistory
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 
 class MainActivity : FlutterActivity() {
+    private var location: ForegroundLocation? = null
     private var wifiScanController: WifiScanController? = null
     private var deviceApi: GRemoteDeviceHostApi? = null
     private var mediaApi: GRemoteMediaHostApi? = null
+    private var importHistory: CameraImportHistory? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         val messenger = flutterEngine.dartExecutor.binaryMessenger
         wifiScanController = WifiScanController(this, messenger)
+        location = ForegroundLocation(this, messenger)
         deviceApi = GRemoteDeviceHostApi(
             context = applicationContext,
             flutterApi = CameraDeviceFlutterApi(messenger),
             keepScreenOn = ::setKeepScreenOn,
         ).also { CameraDeviceHostApi.setUp(messenger, it) }
         mediaApi = GRemoteMediaHostApi(this).also { MediaHostApi.setUp(messenger, it) }
+        importHistory = CameraImportHistory(applicationContext, messenger)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        location?.onResume()
     }
 
     override fun onPause() {
+        location?.onPause()
         wifiScanController?.onPause()
         super.onPause()
     }
@@ -51,6 +63,8 @@ class MainActivity : FlutterActivity() {
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
         val messenger = flutterEngine.dartExecutor.binaryMessenger
+        location?.close()
+        location = null
         wifiScanController?.close()
         wifiScanController = null
         CameraDeviceHostApi.setUp(messenger, null)
@@ -59,6 +73,8 @@ class MainActivity : FlutterActivity() {
         deviceApi = null
         mediaApi?.close()
         mediaApi = null
+        importHistory?.close()
+        importHistory = null
         super.cleanUpFlutterEngine(flutterEngine)
     }
 }

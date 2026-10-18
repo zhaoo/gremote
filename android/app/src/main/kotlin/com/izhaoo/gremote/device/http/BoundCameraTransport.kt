@@ -195,7 +195,24 @@ class BoundCameraTransport(
                     try {
                         val output = resolver.openOutputStream(uri)
                             ?: throw CameraTransportException("publishFailed", "Cannot open media entry")
-                        val copied = output.use { body.byteStream().use { input -> copyPhotoStream(input, it) } }
+                        var lastProgress = 0L
+                        val totalBytes = body.contentLength()
+                        fun reportProgress(bytes: Long) {
+                            val now = SystemClock.elapsedRealtime()
+                            if (bytes != 0L && bytes != totalBytes && now - lastProgress < 120) return
+                            lastProgress = now
+                            emitEvent("photoProgress", JSONObject().apply {
+                                put("id", "$directory/$fileName")
+                                put("bytes", bytes)
+                                put("total", totalBytes)
+                            }.toString())
+                        }
+                        reportProgress(0)
+                        val copied = output.use { destination ->
+                            body.byteStream().use { input ->
+                                copyPhotoStream(input, destination, ::reportProgress)
+                            }
+                        }
                         if (copied <= 0L) throw CameraTransportException("emptyPhoto", "Camera returned empty photo")
                         if (body.contentLength() >= 0 && copied != body.contentLength()) {
                             throw CameraTransportException("incompletePhoto", "Camera photo transfer was incomplete")

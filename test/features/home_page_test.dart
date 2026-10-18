@@ -37,6 +37,7 @@ void main() {
     await _pumpCard(tester, const ConnectionWifiManualRequesting());
     expect(find.text('正在连接相机 Wi-Fi'), findsOneWidget);
     expect(find.textContaining('已允许后请等待连接'), findsOneWidget);
+    expect(find.textContaining('无线 LAN'), findsOneWidget);
   });
 
   testWidgets('manual Wi-Fi is available when BLE is idle or fails',

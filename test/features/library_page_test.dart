@@ -83,6 +83,7 @@ void main() {
     expect(tile(1), findsOneWidget);
     expect(tile(3), findsOneWidget);
     expect(tile(2), findsNothing);
+    expect(find.text('按配方'), findsNothing);
 
     await tester.tap(find.text('全部'));
     await tester.pumpAndSettle();

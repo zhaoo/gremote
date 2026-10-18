@@ -83,6 +83,10 @@ class ParamWriter {
   final _queue = <String, _Job>{};
   var _busy = false;
   var _disabled = false;
+  Completer<void>? _idle;
+
+  /// Waits for underlying requests, including requests whose UI timeout elapsed.
+  Future<void> drain() => _idle?.future ?? Future<void>.value();
 
   bool get busy => _busy || _queue.isNotEmpty;
 
@@ -102,6 +106,7 @@ class ParamWriter {
   Future<void> _pump() async {
     if (_busy) return;
     _busy = true;
+    _idle = Completer<void>();
     try {
       while (_queue.isNotEmpty) {
         final key = _queue.keys.first;
@@ -114,6 +119,8 @@ class ParamWriter {
       }
     } finally {
       _busy = false;
+      _idle?.complete();
+      _idle = null;
     }
   }
 

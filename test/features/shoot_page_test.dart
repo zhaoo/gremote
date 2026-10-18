@@ -6,9 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gremote/app/app.dart';
+import 'package:gremote/app/app_presence.dart';
 import 'package:gremote/app/theme/app_colors.dart';
 import 'package:gremote/camera/live/live_view_controller.dart';
+import 'package:gremote/camera/sync/camera_state_controller.dart';
 import 'package:gremote/features/shoot/widgets/viewfinder.dart';
+import 'package:gremote/features/settings/protocol_probe_page.dart';
 import 'package:gremote/app/router.dart';
 import 'package:gremote/camera/connection/connection_controller.dart';
 import 'package:gremote/camera/gateway/fake_gateways.dart';
@@ -59,6 +62,31 @@ Future<({TestDarkroom env, FakeCameraGateways gateways})> pumpShoot(
 }
 
 void main() {
+  testWidgets('opening probe ends shoot session and popping reactivates it',
+      (tester) async {
+    final harness = await pumpShoot(tester, connect: true);
+    final container =
+        ProviderScope.containerOf(tester.element(find.byTooltip('返回首页')));
+    await tester.runAsync(() async {
+      await container
+          .read(cameraStateControllerProvider.notifier)
+          .setParam('WBMode', 'daylight');
+    });
+    expect(harness.gateways.camera.props['WBMode'], 'daylight');
+    await tester.tap(find.byKey(const Key('mode-more')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('协议探测'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProtocolProbePage), findsOneWidget);
+    expect(container.read(shootPageVisibleProvider), isFalse);
+    expect(harness.gateways.camera.props['WBMode'], 'auto');
+    appRouter.pop();
+    await tester.pumpAndSettle();
+    expect(appRouter.routeInformationProvider.value.uri.path, '/shoot');
+    expect(container.read(shootPageVisibleProvider), isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('tap actual JPEG point sends 25,75 and bars do not focus',
       (tester) async {
     final bytes = File('test/fixtures/live_view_600x400.jpg').readAsBytesSync();
@@ -106,6 +134,15 @@ void main() {
     await tester.tap(find.text('日光'));
     await tester.pumpAndSettle();
     expect(harness.gateways.camera.props['WBMode'], 'daylight');
+    final container =
+        ProviderScope.containerOf(tester.element(find.byTooltip('返回首页')));
+    await tester.tap(find.byTooltip('返回首页'));
+    await tester.pumpAndSettle();
+    expect(harness.gateways.camera.props['WBMode'], 'auto');
+    expect(container.read(shootPageVisibleProvider), isFalse);
+    await tester.tap(find.text('拍摄'));
+    await tester.pumpAndSettle();
+    expect(container.read(shootPageVisibleProvider), isTrue);
   });
 
   testWidgets(

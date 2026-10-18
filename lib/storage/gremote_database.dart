@@ -5,14 +5,15 @@ import 'package:sqflite/sqflite.dart';
 
 /// Opens the single app database and owns its schema.
 abstract final class GRemoteDatabase {
-  static const version = 2;
+  static const version = 3;
 
   static Future<Database> open({
     DatabaseFactory? factory,
     String? path,
   }) async {
     final dbFactory = factory ?? databaseFactory;
-    final dbPath = path ?? p.join(await dbFactory.getDatabasesPath(), 'gremote.db');
+    final dbPath =
+        path ?? p.join(await dbFactory.getDatabasesPath(), 'gremote.db');
     if (dbPath != inMemoryDatabasePath &&
         !await dbFactory.databaseExists(dbPath)) {
       final legacyPath = p.join(p.dirname(dbPath), 'm10v.db');
@@ -38,10 +39,25 @@ abstract final class GRemoteDatabase {
   static Future<void> _create(Database db, int version) async {
     await _createV1(db);
     await _createV2(db);
+    await _createV3(db);
   }
 
   static Future<void> _upgrade(Database db, int from, int to) async {
     if (from < 2) await _createV2(db);
+    if (from < 3) await _createV3(db);
+  }
+
+  static Future<void> _createV3(Database db) async {
+    await db.execute('''
+      CREATE TABLE shot_locations (
+        dir TEXT NOT NULL, base_name TEXT NOT NULL,
+        capture_wall_seconds INTEGER NOT NULL, recorded_at INTEGER NOT NULL,
+        latitude REAL NOT NULL, longitude REAL NOT NULL, accuracy REAL NOT NULL,
+        altitude REAL, measured_at INTEGER NOT NULL,
+        PRIMARY KEY (dir, base_name, capture_wall_seconds)
+      )''');
+    await db.execute(
+        'CREATE INDEX shot_locations_recorded ON shot_locations(recorded_at)');
   }
 
   static Future<void> _createV1(Database db) async {

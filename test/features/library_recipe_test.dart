@@ -20,7 +20,7 @@ CaptureRecord _capture(String base, String recipeId) => CaptureRecord(
     );
 
 void main() {
-  test('library filters tagged photos and builds per-recipe export jobs',
+  test('library keeps all GR photos and builds per-recipe export jobs',
       () async {
     final gateway = FakeMediaGateway(
       entries: [mediaEntry(1), mediaEntry(2), mediaEntry(3)],
@@ -44,9 +44,8 @@ void main() {
     expect(container.read(libraryControllerProvider).tags.keys,
         containsAll([1, 2]));
 
-    await controller.setRecipeOnly(true);
     expect(container.read(libraryControllerProvider).items.map((i) => i.id),
-        [2, 1]);
+        [3, 2, 1]);
     controller.toggle(1);
     controller.toggle(2);
     final jobs = await controller.recipeJobs();

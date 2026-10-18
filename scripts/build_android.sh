@@ -104,7 +104,8 @@ SOURCE_APK="$ROOT_DIR/build/app/outputs/flutter-apk/app-$MODE.apk"
 
 mkdir -p "$ROOT_DIR/dist"
 TIMESTAMP="$(date '+%Y%m%d-%H%M%S')"
-OUTPUT_APK="$ROOT_DIR/dist/gremote-0.2.0+2-arm64-$MODE-$TIMESTAMP.apk"
+APP_VERSION="$(sed -n 's/^version:[[:space:]]*//p' "$ROOT_DIR/pubspec.yaml" | head -n 1)"
+OUTPUT_APK="$ROOT_DIR/dist/gremote-$APP_VERSION-arm64-$MODE-$TIMESTAMP.apk"
 cp "$SOURCE_APK" "$OUTPUT_APK"
 
 if command -v shasum >/dev/null 2>&1; then

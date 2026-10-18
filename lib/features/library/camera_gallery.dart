@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -7,19 +8,25 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../../app/theme/app_colors.dart';
 import '../../camera/connection/connection_controller.dart';
+import '../../camera/gateway/ble_gateway.dart';
 import '../../camera/connection/connection_state.dart';
 import '../../camera/http/camera_api.dart';
 import '../../camera/http/camera_files.dart';
 import '../../platform/device_api.g.dart';
 import 'camera_transfer.dart';
+import '../home/import_history.dart';
 
 final cameraGalleryServiceProvider = Provider<CameraGalleryService>((ref) {
-  final transport = ref.read(cameraGatewaysProvider).transport;
-  return CameraGalleryService(CameraApi(transport), CameraDeviceHostApi());
+  final gateways = ref.read(cameraGatewaysProvider);
+  return CameraGalleryService(
+      CameraApi(gateways.transport), CameraDeviceHostApi(),
+      events: gateways.ble.events);
 });
 
 class CameraGalleryService {
-  CameraGalleryService(this.api, this.host);
+  CameraGalleryService(this.api, this.host,
+      {this.events = const Stream.empty()});
+  final Stream<CameraDeviceEvent> events;
 
   final transferGate = CameraTransferGate();
 
@@ -59,14 +66,27 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
   bool _downloading = false;
   bool _selectionMode = false;
   int _session = 0;
-  String _format = '全部';
+  String _format = 'RAW+JPG';
+  StreamSubscription<CameraDeviceEvent>? _progressSubscription;
+  int _received = 0;
+  int _expected = -1;
+  String? _currentId;
+  bool _stopAfterCurrent = false;
   String? _currentFile;
   String? _result;
   final _failures = <String, String>{};
 
   bool _included(CameraFile file) =>
-      _format == '全部' ||
-      (_format == '仅 RAW' ? file.extension == 'DNG' : file.extension != 'DNG');
+      _format == 'RAW+JPG' ||
+      (_format == 'RAW' ? file.extension == 'DNG' : file.extension != 'DNG');
+  List<CameraFile> get _selectedFiles => _files
+      .where((file) => _selected.contains(file.remoteId) && _included(file))
+      .toList();
+  int get _selectedPhotos => _files
+      .where((f) => _selected.contains(f.remoteId))
+      .map((f) => '${f.dir}/${f.baseName}')
+      .toSet()
+      .length;
   String? _error;
   int _completed = 0;
   int _total = 0;
@@ -75,6 +95,24 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
   void initState() {
     super.initState();
     _service = ref.read(cameraGalleryServiceProvider);
+    _progressSubscription = _service.events.listen((event) {
+      if (!mounted || !_downloading || event.type != 'photoProgress') return;
+      try {
+        final data = jsonDecode(event.jsonPayload);
+        if (data is! Map || data['id'] != _currentId) return;
+        final bytes = data['bytes'];
+        final total = data['total'];
+        if (bytes is! int || total is! int || bytes < 0 || bytes < _received) {
+          return;
+        }
+        setState(() {
+          _received = bytes;
+          _expected = total;
+        });
+      } on FormatException {
+        // Ignore malformed native progress events.
+      }
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted &&
           ref.read(connectionControllerProvider) is ConnectionReady) {
@@ -86,6 +124,7 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
   @override
   void dispose() {
     _session++;
+    unawaited(_progressSubscription?.cancel());
     _service.transferGate.invalidate();
     super.dispose();
   }
@@ -120,6 +159,11 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
       _downloading = true;
       _completed = 0;
       _total = files.length;
+      _stopAfterCurrent = false;
+      _currentId = null;
+      _currentFile = null;
+      _received = 0;
+      _expected = -1;
       _error = null;
     });
     final session = _session;
@@ -130,13 +174,19 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
     try {
       await service.transferGate.originals(() async {
         for (final file in files) {
-          if (!mounted || session != _session) break;
+          if (!mounted || session != _session || _stopAfterCurrent) break;
           if (ref.read(connectionControllerProvider) is! ConnectionReady) break;
-          setState(() => _currentFile = file.file);
+          setState(() {
+            _currentFile = file.file;
+            _currentId = file.remoteId;
+            _received = 0;
+            _expected = -1;
+          });
           try {
             await service.download(file);
             if (!mounted || session != _session) break;
             successes++;
+            ref.invalidate(importHistoryProvider);
             _saved.add(file.remoteId);
             _selected.remove(file.remoteId);
           } catch (error) {
@@ -162,7 +212,9 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
     setState(() {
       _downloading = false;
       _currentFile = null;
-      _result = '保存完成 · 成功 $successes / ${files.length} 个文件';
+      _currentId = null;
+      _result =
+          '${_stopAfterCurrent ? '已停止' : '保存完成'} · 成功 $successes / ${files.length} 个文件';
       if (_failures.isNotEmpty) {
         _selectionMode = true;
         _error = '${_failures.length} 个文件保存失败，已保留选择，可再次保存重试';
@@ -172,10 +224,10 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
 
   void _toggle(List<CameraFile> files) {
     if (_downloading) return;
-    final ids = files.where(_included).map((f) => f.remoteId).toList();
+    final ids = files.map((f) => f.remoteId).toList();
     setState(() {
       _selectionMode = true;
-      if (ids.every(_selected.contains)) {
+      if (ids.any(_selected.contains)) {
         _selected.removeAll(ids);
       } else {
         _selected.addAll(ids);
@@ -223,180 +275,247 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
     }
     final entries = groups.entries.toList()
       ..sort((a, b) => b.key.compareTo(a.key));
-    return Column(children: [
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
+        padding: const EdgeInsets.fromLTRB(20, 4, 12, 12),
         child: Row(children: [
-          const Icon(Icons.circle, size: 8, color: GRemoteColors.gold),
-          const SizedBox(width: 9),
           Expanded(
-              child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('相机照片',
-                  style:
-                      TextStyle(color: GRemoteColors.goldSoft, fontSize: 12)),
-              const SizedBox(height: 4),
-              Text('${groups.length} 张 · ${_files.length} 个文件',
-                  style: const TextStyle(
-                      color: GRemoteColors.muted, fontSize: 11)),
-            ],
-          )),
+              child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  child: Align(
+                      alignment: Alignment.centerLeft,
+                      key: ValueKey(_selectionMode),
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                                _selectionMode
+                                    ? '已选 $_selectedPhotos 张'
+                                    : '相机照片',
+                                style: const TextStyle(
+                                    color: GRemoteColors.text,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 3),
+                            Text(
+                                _selectionMode
+                                    ? '轻点照片选择 · 长按开始多选'
+                                    : '${groups.length} 张照片 · 原始画质',
+                                style: const TextStyle(
+                                    color: GRemoteColors.muted, fontSize: 11)),
+                          ])))),
+          if (_selectionMode)
+            TextButton(
+                onPressed: _downloading
+                    ? null
+                    : () => setState(() {
+                          if (_selected.length == _files.length) {
+                            _selected.clear();
+                          } else {
+                            _selected.addAll(_files.map((f) => f.remoteId));
+                          }
+                        }),
+                child: Text(
+                    _selected.length == _files.length && _files.isNotEmpty
+                        ? '清除'
+                        : '全选')),
           TextButton(
-            onPressed: _downloading
-                ? null
-                : () => setState(() {
-                      _selectionMode = !_selectionMode;
-                      if (!_selectionMode) _selected.clear();
-                    }),
-            child: Text(_selectionMode ? '取消' : '多选'),
-          ),
-          IconButton(
-              tooltip: '刷新相机图库',
-              onPressed: _loading || _downloading ? null : _refresh,
-              icon:
-                  const Icon(Icons.refresh_rounded, color: GRemoteColors.gold)),
+              onPressed: _downloading
+                  ? null
+                  : () => setState(() {
+                        _selectionMode = !_selectionMode;
+                        if (!_selectionMode) _selected.clear();
+                      }),
+              child: Text(_selectionMode ? '取消' : '多选')),
+          if (!_selectionMode)
+            IconButton(
+                tooltip: '刷新相机图库',
+                onPressed: _loading || _downloading ? null : _refresh,
+                icon: const Icon(Icons.refresh_rounded,
+                    size: 22, color: GRemoteColors.gold)),
         ]),
       ),
-      if (_selectionMode)
-        Container(
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: GRemoteColors.raised,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: GRemoteColors.divider),
-          ),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Wrap(spacing: 8, runSpacing: 8, children: [
-              for (final format in ['全部', '仅 JPEG', '仅 RAW'])
-                ChoiceChip(
-                  label: Text(format),
-                  selected: _format == format,
-                  onSelected: _downloading
-                      ? null
-                      : (_) => setState(() {
-                            _format = format;
-                            _selected.removeWhere((id) => !_files
-                                .any((f) => f.remoteId == id && _included(f)));
-                          }),
-                ),
-            ]),
-            const SizedBox(height: 4),
-            Row(children: [
-              const Expanded(
-                  child: Text('轻点照片可多选',
-                      style:
-                          TextStyle(color: GRemoteColors.muted, fontSize: 12))),
-              TextButton(
-                  onPressed: _downloading
-                      ? null
-                      : () => setState(() {
-                            _selected.addAll(
-                                _files.where(_included).map((f) => f.remoteId));
-                          }),
-                  child: const Text('全选')),
-              TextButton(
-                  onPressed:
-                      _downloading ? null : () => setState(_selected.clear),
-                  child: const Text('清除')),
-            ]),
-          ]),
-        ),
+      if (_loading)
+        const LinearProgressIndicator(minHeight: 2, color: GRemoteColors.gold),
       if (_result != null && !_downloading)
         Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
             child: Text(_result!,
-                style: const TextStyle(color: GRemoteColors.goldSoft))),
-      if (_loading)
-        const LinearProgressIndicator(
-            color: GRemoteColors.gold, backgroundColor: GRemoteColors.divider),
+                style: const TextStyle(
+                    color: GRemoteColors.goldSoft, fontSize: 12))),
       if (_error != null)
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-          child: Text(_error!,
-              style: const TextStyle(color: GRemoteColors.danger)),
-        ),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+            child: Text(_error!,
+                style: TextStyle(
+                    color: _error != null
+                        ? GRemoteColors.danger
+                        : GRemoteColors.goldSoft,
+                    fontSize: 12))),
       Expanded(
           child: entries.isEmpty && !_loading
               ? _GalleryEmpty(
                   icon: Icons.photo_library_outlined,
                   title: _error == null ? '相机里还没有照片' : '暂时无法显示照片',
-                  message: _error == null ? '拍摄后轻点右上角刷新。' : '轻点右上角重试。',
-                )
+                  message: _error == null ? '拍摄后轻点右上角刷新。' : '轻点右上角重试。')
               : GridView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 0.78,
-                  ),
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 10,
+                      childAspectRatio: 0.88),
                   itemCount: entries.length,
-                  itemBuilder: (context, index) => _tile(entries[index].value),
-                )),
-      if (_selectionMode || _downloading)
-        SafeArea(
-          top: false,
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(18, 10, 18, 12),
-            decoration: const BoxDecoration(
-                color: GRemoteColors.navy,
-                border: Border(top: BorderSide(color: GRemoteColors.divider))),
-            child: _downloading
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                        Row(children: [
-                          const Icon(Icons.downloading_rounded,
-                              color: GRemoteColors.gold, size: 20),
-                          const SizedBox(width: 8),
-                          const Expanded(
-                              child: Text('正在保存原图',
-                                  style: TextStyle(
-                                      color: GRemoteColors.text,
-                                      fontWeight: FontWeight.w600))),
-                          Text('$_completed / $_total',
-                              style:
-                                  const TextStyle(color: GRemoteColors.gold)),
-                        ]),
-                        const SizedBox(height: 8),
-                        Text(_currentFile ?? '正在准备下载…',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: GRemoteColors.muted, fontSize: 12)),
-                        const SizedBox(height: 10),
-                        ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: LinearProgressIndicator(
-                                minHeight: 4,
-                                value: _total == 0 ? 0 : _completed / _total,
-                                color: GRemoteColors.gold,
-                                backgroundColor: GRemoteColors.divider)),
-                      ])
-                : Row(children: [
-                    Expanded(
-                        child: Text('已选 ${_selected.length} 个文件',
-                            style: const TextStyle(color: GRemoteColors.text))),
-                    const SizedBox(width: 12),
-                    Expanded(
-                        child: FilledButton.icon(
-                      onPressed: _selected.isEmpty
-                          ? null
-                          : () => _download(_files
-                              .where((f) => _selected.contains(f.remoteId))
-                              .toList()),
-                      icon: const Icon(Icons.download_rounded, size: 18),
-                      label: const Text('保存原图'),
-                    )),
-                  ]),
-          ),
-        ),
+                  itemBuilder: (context, index) =>
+                      _tile(entries[index].value))),
+      AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.bottomCenter,
+          child: _selectionMode || _downloading
+              ? _savePanel()
+              : const SizedBox(width: double.infinity)),
     ]);
   }
+
+  Widget _savePanel() {
+    final files = _selectedFiles;
+    final fraction =
+        _expected > 0 ? (_received / _expected).clamp(0.0, 1.0) : null;
+    return SafeArea(
+        top: false,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
+          decoration: const BoxDecoration(
+              color: GRemoteColors.navy,
+              border: Border(top: BorderSide(color: GRemoteColors.divider))),
+          child: _downloading
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                      Row(children: [
+                        const Expanded(
+                            child: Text('正在保存原图',
+                                style: TextStyle(
+                                    color: GRemoteColors.text,
+                                    fontWeight: FontWeight.w600))),
+                        Text('$_completed / $_total 个文件',
+                            style: const TextStyle(
+                                color: GRemoteColors.goldSoft, fontSize: 12)),
+                      ]),
+                      const SizedBox(height: 10),
+                      Row(children: [
+                        Expanded(
+                            child: Text(_currentFile ?? '正在等待预览传输结束…',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    color: GRemoteColors.muted, fontSize: 12))),
+                        const SizedBox(width: 12),
+                        Text(
+                            fraction == null
+                                ? _bytes(_received)
+                                : '${(fraction * 100).floor()}%',
+                            key: const Key('photo-byte-progress'),
+                            style: const TextStyle(
+                                color: GRemoteColors.goldSoft, fontSize: 12)),
+                      ]),
+                      const SizedBox(height: 10),
+                      TweenAnimationBuilder<double>(
+                          duration: const Duration(milliseconds: 150),
+                          tween: Tween(end: fraction ?? 0),
+                          builder: (context, value, _) => ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                  key: const Key('photo-progress-bar'),
+                                  minHeight: 4,
+                                  value: fraction == null ? null : value,
+                                  color: GRemoteColors.gold,
+                                  backgroundColor: GRemoteColors.divider))),
+                      const SizedBox(height: 8),
+                      Row(children: [
+                        Expanded(
+                            child: Text(
+                                _expected > 0
+                                    ? '${_bytes(_received)} / ${_bytes(_expected)}'
+                                    : '已接收 ${_bytes(_received)} · 文件大小未知',
+                                style: const TextStyle(
+                                    color: GRemoteColors.muted, fontSize: 10))),
+                        TextButton(
+                            onPressed: _stopAfterCurrent
+                                ? null
+                                : () =>
+                                    setState(() => _stopAfterCurrent = true),
+                            child: Text(_stopAfterCurrent ? '正在收尾' : '停止后续')),
+                      ]),
+                    ])
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                      Row(children: [
+                        const Text('保存格式',
+                            style: TextStyle(
+                                color: GRemoteColors.muted, fontSize: 12)),
+                        const SizedBox(width: 14),
+                        Expanded(
+                            child: SegmentedButton<String>(
+                                style: SegmentedButton.styleFrom(
+                                    visualDensity: VisualDensity.compact,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8),
+                                    textStyle: const TextStyle(fontSize: 11)),
+                                showSelectedIcon: false,
+                                segments: const [
+                                  ButtonSegment(
+                                      value: 'JPG', label: Text('JPG')),
+                                  ButtonSegment(
+                                      value: 'RAW', label: Text('RAW')),
+                                  ButtonSegment(
+                                      value: 'RAW+JPG', label: Text('RAW+JPG'))
+                                ],
+                                selected: {_format},
+                                onSelectionChanged: (value) =>
+                                    setState(() => _format = value.single))),
+                      ]),
+                      const SizedBox(height: 10),
+                      Row(children: [
+                        Expanded(
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                              Text('已选 $_selectedPhotos 张',
+                                  style: const TextStyle(
+                                      color: GRemoteColors.text,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 3),
+                              Text(
+                                  files.isEmpty && _selectedPhotos > 0
+                                      ? '所选照片没有此格式'
+                                      : '${files.length} 个文件 · ${_format == 'RAW' ? 'DNG 原始文件' : _format == 'JPG' ? 'JPEG 原图' : '两种格式'}',
+                                  style: const TextStyle(
+                                      color: GRemoteColors.muted,
+                                      fontSize: 10)),
+                            ])),
+                        const SizedBox(width: 12),
+                        Expanded(
+                            child: FilledButton.icon(
+                                onPressed: files.isEmpty
+                                    ? null
+                                    : () => _download(files),
+                                icon: const Icon(Icons.download_rounded,
+                                    size: 18),
+                                label: const Text('保存原图'))),
+                      ]),
+                    ]),
+        ));
+  }
+
+  String _bytes(int value) => value < 1024 * 1024
+      ? '${(value / 1024).toStringAsFixed(0)} KB'
+      : '${(value / (1024 * 1024)).toStringAsFixed(1)} MB';
 
   Widget _tile(List<CameraFile> files) {
     final jpeg = files.where((f) => f.extension != 'DNG').firstOrNull;
@@ -411,7 +530,9 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
           ? null
           : () => _selectionMode ? _toggle(files) : _showFileSheet(files),
       onLongPress: _downloading ? null : () => _toggle(files),
-      child: DecoratedBox(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
             color: GRemoteColors.raised,
             borderRadius: BorderRadius.circular(14),
@@ -427,7 +548,8 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                   future: preview,
                   builder: (context, snapshot) {
                     if (snapshot.hasData) {
-                      return Image.memory(snapshot.data!, fit: BoxFit.cover);
+                      return Image.memory(snapshot.data!,
+                          fit: BoxFit.cover, gaplessPlayback: true);
                     }
                     return const ColoredBox(
                         color: GRemoteColors.navy,
@@ -438,12 +560,29 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                 Positioned(
                     top: 10,
                     right: 10,
-                    child: Icon(
-                        selected > 0
-                            ? Icons.check_circle
-                            : Icons.radio_button_unchecked,
-                        color: GRemoteColors.gold,
-                        size: 25)),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      width: 26,
+                      height: 26,
+                      decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: selected > 0
+                              ? GRemoteColors.gold
+                              : Colors.black45,
+                          border: Border.all(
+                              color: selected > 0
+                                  ? GRemoteColors.gold
+                                  : Colors.white70,
+                              width: 1.5)),
+                      child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 150),
+                          child: selected > 0
+                              ? const Icon(Icons.check_rounded,
+                                  key: ValueKey(true),
+                                  color: GRemoteColors.night,
+                                  size: 18)
+                              : const SizedBox(key: ValueKey(false))),
+                    )),
               if (files.any((file) => _failures.containsKey(file.remoteId)))
                 Positioned(
                     bottom: 10,
@@ -476,14 +615,17 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                       color: GRemoteColors.text,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600)),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500)),
               const SizedBox(height: 3),
-              Text(files.map((f) => f.extension).join('  +  '),
+              Text(
+                  files
+                      .map((f) => f.extension == 'DNG' ? 'RAW' : 'JPG')
+                      .join(' + '),
                   style: const TextStyle(
-                      color: GRemoteColors.gold,
-                      fontSize: 10,
-                      letterSpacing: 1)),
+                      color: GRemoteColors.muted,
+                      fontSize: 9,
+                      letterSpacing: 0.5)),
             ]),
           ),
         ]),

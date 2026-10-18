@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gremote/camera/capture/capture_tracker.dart';
@@ -23,10 +25,14 @@ class _Camera implements ProgramCamera {
   final writes = <String>[];
   final shots = <CaptureContext>[];
   var failures = 0;
+  String? delayedWrite;
+  Completer<void>? writeGate;
+  Completer<void>? shotGate;
 
   @override
   Future<WriteOutcome> setParam(String wireKey, String value) async {
     writes.add('$wireKey=$value');
+    if (wireKey == delayedWrite) await writeGate!.future;
     state = state.applyProps(parseProps({wireKey: value}));
     return WriteConfirmed(value);
   }
@@ -36,6 +42,7 @@ class _Camera implements ProgramCamera {
     required bool autoFocus,
     required CaptureContext context,
   }) async {
+    if (shotGate != null) await shotGate!.future;
     if (failures-- > 0) return const [];
     shots.add(context);
     return [
@@ -76,6 +83,75 @@ class _Program implements Program {
 }
 
 void main() {
+  for (final key in ['shootMode', 'av']) {
+    test('abort waits for pending $key write and prevents shutter', () async {
+      final gate = Completer<void>();
+      final camera = _Camera()
+        ..delayedWrite = key
+        ..writeGate = gate;
+      final runner = ProgramRunner(camera: camera, onState: (_) {});
+      final running = runner.start(_Program(delay: null));
+      await Future<void>.delayed(Duration.zero);
+      var aborted = false;
+      final aborting = runner.abort().then((_) => aborted = true);
+      var secondAborted = false;
+      final secondAbort = runner.abort().then((_) => secondAborted = true);
+      await Future<void>.delayed(Duration.zero);
+      expect(aborted, isFalse);
+      expect(secondAborted, isFalse);
+      gate.complete();
+      await aborting;
+      await secondAbort;
+      await running;
+      expect(camera.shots, isEmpty);
+      expect(camera.state.value(ParamKey.drive), 'continuous');
+      expect(camera.state.value(ParamKey.aperture), '2.8');
+      expect(runner.state.phase, RunPhase.aborted);
+    });
+  }
+
+  test('abort waits for in-flight capture before restoring and stops frames',
+      () async {
+    final gate = Completer<void>();
+    final camera = _Camera()..shotGate = gate;
+    final runner = ProgramRunner(camera: camera, onState: (_) {});
+    final running = runner.start(_Program(delay: null));
+    await Future<void>.delayed(Duration.zero);
+    var aborted = false;
+    final aborting = runner.abort().then((_) => aborted = true);
+    await Future<void>.delayed(Duration.zero);
+    expect(aborted, isFalse);
+    expect(camera.state.value(ParamKey.aperture), '4.0');
+    gate.complete();
+    await aborting;
+    await running;
+    expect(camera.shots, hasLength(1));
+    expect(camera.state.value(ParamKey.aperture), '2.8');
+    expect(runner.state.phase, RunPhase.aborted);
+  });
+
+  test('abort interrupts a scheduled frame delay before restoring', () {
+    fakeAsync((async) {
+      final camera = _Camera();
+      final runner = ProgramRunner(
+        camera: camera,
+        onState: (_) {},
+        now: () => async.getClock(DateTime.utc(2026)).now(),
+      );
+      runner.start(_Program());
+      async.flushMicrotasks();
+      var aborted = false;
+      runner.abort().then((_) => aborted = true);
+      async.flushMicrotasks();
+      expect(aborted, isTrue);
+      expect(camera.shots, hasLength(1));
+      expect(camera.state.value(ParamKey.drive), 'continuous');
+      expect(camera.state.value(ParamKey.aperture), '2.8');
+      async.elapse(const Duration(seconds: 5));
+      expect(camera.shots, hasLength(1));
+    });
+  });
+
   test('runs frames at planned times and restores changed parameters', () {
     fakeAsync((async) {
       final camera = _Camera();

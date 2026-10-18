@@ -27,6 +27,14 @@ final cameraStateControllerProvider =
 final latestCaptureProvider = StreamProvider<CaptureRecord>(
     (ref) => ref.watch(cameraStateControllerProvider.notifier).captures);
 
+class SettingsRestoreReport {
+  const SettingsRestoreReport(
+      {this.restored = const [], this.failed = const {}});
+  final List<String> restored;
+  final Map<String, String> failed;
+  bool get success => failed.isEmpty;
+}
+
 class _Session {
   _Session({
     required this.firmware,
@@ -36,6 +44,7 @@ class _Session {
     required this.tracker,
   });
 
+  Map<String, CameraParam>? baseline;
   final String firmware;
   ProtocolProfile profile;
   final ParamWriter writer;
@@ -55,6 +64,7 @@ class CameraStateController extends Notifier<CameraState> {
   final _captures = StreamController<CaptureRecord>.broadcast();
   var _propsFailures = 0;
   var _shooting = 0;
+  Future<SettingsRestoreReport>? _restoring;
 
   CameraApi get api => _api;
   Stream<CaptureRecord> get captures => _captures.stream;
@@ -84,9 +94,11 @@ class CameraStateController extends Notifier<CameraState> {
 
   /// Writes one parameter; the camera's readback decides the outcome.
   Future<WriteOutcome> setParam(String wireKey, String value) async {
+    if (_restoring != null) return const WriteRejected('restoring');
     final session = _session;
     final param = state.params[wireKey];
     if (session == null || param == null) return const WriteRejected('offline');
+    if (session.baseline == null) return const WriteRejected('noBaseline');
     if (!state.writesEnabled) return const WritesDisabled();
     if (!param.writable) return const WriteRejected('notWritable');
     state = state.copyWith(pending: {...state.pending, wireKey: value});
@@ -95,6 +107,80 @@ class CameraStateController extends Notifier<CameraState> {
       state = state.copyWith(pending: {...state.pending}..remove(wireKey));
     }
     return outcome;
+  }
+
+  /// Restores the first camera readback for this connection. No protocol values
+  /// are synthesized; changed settings must still advertise the original value.
+  Future<SettingsRestoreReport> restoreConnectionSettings() {
+    final pending = _restoring;
+    if (pending != null) return pending;
+    final operation = _restoreConnectionSettings();
+    _restoring = operation;
+    return operation.whenComplete(() {
+      if (identical(_restoring, operation)) _restoring = null;
+    });
+  }
+
+  Future<SettingsRestoreReport> _restoreConnectionSettings() async {
+    final session = _session;
+    if (session == null) {
+      return const SettingsRestoreReport(failed: {'connection': 'offline'});
+    }
+    await session.writer.drain();
+    if (_session != session) {
+      return const SettingsRestoreReport(failed: {'connection': 'offline'});
+    }
+    try {
+      await session.stream.refresh();
+    } on Exception {
+      return const SettingsRestoreReport(failed: {'connection': 'readFailed'});
+    }
+    final baseline = session.baseline;
+    if (baseline == null) {
+      return const SettingsRestoreReport(failed: {'connection': 'noBaseline'});
+    }
+    final restored = <String>[];
+    final failed = <String, String>{};
+    for (final original in baseline.values) {
+      if (!original.writable || original.current == null) continue;
+      final key = original.wireKey;
+      if (_session != session) {
+        failed[key] = 'offline';
+        continue;
+      }
+      final current = state.params[key];
+      if (current?.current == original.current) continue;
+      if (current == null ||
+          !current.writable ||
+          !current.options.contains(original.current)) {
+        failed[key] = 'unsupported';
+        continue;
+      }
+      if (!state.writesEnabled) {
+        failed[key] = 'writesDisabled';
+        continue;
+      }
+      final outcome = await session.writer.write(current, original.current!);
+      // A timeout completes the UI future before the underlying write settles.
+      await session.writer.drain();
+      if (_session != session) {
+        failed[key] = 'offline';
+        continue;
+      }
+      try {
+        await session.stream.refresh();
+        if (_session == session &&
+            state.params[key]?.current == original.current) {
+          restored.add(key);
+        } else {
+          failed[key] = 'readbackMismatch';
+        }
+      } on Exception {
+        failed[key] = 'readFailed';
+      }
+      if (outcome is WritesDisabled) failed[key] = 'writesDisabled';
+    }
+    return SettingsRestoreReport(restored: restored, failed: failed);
   }
 
   /// HTTP shutter, then waits for the new file(s).
@@ -188,7 +274,7 @@ class CameraStateController extends Notifier<CameraState> {
         socket: _bundle.changes,
         fetchProps: _fetchProps,
         onProps: (json, {required full}) {
-          if (_session == session) _applyProps(json);
+          if (_session == session) _applyProps(json, full: full);
         },
         onMode: (mode) {
           if (_session == session) state = state.copyWith(syncMode: mode);
@@ -248,10 +334,11 @@ class CameraStateController extends Notifier<CameraState> {
     }
   }
 
-  void _applyProps(Map<String, Object?> json) {
+  void _applyProps(Map<String, Object?> json, {required bool full}) {
     final parsed = parseProps(json);
     final before = state.status;
     state = state.applyProps(parsed);
+    if (full) _session?.baseline ??= Map.unmodifiable(state.params);
     final after = state.status;
     final newCaptureId = parsed.status.captureId != null &&
         before.captureId != null &&

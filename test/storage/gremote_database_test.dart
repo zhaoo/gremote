@@ -13,12 +13,12 @@ Future<Set<String>> _tables(Database db) async => {
 void main() {
   setUpAll(sqfliteFfiInit);
 
-  test('a new database is created at version 2 with every table', () async {
+  test('a new database is created at version 3 with every table', () async {
     final db = await GRemoteDatabase.open(
         factory: databaseFactoryFfiNoIsolate, path: inMemoryDatabasePath);
     addTearDown(db.close);
 
-    expect(await db.getVersion(), 2);
+    expect(await db.getVersion(), 3);
     expect(
       await _tables(db),
       containsAll([
@@ -30,6 +30,7 @@ void main() {
         'combo_recipes',
         'capture_tags',
         'program_runs',
+        'shot_locations',
       ]),
     );
   });
@@ -49,8 +50,28 @@ void main() {
     addTearDown(migrated.close);
     expect(await File(targetPath).exists(), isTrue);
     expect(await File(legacyPath).exists(), isFalse);
-    expect(await migrated.query('app_kv', where: 'key = ?', whereArgs: ['saved']),
+    expect(
+        await migrated.query('app_kv', where: 'key = ?', whereArgs: ['saved']),
         hasLength(1));
+  });
+
+  test('version 2 keeps preferences while adding shot locations', () async {
+    final dir = Directory.systemTemp.createTempSync('gremote-v2-db');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final path = '${dir.path}/gremote.db';
+    final old = await databaseFactoryFfiNoIsolate.openDatabase(path,
+        options: OpenDatabaseOptions(
+            version: 2,
+            onCreate: (db, _) => db.execute(
+                'CREATE TABLE app_kv (key TEXT PRIMARY KEY, value TEXT NOT NULL)')));
+    await old.insert('app_kv', {'key': 'retained', 'value': 'yes'});
+    await old.close();
+    final db = await GRemoteDatabase.open(
+        factory: databaseFactoryFfiNoIsolate, path: path);
+    addTearDown(db.close);
+    expect(await db.getVersion(), 3);
+    expect((await db.query('app_kv')).single['value'], 'yes');
+    expect(await db.query('shot_locations'), isEmpty);
   });
 
   test('a version 1 database upgrades and keeps its rows', () async {
@@ -84,7 +105,7 @@ void main() {
         factory: databaseFactoryFfiNoIsolate, path: path);
     addTearDown(db.close);
 
-    expect(await db.getVersion(), 2);
+    expect(await db.getVersion(), 3);
     expect(
         await _tables(db),
         containsAll(

@@ -13,7 +13,6 @@ class LibraryState {
   const LibraryState({
     this.access,
     this.grOnly = true,
-    this.recipeOnly = false,
     this.items = const [],
     this.tags = const {},
     this.scan,
@@ -24,7 +23,6 @@ class LibraryState {
   /// Null until the first permission check returns.
   final MediaAccess? access;
   final bool grOnly;
-  final bool recipeOnly;
   final List<LocalMediaItem> items;
   final Map<int, TagMatch> tags;
 
@@ -42,7 +40,6 @@ class LibraryState {
   LibraryState copyWith({
     MediaAccess? access,
     bool? grOnly,
-    bool? recipeOnly,
     List<LocalMediaItem>? items,
     Map<int, TagMatch>? tags,
     ScanProgress? Function()? scan,
@@ -52,7 +49,6 @@ class LibraryState {
       LibraryState(
         access: access ?? this.access,
         grOnly: grOnly ?? this.grOnly,
-        recipeOnly: recipeOnly ?? this.recipeOnly,
         items: items ?? this.items,
         tags: tags ?? this.tags,
         scan: scan == null ? this.scan : scan(),
@@ -89,11 +85,6 @@ class LibraryController extends Notifier<LibraryState> {
 
   Future<void> setGrOnly(bool grOnly) async {
     state = state.copyWith(grOnly: grOnly, selected: const {});
-    await _reload();
-  }
-
-  Future<void> setRecipeOnly(bool recipeOnly) async {
-    state = state.copyWith(recipeOnly: recipeOnly, selected: const {});
     await _reload();
   }
 
@@ -174,9 +165,7 @@ class LibraryController extends Notifier<LibraryState> {
       final match = matchTag(item, allTags);
       if (match != null) tags[item.id] = match;
     }
-    final items = state.recipeOnly
-        ? allItems.where((item) => tags.containsKey(item.id)).toList()
-        : allItems;
+    final items = allItems;
     final ids = {for (final item in items) item.id};
     state = state.copyWith(
       items: items,

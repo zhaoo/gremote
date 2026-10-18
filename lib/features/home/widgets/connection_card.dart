@@ -157,7 +157,7 @@ class ConnectionCard extends StatelessWidget {
           const _ConnectionPresentation(
             status: 'Wi-Fi',
             title: '正在连接相机 Wi-Fi',
-            detail: '如出现系统连接提示，请选择允许；已允许后请等待连接。',
+            detail: '请确认相机“无线 LAN”已开启（仅开启蓝牙还不够）。如出现系统连接提示，请选择允许；已允许后请等待连接。',
           ),
         ConnectionWifiBound() => const _ConnectionPresentation(
             status: 'Wi-Fi 已绑定',
@@ -466,6 +466,7 @@ class _FailureContent extends StatelessWidget {
         'cameraNotFound' => '未找到相机',
         'unsupportedCamera' => '暂不支持这台相机',
         'wifiUserRejected' => '需要允许 Wi-Fi 连接',
+        'wifiTimeout' => '相机 Wi-Fi 连接超时',
         'bleTimeout' => '蓝牙读取超时',
         'bleDisconnected' => '蓝牙连接中断',
         'wifiLost' => '相机 Wi-Fi 已断开',
@@ -475,7 +476,9 @@ class _FailureContent extends StatelessWidget {
       };
 
   String _failureGuidance(ConnectionFailure failure) =>
-      failure.code == 'cameraNotFound'
+      failure.code == 'wifiTimeout'
+          ? '请在相机中开启“无线 LAN”；蓝牙开启不代表 Wi-Fi 已开启。开启后重新连接，并允许系统连接提示。'
+          : failure.code == 'cameraNotFound'
           ? '请确认相机已开启并靠近手机。'
           : switch (failure.userAction) {
               ConnectionUserAction.openSettings => '打开系统设置授予权限，然后返回重试。',

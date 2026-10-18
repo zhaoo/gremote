@@ -22,6 +22,7 @@ import '../../camera/recipe/recipe_store.dart';
 import '../../camera/sync/camera_state.dart';
 import '../../camera/sync/camera_state_controller.dart';
 import '../../darkroom/darkroom_providers.dart';
+import '../../location/location_recording.dart';
 import 'shoot_mode.dart';
 import 'shoot_labels.dart';
 import 'widgets/bottom_bar.dart';
@@ -62,18 +63,25 @@ class _ShootPageState extends ConsumerState<ShootPage> {
   var _focusFailed = false;
   var _shutterHeld = false;
   var _shutterEpoch = 0;
+  GoRouter? _router;
+  bool _leaving = false;
+  bool _restoreRequired = false;
+  Future<void>? _pressInFlight;
+  Future<SettingsRestoreReport>? _finishing;
+  late final StateController<Future<bool> Function()?> _exitHandler;
+  bool _restoreDialogVisible = false;
 
   @override
   void initState() {
     super.initState();
     unawaited(SystemChrome.setPreferredOrientations(DeviceOrientation.values));
     _shootVisible = ref.read(shootPageVisibleProvider.notifier);
+    _exitHandler = ref.read(shootExitHandlerProvider.notifier);
     _liveViewController = ref.read(liveViewControllerProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _attached = true;
-      _shootVisible.state = true;
-      _liveViewController.attach();
+      _exitHandler.state = _prepareExit;
+      _activate();
     });
     _lifecycle = AppLifecycleListener(onStateChange: (lifecycle) {
       ref.read(appForegroundProvider.notifier).state =
@@ -83,7 +91,40 @@ class _ShootPageState extends ConsumerState<ShootPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final router = GoRouter.of(context);
+    if (identical(router, _router)) return;
+    _router?.routeInformationProvider.removeListener(_routeChanged);
+    _router = router;
+    router.routeInformationProvider.addListener(_routeChanged);
+  }
+
+  void _routeChanged() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_router?.routeInformationProvider.value.uri.path == '/shoot') {
+        if (!_leaving) _activate();
+      }
+    });
+  }
+
+  void _activate() {
+    if (_attached ||
+        _finishing != null ||
+        _router?.routeInformationProvider.value.uri.path != '/shoot') return;
+    _attached = true;
+    if (ref.read(connectionControllerProvider) is ConnectionReady) {
+      _restoreRequired = true;
+    }
+    _shootVisible.state = true;
+    _liveViewController.attach();
+    unawaited(SystemChrome.setPreferredOrientations(DeviceOrientation.values));
+  }
+
+  @override
   void dispose() {
+    _router?.routeInformationProvider.removeListener(_routeChanged);
     _histogramTimer?.cancel();
     _lifecycle.dispose();
     if (_attached) {
@@ -104,12 +145,14 @@ class _ShootPageState extends ConsumerState<ShootPage> {
   @override
   Widget build(BuildContext context) {
     ref.listen(connectionControllerProvider, (_, next) {
+      if (next is ConnectionReady && _attached) _restoreRequired = true;
       if (next is! ConnectionReady) {
         _shutterEpoch++;
         _shutterHeld = false;
         _focusPoint = null;
       }
     });
+    ref.watch(locationRecordingProvider);
     final connection = ref.watch(connectionControllerProvider);
     final connected = connection is ConnectionReady;
     final camera = ref.watch(cameraStateControllerProvider);
@@ -157,7 +200,8 @@ class _ShootPageState extends ConsumerState<ShootPage> {
                 ),
               Expanded(
                 child: _mode == ShootMode.more
-                    ? MoreGrid(onProbe: () => context.push('/probe'))
+                    ? MoreGrid(
+                        onProbe: () => unawaited(_exitTo('/probe', push: true)))
                     : LayoutBuilder(builder: (context, constraints) {
                         final height = constraints.maxHeight;
                         final width =
@@ -245,7 +289,7 @@ class _ShootPageState extends ConsumerState<ShootPage> {
                 onPause: ref.read(programControllerProvider.notifier).pause,
                 onResume: () => unawaited(
                     ref.read(programControllerProvider.notifier).resume()),
-                onLibrary: () => context.go('/library'),
+                onLibrary: () => unawaited(_exitTo('/library')),
               ),
             ]),
             if (programActive)
@@ -258,6 +302,17 @@ class _ShootPageState extends ConsumerState<ShootPage> {
                   tooltip: '暗屏',
                 ),
               ),
+            if (_leaving && !_restoreDialogVisible)
+              const Positioned.fill(
+                  child: Stack(children: [
+                ModalBarrier(dismissible: false, color: Colors.black54),
+                Center(
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('正在恢复相机设置…'),
+                ])),
+              ])),
             if (_dimmed && programActive)
               DimOverlay(
                 progress: '${program.done}/${program.total} · 点击恢复显示',
@@ -269,10 +324,126 @@ class _ShootPageState extends ConsumerState<ShootPage> {
     );
   }
 
-  void _goHome() {
-    unawaited(SystemChrome.setPreferredOrientations(
-        const [DeviceOrientation.portraitUp]));
-    context.go('/home');
+  void _goHome() => unawaited(_exitTo('/home'));
+
+  Future<SettingsRestoreReport> _finishSession() {
+    final pending = _finishing;
+    if (pending != null) return pending;
+    final operation = _doFinishSession();
+    _finishing = operation;
+    return operation.whenComplete(() {
+      if (identical(_finishing, operation)) _finishing = null;
+    });
+  }
+
+  Future<SettingsRestoreReport> _doFinishSession() async {
+    _attached = false;
+    _shootVisible.state = false;
+    _histogramTimer?.cancel();
+    _histogram = false;
+    _stats = null;
+    _liveViewController.detach();
+    await ref.read(locationRecordingProvider.notifier).sync();
+    try {
+      if (!_restoreRequired &&
+          ref.read(connectionControllerProvider) is! ConnectionReady) {
+        return const SettingsRestoreReport();
+      }
+      await ref.read(programControllerProvider.notifier).abort();
+      await _pressInFlight?.catchError((Object _) {});
+      if (_shutterHeld) await _releaseShutter();
+      await ref.read(cameraGatewaysProvider).transport.stopLiveView();
+      if (ref.read(connectionControllerProvider) is! ConnectionReady) {
+        return !_restoreRequired
+            ? const SettingsRestoreReport()
+            : const SettingsRestoreReport(failed: {'connection': 'offline'});
+      }
+      final report = await ref
+          .read(cameraStateControllerProvider.notifier)
+          .restoreConnectionSettings();
+      if (report.success) _restoreRequired = false;
+      return report;
+    } catch (_) {
+      return const SettingsRestoreReport(
+          failed: {'connection': 'restoreFailed'});
+    } finally {
+      _shutterEpoch++;
+      _shutterHeld = false;
+    }
+  }
+
+  Future<void> _exitTo(String destination, {bool push = false}) async {
+    if (_leaving) return;
+    if (push) {
+      final allowed = await _prepareExit();
+      if (!mounted) return;
+      if (!allowed) return;
+      // Imperative pushes retain /shoot in the reported URI. Keep the route
+      // listener from reactivating its session underneath the pushed page.
+      setState(() => _leaving = true);
+      try {
+        await context.push(destination);
+      } finally {
+        if (mounted) {
+          setState(() => _leaving = false);
+          _activate();
+        }
+      }
+    } else {
+      context.go(destination);
+    }
+  }
+
+  Future<bool> _prepareExit() async {
+    if (!mounted) return true;
+    if (_leaving) return false;
+    setState(() => _leaving = true);
+    var leave = true;
+    try {
+      var report = await _finishSession();
+      while (mounted && !report.success) {
+        setState(() => _restoreDialogVisible = true);
+        if (!mounted) return true;
+        final decision = await showDialog<String>(
+            context: context,
+            barrierDismissible: false,
+            builder: (dialogContext) => AlertDialog(
+                    title: const Text('部分机内参数未恢复'),
+                    content: Text(
+                        '${report.failed.keys.map((key) => key == 'connection' ? '相机连接' : shootParamLabel(key)).join('、')}。请确认相机保持连接后重试。'),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(dialogContext, 'stay'),
+                          child: const Text('留在拍摄')),
+                      TextButton(
+                          onPressed: () =>
+                              Navigator.pop(dialogContext, 'leave'),
+                          child: const Text('仍然退出')),
+                      FilledButton(
+                          onPressed: () =>
+                              Navigator.pop(dialogContext, 'retry'),
+                          child: const Text('重试恢复')),
+                    ]));
+        if (mounted) setState(() => _restoreDialogVisible = false);
+        if (decision == 'retry') {
+          report = await _finishSession();
+        } else {
+          leave = decision == 'leave';
+          break;
+        }
+      }
+      if (!mounted) return true;
+      if (leave) {
+        unawaited(SystemChrome.setPreferredOrientations(
+            const [DeviceOrientation.portraitUp]));
+      }
+      return leave;
+    } finally {
+      if (mounted) {
+        setState(() => _leaving = false);
+        if (!leave) _activate();
+      }
+    }
   }
 
   Future<void> _pressShutter() async {
@@ -280,13 +451,19 @@ class _ShootPageState extends ConsumerState<ShootPage> {
     final epoch = _shutterEpoch;
     setState(() => _shutterHeld = true);
     try {
-      await ref.read(connectionControllerProvider.notifier).pressShutter();
+      final operation =
+          ref.read(connectionControllerProvider.notifier).pressShutter();
+      _pressInFlight = operation;
+      await operation;
+      _pressInFlight = null;
     } catch (_) {
       if (mounted && epoch == _shutterEpoch) {
         setState(() => _shutterHeld = false);
         _feedback('拍摄请求失败，请检查相机连接');
       }
       rethrow;
+    } finally {
+      _pressInFlight = null;
     }
   }
 

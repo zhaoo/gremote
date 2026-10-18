@@ -24,6 +24,59 @@ void main() {
     expect(h.gateways.trace, contains('openChanges'));
   });
 
+  test('restores connection baseline rather than the latest shoot values',
+      () async {
+    h = await CameraHarness.create();
+    await h.connect();
+    await h.controller.setParam('sv', '400');
+    h.camera.bodyChange('av', '5.6');
+    await pumpEventQueue();
+    final report = await h.controller.restoreConnectionSettings();
+    expect(report.success, isTrue);
+    expect(h.camera.props['sv'], '200');
+    expect(h.camera.props['av'], '2.8');
+    await h.controller.setParam('sv', '800');
+    await h.controller.restoreConnectionSettings();
+    expect(h.camera.props['sv'], '200');
+  });
+
+  test('restore reports changed settings whose baseline is no longer supported',
+      () async {
+    h = await CameraHarness.create();
+    await h.connect();
+    await h.controller.setParam('sv', '400');
+    h.camera.props['svList'] = ['400', '800'];
+    final report = await h.controller.restoreConnectionSettings();
+    expect(report.success, isFalse);
+    expect(report.failed, contains('sv'));
+    expect(h.camera.props['sv'], '400');
+  });
+
+  test('restore drains pending writes and rejects edits while restoring',
+      () async {
+    h = await CameraHarness.create();
+    await h.connect();
+    final pending = h.controller.setParam('sv', '400');
+    final restore = h.controller.restoreConnectionSettings();
+    final edit = await h.controller.setParam('sv', '800');
+    expect(edit, isA<WriteRejected>());
+    await pending;
+    expect((await restore).success, isTrue);
+    expect(h.camera.props['sv'], '200');
+  });
+
+  test('restore reports a disconnected camera without issuing writes',
+      () async {
+    h = await CameraHarness.create();
+    await h.connect();
+    await h.controller.setParam('sv', '400');
+    await h.container.read(connectionControllerProvider.notifier).cancel();
+    final writeCount = h.camera.writes.length;
+    final report = await h.controller.restoreConnectionSettings();
+    expect(report.failed['connection'], 'offline');
+    expect(h.camera.writes.length, writeCount);
+  });
+
   test('setParam writes, remembers the encoding and reads back', () async {
     h = await CameraHarness.create(
         camera: FakeCameraModel(acceptedContentTypes: {'form'}));

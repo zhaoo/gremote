@@ -199,11 +199,6 @@ class _LocalLibrary extends StatelessWidget {
               onSelected: (_) => controller.setGrOnly(false),
             ),
             const SizedBox(width: 8),
-            ChoiceChip(
-              label: const Text('按配方'),
-              selected: state.recipeOnly,
-              onSelected: controller.setRecipeOnly,
-            ),
             const Spacer(),
             Text('${state.items.length} 张',
                 style:

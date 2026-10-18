@@ -84,16 +84,38 @@ class ProgramRunner {
   var _index = 0;
   var _generation = 0;
   var _runningLoop = false;
+  Future<void>? _activeOperation;
+  Future<void>? _abortOperation;
   Timer? _timer;
   Completer<void>? _wake;
 
   ProgramRunState get state => _state;
   List<Map<String, Object?>> get log => List.unmodifiable(_log);
 
-  Future<void> start(Program program, {bool autoFocusFirst = false}) async {
-    if (_runningLoop || _state.phase == RunPhase.paused) {
+  Future<void> start(Program program, {bool autoFocusFirst = false}) {
+    if (_activeOperation != null ||
+        _abortOperation != null ||
+        _state.phase == RunPhase.paused) {
       throw StateError('a program is already active');
     }
+    return _track(() => _start(program, autoFocusFirst: autoFocusFirst));
+  }
+
+  Future<void> _track(Future<void> Function() operation) {
+    final settled = Completer<void>();
+    _activeOperation = settled.future;
+    return (() async {
+      try {
+        await operation();
+      } finally {
+        _activeOperation = null;
+        settled.complete();
+      }
+    })();
+  }
+
+  Future<void> _start(Program program, {required bool autoFocusFirst}) async {
+    final generation = _generation;
     final refusal = program.refusal(_camera.state);
     final runId = _newId();
     _set(ProgramRunState(
@@ -117,11 +139,14 @@ class ProgramRunner {
     _startAt = _now();
     final drive = _camera.state.param(ParamKey.drive);
     if (drive?.writable == true && drive!.current != 'single') {
-      if (!await _write('shootMode', 'single')) {
+      final written = await _write('shootMode', 'single');
+      if (generation != _generation) return;
+      if (!written) {
         _set(_state.copyWith(phase: RunPhase.refused, reason: '无法切换到单张模式'));
         return;
       }
     }
+    if (generation != _generation) return;
     await _run(autoFocusFirst: autoFocusFirst);
   }
 
@@ -147,10 +172,19 @@ class ProgramRunner {
     _startAt = _now().subtract(
       (_program!.interval ?? Duration.zero) * _index,
     );
-    await _run();
+    if (_abortOperation != null) return;
+    await _track(() => _run());
   }
 
-  Future<void> abort() async {
+  Future<void> abort() {
+    if (_abortOperation != null) return _abortOperation!;
+    _abortOperation = _abort().whenComplete(() {
+      _abortOperation = null;
+    });
+    return _abortOperation!;
+  }
+
+  Future<void> _abort() async {
     if (_program == null ||
         const {RunPhase.completed, RunPhase.aborted, RunPhase.refused}
             .contains(_state.phase)) {
@@ -158,6 +192,9 @@ class ProgramRunner {
     }
     _generation++;
     _interruptDelay();
+    // Let any camera request already sent settle before restoring settings.
+    // The invalidated generation prevents subsequent frame requests.
+    await _activeOperation;
     await _restore();
     _set(_state.copyWith(
       phase: RunPhase.aborted,
@@ -197,12 +234,16 @@ class ProgramRunner {
             'milliseconds': _now().difference(planned).inMilliseconds,
           });
         }
-        var ok = await _executeFrame(autoFocus: autoFocusFirst && _index == 0);
+        var ok = await _executeFrame(generation,
+            autoFocus: autoFocusFirst && _index == 0);
+        if (generation != _generation) return;
         if (!ok) {
           if (!await _delay(const Duration(seconds: 1), generation)) return;
           if (generation != _generation) return;
-          ok = await _executeFrame(autoFocus: autoFocusFirst && _index == 0);
+          ok = await _executeFrame(generation,
+              autoFocus: autoFocusFirst && _index == 0);
         }
+        if (generation != _generation) return;
         if (!ok) {
           _set(_state.copyWith(
             phase: RunPhase.paused,
@@ -251,17 +292,20 @@ class ProgramRunner {
     if (wake != null && !wake.isCompleted) wake.complete();
   }
 
-  Future<bool> _executeFrame({required bool autoFocus}) async {
+  Future<bool> _executeFrame(int generation, {required bool autoFocus}) async {
     final program = _program!;
     final step = await program.step(ProgramContext(
       state: _camera.state,
       nudgeEv: _state.nudgeEv,
       index: _index,
     ));
+    if (generation != _generation) return false;
     for (final MapEntry(:key, :value) in step.params.entries) {
       if (_camera.state.params[key]?.current == value) continue;
       if (!await _write(key, value)) return false;
+      if (generation != _generation) return false;
     }
+    if (generation != _generation) return false;
     final records = await _camera.shootAndAwait(
       autoFocus: autoFocus,
       context: CaptureContext(

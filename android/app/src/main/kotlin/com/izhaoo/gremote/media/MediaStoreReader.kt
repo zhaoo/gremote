@@ -39,13 +39,11 @@ class MediaStoreReader(context: Context) {
 
     /** All JPEGs except the copies gremote exported itself. */
     fun queryImages(): List<NativeMediaEntry> {
-        val (pathColumn, exportPattern, legacyPattern) =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                Triple(MediaStore.MediaColumns.RELATIVE_PATH, "$EXPORT_RELATIVE_PATH/%", "${Environment.DIRECTORY_PICTURES}/m10v/%")
-            } else {
-                @Suppress("DEPRECATION")
-                Triple(MediaStore.MediaColumns.DATA, "%/$EXPORT_RELATIVE_PATH/%", "%/${Environment.DIRECTORY_PICTURES}/m10v/%")
-            }
+        val relative = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+        val pathColumn = if (relative) MediaStore.MediaColumns.RELATIVE_PATH else {
+            @Suppress("DEPRECATION")
+            MediaStore.MediaColumns.DATA
+        }
         val projection = arrayOf(
             MediaStore.Images.Media._ID,
             MediaStore.Images.Media.DISPLAY_NAME,
@@ -53,14 +51,14 @@ class MediaStoreReader(context: Context) {
             MediaStore.Images.Media.DATE_TAKEN,
             MediaStore.Images.Media.WIDTH,
             MediaStore.Images.Media.HEIGHT,
+            pathColumn,
         )
-        val selection = "${MediaStore.Images.Media.MIME_TYPE} = ? AND " +
-            "($pathColumn IS NULL OR ($pathColumn NOT LIKE ? AND $pathColumn NOT LIKE ?))"
+        val selection = "${MediaStore.Images.Media.MIME_TYPE} = ?"
         val cursor = resolver.query(
             collection,
             projection,
             selection,
-            arrayOf("image/jpeg", exportPattern, legacyPattern),
+            arrayOf("image/jpeg"),
             "${MediaStore.Images.Media.DATE_TAKEN} DESC",
         ) ?: throw MediaException("queryFailed", "MediaStore returned no cursor")
         return cursor.use { c ->
@@ -70,8 +68,12 @@ class MediaStoreReader(context: Context) {
             val taken = c.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_TAKEN)
             val width = c.getColumnIndexOrThrow(MediaStore.Images.Media.WIDTH)
             val height = c.getColumnIndexOrThrow(MediaStore.Images.Media.HEIGHT)
+            val path = c.getColumnIndexOrThrow(pathColumn)
             buildList {
                 while (c.moveToNext()) {
+                    val location = c.getString(path)
+                    val directory = if (relative) location else location?.substringBeforeLast('/')
+                    if (!includeLocalPhotoDirectory(directory)) continue
                     val rowId = c.getLong(id)
                     add(
                         NativeMediaEntry(
