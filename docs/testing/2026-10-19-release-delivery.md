@@ -25,3 +25,12 @@
 - iOS SDK 不存在；`scripts/build_ios.sh` 明确拒绝继续。未运行 CocoaPods 安装、iOS 编译、链接、签名、真机或 TestFlight。
 - Foundation Swift 测试被本机 CLT 的 SwiftBridging 重定义阻塞；纯 Swift 测试可执行文件运行被系统以 exit 137 终止，未取得通过结果。不能用语法解析替代运行结论。
 - 审查指出的连接状态、JPEG 输入限制、云端照片跳过、WebSocket 握手事件已修正；涉及 Apple API 的修复仍须 SDK 编译和设备验证。
+
+## 服务器连接恢复后的最终部署
+
+- GRemote 专用发布公钥与加固后的入口安装成功，返回 GREMOTE_DEPLOY_ENTRY_READY；Nginx -t 通过。
+- `site-2026.10.19.1` 触发 [CI 39205850137](https://github.com/zhaoo/gremote/actions/runs/39205850137) 成功，对应完整 SHA eb5491b75f6fed735589f182f86bea1c9b57cf57。
+- 公网 HTTPS version.json 返回同一 SHA；检查未忽略证书错误。
+- 受限密钥执行任意命令被拒绝，只允许 deploy <SHA> 和 rollback。
+- 实测回滚至 5a82fc827a1dfde7980d16778ad490ccc8980b52，立即恢复 eb5491b75f6fed735589f182f86bea1c9b57cf57，返回 ROLLBACK_OK。
+- 正式官网的浏览器打开动作跳转到办公安全内部页，自动审批拒绝读取内部内容。因此线上视觉验收暂受限；本地实际浏览器证据与 CI/公网 HTTPS 证据分开报告。

@@ -8,7 +8,7 @@
 
 服务器安装：root 持有 `/usr/local/lib/gremote-deploy/publish_site.py` 与 `receive_ssh.py`，部署密钥仅绑定 `restrict,command="/usr/bin/python3 /usr/local/lib/gremote-deploy/receive_ssh.py"`。拒绝 shell、转发及任意命令。不得复用 M10V 发布密钥。
 
-GitHub 手动触发 `Deploy GRemote website`，选择 develop。需要 Secret `GREMOTE_DEPLOY_SSH_KEY`、变量 `GREMOTE_DEPLOY_HOST` 与 `GREMOTE_DEPLOY_KNOWN_HOSTS`。部署成功须同时看到本次 SHA 的 DEPLOY_OK 和公网 HTTPS version.json 一致。首次工作流尚不在默认分支时，可先通过受限 SSH 发布；不为显示按钮擅自修改默认分支。
+GitHub 手动触发 `Deploy GRemote website`，选择 develop。需要 Secret `GREMOTE_DEPLOY_SSH_KEY`、变量 `GREMOTE_DEPLOY_HOST` 与 `GREMOTE_DEPLOY_KNOWN_HOSTS`。部署成功须同时看到本次 SHA 的 DEPLOY_OK 和公网 HTTPS version.json 一致。工作流尚不在默认分支时，在 develop 提交上创建并推送 `site-*` 标签触发发布；普通 develop 推送不发布，不修改默认分支。
 
 归档仅包含以下普通文件，不含目录项或版本文件（version.json 由服务器生成）：
 
@@ -23,3 +23,12 @@ Nginx 初始配置在 nginx.conf；正式部署后单独配置 ACME、TLS 与续
 ## 当前 HTTPS
 
 2026-10-19 DNS-01 手动签发，证书有效至 2027-01-17。公网 HTTPS 已验证。当前未配置 DNS 自动化续期，需要到期前重复 DNS 验证，不能依赖默认 certbot timer。命令：`sudo certbot certonly --manual --preferred-challenges dns -d gremote.izhaoo.com`；完成后先 `nginx -t` 再 reload。
+
+## 已验证发布
+
+2026-10-19：`site-2026.10.19.1` 发布提交 `eb5491b75f6fed735589f182f86bea1c9b57cf57`。
+
+- [Actions 39205850137](https://github.com/zhaoo/gremote/actions/runs/39205850137) 成功；包含 8 项部署测试、准确 SHA 的 DEPLOY_OK 与公网 HTTPS version.json 核验。
+- 专用密钥已安装；任意命令测试被受限入口拒绝。
+- 实测回滚至前版 `5a82fc827a1dfde7980d16778ad490ccc8980b52`，再恢复当前版本。
+- 线上浏览器被办公安全页面跳转拦截，自动审批未授权读取该内部页面；不计作线上视觉验收通过。本地浏览器验证见测试记录。
