@@ -1,0 +1,19 @@
+# GRemote 宝塔静态站点
+
+源码 `website/`；站点 `/www/wwwroot/gremote/current`；版本 `/www/wwwroot/gremote/releases/<完整SHA>`。
+
+`publish_site.py` 先校验白名单、完整性、路径、大小和重复成员，拒绝链接，然后写入新目录并原子切换 current。previous 保留上一版；版本目录不覆盖；部署与回滚共享非阻塞文件锁。
+
+服务器安装：root 持有 `/usr/local/lib/gremote-deploy/publish_site.py` 与 `receive_ssh.py`，部署密钥仅绑定 `restrict,command="/usr/bin/python3 /usr/local/lib/gremote-deploy/receive_ssh.py"`。拒绝 shell、转发及任意命令。不得复用 M10V 发布密钥。
+
+GitHub 手动触发 `Deploy GRemote website`，选择 develop。需要 Secret `GREMOTE_DEPLOY_SSH_KEY`、变量 `GREMOTE_DEPLOY_HOST` 与 `GREMOTE_DEPLOY_KNOWN_HOSTS`。部署成功须同时看到本次 SHA 的 DEPLOY_OK 和公网 HTTPS version.json 一致。首次工作流尚不在默认分支时，可先通过受限 SSH 发布；不为显示按钮擅自修改默认分支。
+
+归档仅包含以下普通文件，不含目录项或版本文件（version.json 由服务器生成）：
+
+```sh
+tar -czf /tmp/gremote-site.tar.gz -C website index.html style.css app.js releases.json assets/street.jpg assets/camera.png assets/editorial.ttf assets/icon.png assets/OFL.txt
+```
+
+回滚：使用专用 SSH 密钥执行固定命令 `rollback`，或管理员 `sudo python3 /usr/local/lib/gremote-deploy/publish_site.py --rollback`。回查 version.json 并与 previous 对照。不要删除当前或 previous 引用的版本目录。
+
+Nginx 初始配置在 nginx.conf；正式部署后单独配置 ACME、TLS 与续期。不能把 HTTP/内网检查当作 HTTPS 公网验收。修改前备份现有配置，`nginx -t` 成功后 reload，保留 M10V 站点。

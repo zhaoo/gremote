@@ -1,0 +1,40 @@
+name: Deploy GRemote website
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: gremote-website-production
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Test deployment controls
+        run: python3 -m unittest discover -s tests -p 'test_site_deploy.py'
+      - name: Publish immutable static site
+        env:
+          DEPLOY_KEY: ${{ secrets.GREMOTE_DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ vars.GREMOTE_DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ vars.GREMOTE_DEPLOY_HOST }}
+        run: |
+          set -euo pipefail
+          test -n "$DEPLOY_KEY"
+          test -n "$DEPLOY_KNOWN_HOSTS"
+          test -n "$DEPLOY_HOST"
+          umask 077
+          key="$RUNNER_TEMP/deploy-key"
+          hosts="$RUNNER_TEMP/known-hosts"
+          trap 'rm -f "$key" "$hosts"' EXIT
+          printf '%s\n' "$DEPLOY_KEY" > "$key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$hosts"
+          tar -czf "$RUNNER_TEMP/site.tar.gz" -C website index.html style.css app.js releases.json assets/street.jpg assets/camera.png assets/editorial.ttf assets/icon.png assets/OFL.txt
+          ssh -i "$key" -T -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$hosts" -o ConnectTimeout=15 "root@$DEPLOY_HOST" "deploy $GITHUB_SHA" < "$RUNNER_TEMP/site.tar.gz" | tee "$RUNNER_TEMP/deploy.log"
+          grep -F "DEPLOY_OK commit=$GITHUB_SHA " "$RUNNER_TEMP/deploy.log"
+      - name: Verify public HTTPS version
+        run: |
+          curl --fail --retry 3 --retry-delay 5 https://gremote.izhaoo.com/version.json -o /tmp/version.json
+          python3 -c 'import json,os; assert json.load(open("/tmp/version.json"))["commit"] == os.environ["GITHUB_SHA"]'
