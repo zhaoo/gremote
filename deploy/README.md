@@ -11,9 +11,13 @@ GitHub 手动触发 `Deploy GRemote website`，选择 develop。需要 Secret `G
 归档仅包含以下普通文件，不含目录项或版本文件（version.json 由服务器生成）：
 
 ```sh
-tar -czf /tmp/gremote-site.tar.gz -C website index.html style.css app.js releases.json assets/street.jpg assets/camera.png assets/editorial.ttf assets/icon.png assets/OFL.txt
+COPYFILE_DISABLE=1 tar -czf /tmp/gremote-site.tar.gz -C website index.html style.css app.js releases.json assets/street.jpg assets/camera.png assets/editorial.ttf assets/icon.png assets/OFL.txt
 ```
 
 回滚：使用专用 SSH 密钥执行固定命令 `rollback`，或管理员 `sudo python3 /usr/local/lib/gremote-deploy/publish_site.py --rollback`。回查 version.json 并与 previous 对照。不要删除当前或 previous 引用的版本目录。
 
 Nginx 初始配置在 nginx.conf；正式部署后单独配置 ACME、TLS 与续期。不能把 HTTP/内网检查当作 HTTPS 公网验收。修改前备份现有配置，`nginx -t` 成功后 reload，保留 M10V 站点。
+
+## 当前 HTTPS
+
+2026-10-19 DNS-01 手动签发，证书有效至 2027-01-17。公网 HTTPS 已验证。当前未配置 DNS 自动化续期，需要到期前重复 DNS 验证，不能依赖默认 certbot timer。命令：`sudo certbot certonly --manual --preferred-challenges dns -d gremote.izhaoo.com`；完成后先 `nginx -t` 再 reload。

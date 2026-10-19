@@ -23,6 +23,7 @@ native/imaging/build/
 
 # Android signing and local configuration
 android/key.properties
+android/release-signing/
 android/local.properties
 *.jks
 *.keystore

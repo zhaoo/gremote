@@ -1,6 +1,8 @@
 name: Deploy GRemote website
 on:
   workflow_dispatch:
+  push:
+    tags: [site-*]
 permissions:
   contents: read
 concurrency:
@@ -8,7 +10,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   deploy:
-    if: github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/tags/site-')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

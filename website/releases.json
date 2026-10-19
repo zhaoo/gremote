@@ -1,1 +1,28 @@
-[{"version":"1.0.0","date":"2026-10-18","platform":"Android · 侧载版本","title":"把拍摄、传输与创作连在一起。","changes":["相机图库多选，支持 JPG、RAW（DNG）与 RAW+JPG 保存。","传输显示文件字节进度，支持停止后续任务与失败重试。","今日导入展示真实保存记录；补充无线 LAN 连接引导。","加入位置记录开关，完善退出联机拍摄时的参数恢复。"],"evidence":"小米 14 / GR III 固件 2.10 已记录部分连接与 RAW+JPG 下载验证；位置记录、参数恢复和完整创作流程仍待真机复测。当前 APK 沿用侧载签名。","url":"https://github.com/zhaoo/gremote/releases/tag/v1.0.0"}]
+[
+  {
+    "version": "1.0.1",
+    "date": "2026-10-19",
+    "platform": "Android · 正式签名",
+    "title": "正式签名与官网上线。",
+    "changes": [
+      "Android 改用项目专用正式签名。",
+      "新增功能介绍、使用方法与发布记录官网。"
+    ],
+    "evidence": "与 v1.0.0 签名不同，无法直接覆盖升级；卸载前请先导出需要保留的数据。本轮完成构建与签名验证，未新增真机验收。",
+    "url": "https://github.com/zhaoo/gremote/releases/tag/v1.0.1"
+  },
+  {
+    "version": "1.0.0",
+    "date": "2026-10-18",
+    "platform": "Android · 侧载版本",
+    "title": "相机图库与传输更新。",
+    "changes": [
+      "相机图库多选，支持 JPG、RAW（DNG）与 RAW+JPG 保存。",
+      "传输显示文件字节进度，支持停止后续任务与失败重试。",
+      "今日导入展示真实保存记录；补充无线 LAN 连接引导。",
+      "加入位置记录开关，完善退出联机拍摄时的参数恢复。"
+    ],
+    "evidence": "小米 14 / GR III 固件 2.10 已记录部分连接与 RAW+JPG 下载验证；位置记录、参数恢复和完整创作流程仍待真机复测。当前 APK 沿用侧载签名。",
+    "url": "https://github.com/zhaoo/gremote/releases/tag/v1.0.0"
+  }
+]
