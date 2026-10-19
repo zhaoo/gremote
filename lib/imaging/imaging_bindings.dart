@@ -1,4 +1,5 @@
 import 'dart:ffi';
+import 'dart:io';
 
 import 'package:ffi/ffi.dart';
 
@@ -71,8 +72,8 @@ class ImagingBindings {
       : decodePreview =
             library.lookupFunction<_DecodePreviewC, DecodePreviewFn>(
                 'gremote_decode_preview'),
-        lutValidate = library
-            .lookupFunction<_LutValidateC, LutValidateFn>('gremote_lut_validate'),
+        lutValidate = library.lookupFunction<_LutValidateC, LutValidateFn>(
+            'gremote_lut_validate'),
         applyLut = library
             .lookupFunction<_ApplyLutC, ApplyLutFn>('gremote_apply_lut_rgba'),
         exportJpeg =
@@ -80,7 +81,8 @@ class ImagingBindings {
         free = library.lookupFunction<_FreeC, FreeFn>('gremote_free');
 
   factory ImagingBindings.open(String path) =>
-      ImagingBindings(DynamicLibrary.open(path));
+      ImagingBindings(DynamicLibrary.open(
+          Platform.isIOS ? 'gremote_imaging.framework/gremote_imaging' : path));
 
   final DecodePreviewFn decodePreview;
   final LutValidateFn lutValidate;

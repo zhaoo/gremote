@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:permission_handler/permission_handler.dart' as ph;
 
 import 'device_api.g.dart';
 
 enum CameraRuntimePermission {
+  bluetooth,
   bluetoothScan,
   bluetoothConnect,
   nearbyWifi,
@@ -37,7 +40,10 @@ class CameraPermissionException implements Exception {
 }
 
 class CameraPermissionGate {
-  CameraPermissionGate(this._adapter);
+  CameraPermissionGate(this._adapter, {bool? isIOS})
+      : _isIOS = isIOS ?? Platform.isIOS;
+
+  final bool _isIOS;
 
   final CameraPermissionAdapter _adapter;
 
@@ -62,8 +68,11 @@ class CameraPermissionGate {
   }
 
   Future<void> _ensureGranted() async {
-    final sdk = await _adapter.androidSdkInt();
-    for (final permission in _requiredPermissions(sdk)) {
+    final sdk = _isIOS ? 0 : await _adapter.androidSdkInt();
+    final required = _isIOS
+        ? const [CameraRuntimePermission.bluetooth]
+        : _requiredPermissions(sdk);
+    for (final permission in required) {
       final status = await _adapter.request(permission);
       switch (status) {
         case CameraPermissionStatus.granted:
@@ -109,6 +118,9 @@ class CameraPermissionGate {
   }
 
   Future<void> _ensureWifiGranted() async {
+    if (_isIOS) {
+      return; // iOS requests local-network access on the actual connection.
+    }
     final sdk = await _adapter.androidSdkInt();
     final permission = sdk >= 33
         ? CameraRuntimePermission.nearbyWifi
@@ -172,6 +184,7 @@ class PermissionHandlerCameraPermissionAdapter
 
   ph.Permission _toPermission(CameraRuntimePermission permission) =>
       switch (permission) {
+        CameraRuntimePermission.bluetooth => ph.Permission.bluetooth,
         CameraRuntimePermission.bluetoothScan => ph.Permission.bluetoothScan,
         CameraRuntimePermission.bluetoothConnect =>
           ph.Permission.bluetoothConnect,

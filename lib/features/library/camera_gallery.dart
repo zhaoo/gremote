@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -41,7 +42,8 @@ class CameraGalleryService {
 
   Future<String> download(CameraFile file) async {
     if (!file.downloadable) throw ArgumentError.value(file.file, 'file');
-    if (await host.androidSdkInt() < 29 &&
+    if (!Platform.isIOS &&
+        await host.androidSdkInt() < 29 &&
         !(await Permission.storage.request()).isGranted) {
       throw StateError('Storage permission denied');
     }

@@ -61,6 +61,22 @@ class SiteDeployTests(unittest.TestCase):
         with self.assertRaises(ValueError): self.deploy.publish(site, self.archive(missing='style.css'), 'b'*40)
         self.assertEqual((site/'current').resolve().name, 'a'*40)
 
+    def test_compressed_bomb_has_bounded_expansion(self):
+        import gzip
+        from unittest.mock import patch
+        archive = self.archive({'index.html': b'x' * (40 * 1024 * 1024)})
+        expanded = 0
+        original = gzip._GzipReader.read
+        def counted(stream, *args, **kwargs):
+            nonlocal expanded
+            result = original(stream, *args, **kwargs)
+            expanded += len(result)
+            return result
+        with patch.object(gzip._GzipReader, 'read', counted):
+            with self.assertRaises(ValueError):
+                self.deploy.publish(self.root/'site', archive, 'a'*40)
+        self.assertLessEqual(expanded, self.deploy.MAX_BYTES + 128 * 1024)
+
     def test_bad_version_rejected(self):
         for version in ('../bad', '', 'main', 'g'*40):
             with self.subTest(version=version), self.assertRaises(ValueError):

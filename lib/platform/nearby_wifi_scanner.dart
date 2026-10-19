@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
 
@@ -21,9 +23,12 @@ class NativeNearbyWifiScanner implements NearbyWifiScanner {
   NativeNearbyWifiScanner({
     MethodChannel channel = const MethodChannel('gremote/wifi_scan'),
     Future<bool> Function()? requestPermission,
-  })  : _channel = channel,
+    bool? isIOS,
+  })  : _isIOS = isIOS ?? Platform.isIOS,
+        _channel = channel,
         _requestPermission = requestPermission ?? _requestLocation;
 
+  final bool _isIOS;
   final MethodChannel _channel;
   final Future<bool> Function() _requestPermission;
   Future<WifiScanResult>? _pending;
@@ -46,6 +51,10 @@ class NativeNearbyWifiScanner implements NearbyWifiScanner {
   }
 
   Future<WifiScanResult> _scan() async {
+    if (_isIOS) {
+      throw PlatformException(
+          code: 'wifiScanUnsupported', message: '请在系统设置中连接相机 Wi-Fi');
+    }
     if (!await _requestPermission()) {
       throw PlatformException(code: 'locationPermissionDenied');
     }

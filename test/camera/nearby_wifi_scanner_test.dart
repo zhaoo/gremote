@@ -7,6 +7,21 @@ import 'package:gremote/platform/nearby_wifi_scanner.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   const channel = MethodChannel('gremote/wifi_scan');
+  test('iOS does not ask for location to perform unsupported Wi-Fi scanning',
+      () async {
+    var permissionRequests = 0;
+    final scanner = NativeNearbyWifiScanner(
+        isIOS: true,
+        requestPermission: () async {
+          permissionRequests++;
+          return true;
+        });
+    await expectLater(
+        scanner.scan(),
+        throwsA(isA<PlatformException>()
+            .having((e) => e.code, 'code', 'wifiScanUnsupported')));
+    expect(permissionRequests, 0);
+  });
   tearDown(() => TestDefaultBinaryMessengerBinding
       .instance.defaultBinaryMessenger
       .setMockMethodCallHandler(channel, null));

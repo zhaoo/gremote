@@ -4,6 +4,8 @@
 
 `publish_site.py` 先校验白名单、完整性、路径、大小和重复成员，拒绝链接，然后写入新目录并原子切换 current。previous 保留上一版；版本目录不覆盖；部署与回滚共享非阻塞文件锁。
 
+服务器初始化：从已核验的代码目录执行 `sudo bash deploy/install-server.sh /path/to/dedicated-key.pub`，仅安装脚本与受限公钥，不改写 Nginx 或其他项目授权。
+
 服务器安装：root 持有 `/usr/local/lib/gremote-deploy/publish_site.py` 与 `receive_ssh.py`，部署密钥仅绑定 `restrict,command="/usr/bin/python3 /usr/local/lib/gremote-deploy/receive_ssh.py"`。拒绝 shell、转发及任意命令。不得复用 M10V 发布密钥。
 
 GitHub 手动触发 `Deploy GRemote website`，选择 develop。需要 Secret `GREMOTE_DEPLOY_SSH_KEY`、变量 `GREMOTE_DEPLOY_HOST` 与 `GREMOTE_DEPLOY_KNOWN_HOSTS`。部署成功须同时看到本次 SHA 的 DEPLOY_OK 和公网 HTTPS version.json 一致。首次工作流尚不在默认分支时，可先通过受限 SSH 发布；不为显示按钮擅自修改默认分支。

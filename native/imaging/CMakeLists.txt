@@ -33,6 +33,13 @@ if(ANDROID)
     -DANDROID_PLATFORM=${ANDROID_PLATFORM}
     -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM})
 endif()
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+  list(APPEND LJT_ARGS
+    -DCMAKE_SYSTEM_NAME=iOS
+    -DCMAKE_OSX_SYSROOT=${CMAKE_OSX_SYSROOT}
+    -DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}
+    -DWITH_SIMD=OFF)
+endif()
 if(CMAKE_OSX_ARCHITECTURES)
   list(APPEND LJT_ARGS -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES})
 endif()
@@ -69,7 +76,16 @@ if(ANDROID)
   target_link_options(gremote_imaging PRIVATE -Wl,-z,max-page-size=16384)
 endif()
 
-if(NOT ANDROID)
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+  set_target_properties(gremote_imaging PROPERTIES
+    FRAMEWORK TRUE
+    FRAMEWORK_VERSION A
+    MACOSX_FRAMEWORK_IDENTIFIER com.izhaoo.gremote.imaging
+    PUBLIC_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/include/gremote_imaging.h"
+    XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED NO)
+endif()
+
+if(NOT ANDROID AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
   enable_testing()
   add_executable(gremote_imaging_tests
     tests/test_runner.cpp

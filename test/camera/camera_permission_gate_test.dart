@@ -4,6 +4,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gremote/platform/camera_permission_gate.dart';
 
 void main() {
+  test('iOS requests Bluetooth without Android Wi-Fi or location permissions',
+      () async {
+    final adapter = _FakePermissionAdapter(0);
+    final gate = CameraPermissionGate(adapter, isIOS: true);
+    await gate.ensureGranted();
+    expect(adapter.requested, [CameraRuntimePermission.bluetooth]);
+    adapter.requested.clear();
+    await gate.ensureWifiGranted();
+    expect(adapter.requested, isEmpty);
+  });
   test('concurrent permission checks share the pending system request',
       () async {
     final adapter = _PendingPermissionAdapter();

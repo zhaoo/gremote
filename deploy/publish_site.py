@@ -3,6 +3,8 @@
 import argparse
 from contextlib import contextmanager
 import fcntl
+import gzip
+import io
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -51,7 +53,17 @@ def publish(root, archive, commit):
         if destination.exists():
             raise FileExistsError('Release is immutable: ' + commit)
         current = release_target(root, 'current')
-        with tarfile.open(archive, 'r:*') as tar:
+        # Bound decompression before tar parses PAX metadata or skips file bodies.
+        # gzip can hide huge padding/headers even when the compressed file is tiny.
+        with open(archive, 'rb') as source:
+            is_gzip = source.read(2) == b'\x1f\x8b'
+        opener = gzip.open if is_gzip else open
+        expanded_limit = MAX_BYTES + 100 * 1024
+        with opener(archive, 'rb') as source:
+            expanded = source.read(expanded_limit + 1)
+        if len(expanded) > expanded_limit:
+            raise ValueError('Expanded archive exceeds size limit')
+        with tarfile.open(fileobj=io.BytesIO(expanded), mode='r:') as tar:
             members = tar.getmembers()
             names = set()
             size = 0
