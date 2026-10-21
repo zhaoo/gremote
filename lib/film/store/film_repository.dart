@@ -95,13 +95,15 @@ class FilmRepository {
       required FilmRecipe recipe,
       required List<String> files,
       required RecipeConfidence confidence,
-      int? mediaId}) async {
+      int? mediaId,
+      bool Function()? isCurrent}) async {
     if (!identity.isStable ||
         files.isEmpty ||
         files.any((f) =>
             !RegExp(r'^[A-Za-z0-9_-]+\.(jpe?g|dng)$', caseSensitive: false)
                 .hasMatch(f))) throw const FormatException('照片身份尚未确认');
     final result = await db.transaction((tx) async {
+      if (isCurrent != null && !isCurrent()) throw StateError('拍摄会话已改变');
       if ((await tx.query('film_rolls',
               columns: ['id'], where: 'id=?', whereArgs: [rollId], limit: 1))
           .isEmpty) throw StateError('胶卷不存在');
@@ -124,6 +126,7 @@ class FilmRepository {
             },
             where: 'id=?',
             whereArgs: [row['id']]);
+        if (isCurrent != null && !isCurrent()) throw StateError('拍摄会话已改变');
         return row['id'] as String;
       }
       await _recipe(tx, recipe);
@@ -141,6 +144,7 @@ class FilmRepository {
         'created_at': _clock().millisecondsSinceEpoch,
         'selected': 0
       });
+      if (isCurrent != null && !isCurrent()) throw StateError('拍摄会话已改变');
       return id;
     });
     return (await listItems(rollId)).firstWhere((e) => e.id == result);

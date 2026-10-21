@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/app_presence.dart';
 import '../../diagnostics/diagnostic_event.dart';
 import '../../diagnostics/diagnostic_store.dart';
+import '../../film/capture/active_roll_context.dart';
 import '../capture/capture_tracker.dart';
 import '../connection/connection_controller.dart';
 import '../connection/connection_state.dart';
@@ -51,6 +52,7 @@ class _Session {
   final ChangeStream stream;
   final CaptureTracker tracker;
   StreamSubscription<CaptureRecord>? records;
+  StreamSubscription<CaptureFileUpdate>? fileUpdates;
 }
 
 /// The single source of camera parameter/status truth while connected.
@@ -62,12 +64,16 @@ class CameraStateController extends Notifier<CameraState> {
   _Session? _session;
   Object? _starting;
   final _captures = StreamController<CaptureRecord>.broadcast();
+  final _captureFiles = StreamController<CaptureFileUpdate>.broadcast();
+  int _generation = 0;
   var _propsFailures = 0;
   var _shooting = 0;
   Future<SettingsRestoreReport>? _restoring;
 
   CameraApi get api => _api;
   Stream<CaptureRecord> get captures => _captures.stream;
+  Stream<CaptureFileUpdate> get captureFileUpdates => _captureFiles.stream;
+  int get sessionGeneration => _generation;
   ProtocolProfile? get profile => _session?.profile;
 
   @override
@@ -84,6 +90,7 @@ class CameraStateController extends Notifier<CameraState> {
       _starting = null;
       unawaited(_endSession());
       unawaited(_captures.close());
+      unawaited(_captureFiles.close());
     });
     final current = ref.read(connectionControllerProvider);
     if (current is ConnectionReady) {
@@ -189,11 +196,13 @@ class CameraStateController extends Notifier<CameraState> {
     required CaptureContext context,
   }) async {
     final session = _requireSession();
+    final frozenContext = _withRoll(context);
     _shooting++;
     try {
       await session.tracker.ensurePrimed();
       await _api.shoot(autoFocus: autoFocus);
-      return await session.tracker.detect(context, timeout: _captureTimeout);
+      return await session.tracker
+          .detect(frozenContext, timeout: _captureTimeout);
     } finally {
       _shooting--;
     }
@@ -206,8 +215,8 @@ class CameraStateController extends Notifier<CameraState> {
     _shooting++;
     try {
       return await session.tracker.detect(
-        CaptureContext(
-            source: CaptureSource.app, effect: state.value(ParamKey.effect)),
+        _withRoll(CaptureContext(
+            source: CaptureSource.app, effect: state.value(ParamKey.effect))),
         timeout: _captureTimeout,
       );
     } finally {
@@ -216,6 +225,17 @@ class CameraStateController extends Notifier<CameraState> {
   }
 
   Future<void> refresh() async => _session?.stream.refresh();
+
+  CaptureContext _withRoll(CaptureContext context) {
+    final roll = ref.read(activeRollCaptureContextProvider);
+    return CaptureContext(
+        source: context.source,
+        effect: context.effect,
+        programRunId: context.programRunId,
+        recipeId: context.recipeId,
+        filmRollId: context.filmRollId ?? roll?.rollId,
+        filmRecipeJson: context.filmRecipeJson ?? roll?.recipeJson);
+  }
 
   Future<void> saveProfile(ProtocolProfile profile) async {
     final session = _session;
@@ -290,7 +310,9 @@ class CameraStateController extends Notifier<CameraState> {
       ),
     );
     _session = session;
+    _generation++;
     session.records = session.tracker.records.listen(_captures.add);
+    session.fileUpdates = session.tracker.fileUpdates.listen(_captureFiles.add);
 
     await _quietRefresh();
     try {
@@ -307,8 +329,10 @@ class CameraStateController extends Notifier<CameraState> {
     final session = _session;
     if (session == null) return;
     _session = null;
+    _generation++;
     state = CameraState.offline;
     await session.records?.cancel();
+    await session.fileUpdates?.cancel();
     session.tracker.dispose();
     await session.stream.stop();
   }
@@ -350,9 +374,9 @@ class CameraStateController extends Notifier<CameraState> {
       final session = _session;
       unawaited(session?.tracker
           .detect(
-            CaptureContext(
+            _withRoll(CaptureContext(
                 source: CaptureSource.body,
-                effect: state.value(ParamKey.effect)),
+                effect: state.value(ParamKey.effect))),
             timeout: const Duration(seconds: 3),
           )
           .catchError((Object _) => const <CaptureRecord>[]));

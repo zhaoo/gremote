@@ -23,6 +23,8 @@ class CaptureRecord {
     this.effect,
     this.programRunId,
     this.recipeId,
+    this.filmRollId,
+    this.filmRecipeJson,
   });
 
   final String dir;
@@ -40,6 +42,7 @@ class CaptureRecord {
 
   /// Set by recipe brackets; overrides the active session recipe.
   final String? recipeId;
+  final String? filmRollId, filmRecipeJson;
 
   CameraFile get primaryFile => CameraFile(dir: dir, file: files.first);
 }
@@ -51,12 +54,22 @@ class CaptureContext {
     this.effect,
     this.programRunId,
     this.recipeId,
+    this.filmRollId,
+    this.filmRecipeJson,
   });
 
   final CaptureSource source;
   final String? effect;
   final String? programRunId;
   final String? recipeId;
+  final String? filmRollId, filmRecipeJson;
+}
+
+class CaptureFileUpdate {
+  const CaptureFileUpdate(
+      {required this.dir, required this.baseName, required this.files});
+  final String dir, baseName;
+  final List<String> files;
 }
 
 /// Finds new shots by diffing `/v1/photos` (firmware-derived / unverified).
@@ -78,11 +91,14 @@ class CaptureTracker {
   final _known = <CameraFile>{};
   final _recorded = <String>{};
   final _records = StreamController<CaptureRecord>.broadcast();
+  final _fileUpdates = StreamController<CaptureFileUpdate>.broadcast();
   var _primed = false;
+  bool _disposed = false;
   Future<List<CaptureRecord>>? _inFlight;
   CaptureContext? _context;
 
   Stream<CaptureRecord> get records => _records.stream;
+  Stream<CaptureFileUpdate> get fileUpdates => _fileUpdates.stream;
 
   static Duration timeoutFor(String? tv) {
     final seconds = tv == null ? null : parseTvSeconds(tv);
@@ -93,6 +109,7 @@ class CaptureTracker {
   /// Records the current file list as the baseline.
   Future<void> prime() async {
     final files = await _listPhotos();
+    if (_disposed) return;
     _known
       ..clear()
       ..addAll(files);
@@ -114,6 +131,7 @@ class CaptureTracker {
     CaptureContext context, {
     required Duration timeout,
   }) {
+    if (_disposed) return Future.value(const []);
     final active = _inFlight;
     if (active != null) {
       if (context.source != CaptureSource.body) _context = context;
@@ -125,7 +143,12 @@ class CaptureTracker {
     return future;
   }
 
-  void dispose() => unawaited(_records.close());
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    unawaited(_records.close());
+    unawaited(_fileUpdates.close());
+  }
 
   Future<List<CaptureRecord>> _detect(Duration timeout) async {
     if (!_primed) {
@@ -139,6 +162,7 @@ class CaptureTracker {
     }
     var waited = Duration.zero;
     while (true) {
+      if (_disposed) return const [];
       final fresh = await _freshFiles();
       if (fresh.isNotEmpty) return _build(fresh);
       if (waited >= timeout) return const [];
@@ -150,6 +174,7 @@ class CaptureTracker {
   Future<List<CameraFile>> _freshFiles() async {
     try {
       final files = await _listPhotos();
+      if (_disposed) return const [];
       final fresh = files.where((f) => !_known.contains(f)).toList();
       _known.addAll(fresh);
       return fresh;
@@ -163,7 +188,11 @@ class CaptureTracker {
     for (final file in fresh) {
       final key = '${file.dir}/${file.baseName}';
       // A late RAW of an already-recorded JPEG is not a new shot.
-      if (_recorded.contains(key)) continue;
+      if (_recorded.contains(key)) {
+        _fileUpdates.add(CaptureFileUpdate(
+            dir: file.dir, baseName: file.baseName, files: [file.file]));
+        continue;
+      }
       groups.putIfAbsent(key, () => []).add(file);
     }
     final context = _context!;
@@ -176,10 +205,11 @@ class CaptureTracker {
       } on Exception {
         cameraSeconds = null;
       }
+      if (_disposed) break;
       final record = CaptureRecord(
         dir: first.dir,
         baseName: first.baseName,
-        files: [for (final f in files) f.file],
+        files: List.unmodifiable([for (final f in files) f.file]),
         wallSeconds: cameraSeconds ?? _phoneSeconds(),
         timeSource:
             cameraSeconds == null ? TimeSource.phone : TimeSource.camera,
@@ -187,6 +217,8 @@ class CaptureTracker {
         effect: context.effect,
         programRunId: context.programRunId,
         recipeId: context.recipeId,
+        filmRollId: context.filmRollId,
+        filmRecipeJson: context.filmRecipeJson,
       );
       _recorded.add('${first.dir}/${first.baseName}');
       records.add(record);
