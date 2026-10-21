@@ -15,7 +15,8 @@ PlatformException _createConnectionError(String channelName) {
   );
 }
 
-List<Object?> wrapResponse({Object? result, PlatformException? error, bool empty = false}) {
+List<Object?> wrapResponse(
+    {Object? result, PlatformException? error, bool empty = false}) {
   if (empty) {
     return <Object?>[];
   }
@@ -133,7 +134,6 @@ class NativeHttpResponse {
   }
 }
 
-
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
   @override
@@ -141,13 +141,13 @@ class _PigeonCodec extends StandardMessageCodec {
     if (value is int) {
       buffer.putUint8(4);
       buffer.putInt64(value);
-    }    else if (value is NativeBleDevice) {
+    } else if (value is NativeBleDevice) {
       buffer.putUint8(129);
       writeValue(buffer, value.encode());
-    }    else if (value is NativeCameraBootstrap) {
+    } else if (value is NativeCameraBootstrap) {
       buffer.putUint8(130);
       writeValue(buffer, value.encode());
-    }    else if (value is NativeHttpResponse) {
+    } else if (value is NativeHttpResponse) {
       buffer.putUint8(131);
       writeValue(buffer, value.encode());
     } else {
@@ -158,11 +158,11 @@ class _PigeonCodec extends StandardMessageCodec {
   @override
   Object? readValueOfType(int type, ReadBuffer buffer) {
     switch (type) {
-      case 129: 
+      case 129:
         return NativeBleDevice.decode(readValue(buffer)!);
-      case 130: 
+      case 130:
         return NativeCameraBootstrap.decode(readValue(buffer)!);
-      case 131: 
+      case 131:
         return NativeHttpResponse.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
@@ -174,9 +174,11 @@ class CameraDeviceHostApi {
   /// Constructor for [CameraDeviceHostApi].  The [binaryMessenger] named argument is
   /// available for dependency injection.  If it is left null, the default
   /// BinaryMessenger will be used which routes to the host platform.
-  CameraDeviceHostApi({BinaryMessenger? binaryMessenger, String messageChannelSuffix = ''})
+  CameraDeviceHostApi(
+      {BinaryMessenger? binaryMessenger, String messageChannelSuffix = ''})
       : pigeonVar_binaryMessenger = binaryMessenger,
-        pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
+        pigeonVar_messageChannelSuffix =
+            messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
   final BinaryMessenger? pigeonVar_binaryMessenger;
 
   static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
@@ -184,8 +186,10 @@ class CameraDeviceHostApi {
   final String pigeonVar_messageChannelSuffix;
 
   Future<int> androidSdkInt() async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.CameraDeviceHostApi.androidSdkInt$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.gremote.CameraDeviceHostApi.androidSdkInt$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -211,8 +215,10 @@ class CameraDeviceHostApi {
   }
 
   Future<List<NativeBleDevice?>> scan(int timeoutMs) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.CameraDeviceHostApi.scan$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.gremote.CameraDeviceHostApi.scan$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -233,13 +239,16 @@ class CameraDeviceHostApi {
         message: 'Host platform returned null value for non-null return value.',
       );
     } else {
-      return (pigeonVar_replyList[0] as List<Object?>?)!.cast<NativeBleDevice?>();
+      return (pigeonVar_replyList[0] as List<Object?>?)!
+          .cast<NativeBleDevice?>();
     }
   }
 
   Future<void> connectBle(String deviceId) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.CameraDeviceHostApi.connectBle$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.gremote.CameraDeviceHostApi.connectBle$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -260,8 +269,10 @@ class CameraDeviceHostApi {
   }
 
   Future<void> disconnectBle() async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.CameraDeviceHostApi.disconnectBle$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.gremote.CameraDeviceHostApi.disconnectBle$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -282,8 +293,10 @@ class CameraDeviceHostApi {
   }
 
   Future<NativeCameraBootstrap> readBootstrap() async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.CameraDeviceHostApi.readBootstrap$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.gremote.CameraDeviceHostApi.readBootstrap$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -309,8 +322,10 @@ class CameraDeviceHostApi {
   }
 
   Future<void> setCameraPower(int value) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.CameraDeviceHostApi.setCameraPower$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.gremote.CameraDeviceHostApi.setCameraPower$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -331,8 +346,10 @@ class CameraDeviceHostApi {
   }
 
   Future<void> setNetworkType(int value) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.CameraDeviceHostApi.setNetworkType$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.gremote.CameraDeviceHostApi.setNetworkType$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -353,8 +370,10 @@ class CameraDeviceHostApi {
   }
 
   Future<void> writeOperationRequest(Uint8List value) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.CameraDeviceHostApi.writeOperationRequest$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.gremote.CameraDeviceHostApi.writeOperationRequest$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -375,14 +394,16 @@ class CameraDeviceHostApi {
   }
 
   Future<void> connectCameraWifi(String ssid, String passphrase) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.CameraDeviceHostApi.connectCameraWifi$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.gremote.CameraDeviceHostApi.connectCameraWifi$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final List<Object?>? pigeonVar_replyList =
-        await pigeonVar_channel.send(<Object?>[ssid, passphrase]) as List<Object?>?;
+    final List<Object?>? pigeonVar_replyList = await pigeonVar_channel
+        .send(<Object?>[ssid, passphrase]) as List<Object?>?;
     if (pigeonVar_replyList == null) {
       throw _createConnectionError(pigeonVar_channelName);
     } else if (pigeonVar_replyList.length > 1) {
@@ -396,15 +417,18 @@ class CameraDeviceHostApi {
     }
   }
 
-  Future<NativeHttpResponse> cameraRequest(String method, String url, Map<String?, String?> headers, Uint8List? body) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.CameraDeviceHostApi.cameraRequest$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+  Future<NativeHttpResponse> cameraRequest(String method, String url,
+      Map<String?, String?> headers, Uint8List? body) async {
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.gremote.CameraDeviceHostApi.cameraRequest$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final List<Object?>? pigeonVar_replyList =
-        await pigeonVar_channel.send(<Object?>[method, url, headers, body]) as List<Object?>?;
+    final List<Object?>? pigeonVar_replyList = await pigeonVar_channel
+        .send(<Object?>[method, url, headers, body]) as List<Object?>?;
     if (pigeonVar_replyList == null) {
       throw _createConnectionError(pigeonVar_channelName);
     } else if (pigeonVar_replyList.length > 1) {
@@ -423,16 +447,151 @@ class CameraDeviceHostApi {
     }
   }
 
-  /// Streams one camera original directly into Android MediaStore.
-  Future<String> downloadPhoto(String directory, String fileName) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.CameraDeviceHostApi.downloadPhoto$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+  Future<NativeHttpResponse> companionRequest(String method, String path,
+      Map<String?, String?> headers, Uint8List? body) async {
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.gremote.CameraDeviceHostApi.companionRequest$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final List<Object?>? pigeonVar_replyList = await pigeonVar_channel
+        .send(<Object?>[method, path, headers, body]) as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else if (pigeonVar_replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (pigeonVar_replyList[0] as NativeHttpResponse?)!;
+    }
+  }
+
+  Future<Uint8List?> pickCompanionFile(String kind) async {
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.gremote.CameraDeviceHostApi.pickCompanionFile$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
     final List<Object?>? pigeonVar_replyList =
-        await pigeonVar_channel.send(<Object?>[directory, fileName]) as List<Object?>?;
+        await pigeonVar_channel.send(<Object?>[kind]) as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else {
+      return (pigeonVar_replyList[0] as Uint8List?);
+    }
+  }
+
+  Future<void> saveCompanionPairing(
+      String instanceId, Uint8List keyBytes) async {
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.gremote.CameraDeviceHostApi.saveCompanionPairing$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final List<Object?>? pigeonVar_replyList = await pigeonVar_channel
+        .send(<Object?>[instanceId, keyBytes]) as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else {
+      return;
+    }
+  }
+
+  Future<void> removeCompanionPairing(String instanceId) async {
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.gremote.CameraDeviceHostApi.removeCompanionPairing$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_channel.send(<Object?>[instanceId]) as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else {
+      return;
+    }
+  }
+
+  Future<Uint8List> signCompanionRequest(
+      String instanceId, Uint8List canonicalBytes) async {
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.gremote.CameraDeviceHostApi.signCompanionRequest$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final List<Object?>? pigeonVar_replyList = await pigeonVar_channel
+        .send(<Object?>[instanceId, canonicalBytes]) as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else if (pigeonVar_replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (pigeonVar_replyList[0] as Uint8List?)!;
+    }
+  }
+
+  /// Streams one camera original directly into Android MediaStore.
+  Future<String> downloadPhoto(String directory, String fileName) async {
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.gremote.CameraDeviceHostApi.downloadPhoto$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final List<Object?>? pigeonVar_replyList = await pigeonVar_channel
+        .send(<Object?>[directory, fileName]) as List<Object?>?;
     if (pigeonVar_replyList == null) {
       throw _createConnectionError(pigeonVar_channelName);
     } else if (pigeonVar_replyList.length > 1) {
@@ -452,8 +611,10 @@ class CameraDeviceHostApi {
   }
 
   Future<void> startLiveView(String url) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.CameraDeviceHostApi.startLiveView$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.gremote.CameraDeviceHostApi.startLiveView$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -474,8 +635,10 @@ class CameraDeviceHostApi {
   }
 
   Future<void> stopLiveView() async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.CameraDeviceHostApi.stopLiveView$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.gremote.CameraDeviceHostApi.stopLiveView$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -497,8 +660,10 @@ class CameraDeviceHostApi {
 
   /// Opens the `/v1/changes` WebSocket; events arrive as `changes.*`.
   Future<void> openChangeSocket(String path) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.CameraDeviceHostApi.openChangeSocket$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.gremote.CameraDeviceHostApi.openChangeSocket$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -519,8 +684,10 @@ class CameraDeviceHostApi {
   }
 
   Future<void> closeChangeSocket() async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.CameraDeviceHostApi.closeChangeSocket$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.gremote.CameraDeviceHostApi.closeChangeSocket$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -541,8 +708,10 @@ class CameraDeviceHostApi {
   }
 
   Future<void> setKeepScreenOn(bool on) async {
-    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.CameraDeviceHostApi.setKeepScreenOn$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName =
+        'dev.flutter.pigeon.gremote.CameraDeviceHostApi.setKeepScreenOn$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel =
+        BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -570,18 +739,26 @@ abstract class CameraDeviceFlutterApi {
 
   void onNativeEvent(String type, String jsonPayload);
 
-  static void setUp(CameraDeviceFlutterApi? api, {BinaryMessenger? binaryMessenger, String messageChannelSuffix = '',}) {
-    messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
+  static void setUp(
+    CameraDeviceFlutterApi? api, {
+    BinaryMessenger? binaryMessenger,
+    String messageChannelSuffix = '',
+  }) {
+    messageChannelSuffix =
+        messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
     {
-      final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
-          'dev.flutter.pigeon.gremote.CameraDeviceFlutterApi.onLiveViewChunk$messageChannelSuffix', pigeonChannelCodec,
+      final BasicMessageChannel<
+          Object?> pigeonVar_channel = BasicMessageChannel<
+              Object?>(
+          'dev.flutter.pigeon.gremote.CameraDeviceFlutterApi.onLiveViewChunk$messageChannelSuffix',
+          pigeonChannelCodec,
           binaryMessenger: binaryMessenger);
       if (api == null) {
         pigeonVar_channel.setMessageHandler(null);
       } else {
         pigeonVar_channel.setMessageHandler((Object? message) async {
           assert(message != null,
-          'Argument for dev.flutter.pigeon.gremote.CameraDeviceFlutterApi.onLiveViewChunk was null.');
+              'Argument for dev.flutter.pigeon.gremote.CameraDeviceFlutterApi.onLiveViewChunk was null.');
           final List<Object?> args = (message as List<Object?>?)!;
           final Uint8List? arg_bytes = (args[0] as Uint8List?);
           assert(arg_bytes != null,
@@ -591,22 +768,26 @@ abstract class CameraDeviceFlutterApi {
             return wrapResponse(empty: true);
           } on PlatformException catch (e) {
             return wrapResponse(error: e);
-          }          catch (e) {
-            return wrapResponse(error: PlatformException(code: 'error', message: e.toString()));
+          } catch (e) {
+            return wrapResponse(
+                error: PlatformException(code: 'error', message: e.toString()));
           }
         });
       }
     }
     {
-      final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
-          'dev.flutter.pigeon.gremote.CameraDeviceFlutterApi.onNativeEvent$messageChannelSuffix', pigeonChannelCodec,
+      final BasicMessageChannel<
+          Object?> pigeonVar_channel = BasicMessageChannel<
+              Object?>(
+          'dev.flutter.pigeon.gremote.CameraDeviceFlutterApi.onNativeEvent$messageChannelSuffix',
+          pigeonChannelCodec,
           binaryMessenger: binaryMessenger);
       if (api == null) {
         pigeonVar_channel.setMessageHandler(null);
       } else {
         pigeonVar_channel.setMessageHandler((Object? message) async {
           assert(message != null,
-          'Argument for dev.flutter.pigeon.gremote.CameraDeviceFlutterApi.onNativeEvent was null.');
+              'Argument for dev.flutter.pigeon.gremote.CameraDeviceFlutterApi.onNativeEvent was null.');
           final List<Object?> args = (message as List<Object?>?)!;
           final String? arg_type = (args[0] as String?);
           assert(arg_type != null,
@@ -619,8 +800,9 @@ abstract class CameraDeviceFlutterApi {
             return wrapResponse(empty: true);
           } on PlatformException catch (e) {
             return wrapResponse(error: e);
-          }          catch (e) {
-            return wrapResponse(error: PlatformException(code: 'error', message: e.toString()));
+          } catch (e) {
+            return wrapResponse(
+                error: PlatformException(code: 'error', message: e.toString()));
           }
         });
       }

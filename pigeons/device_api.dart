@@ -63,6 +63,22 @@ abstract class CameraDeviceHostApi {
     Uint8List? body,
   );
 
+  @async
+  NativeHttpResponse companionRequest(String method, String path,
+      Map<String?, String?> headers, Uint8List? body);
+
+  @async
+  Uint8List? pickCompanionFile(String kind);
+
+  @async
+  void saveCompanionPairing(String instanceId, Uint8List keyBytes);
+
+  @async
+  void removeCompanionPairing(String instanceId);
+
+  @async
+  Uint8List signCompanionRequest(String instanceId, Uint8List canonicalBytes);
+
   /// Streams one camera original directly into Android MediaStore.
   @async
   String downloadPhoto(String directory, String fileName);

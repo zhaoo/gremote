@@ -55,6 +55,7 @@ class BoundCameraTransport(
 
     @Volatile private var cameraIp = "192.168.0.1"
     @Volatile private var baseUrl: String? = null
+    @Volatile private var closed = false
     private val liveViewLock = Any()
     private var liveViewCall: Call? = null
     private val client = OkHttpClient.Builder()
@@ -293,7 +294,14 @@ class BoundCameraTransport(
 
     fun closeChangeSocket() = changeSocket.close()
 
+    fun companion(): BoundCompanionTransport {
+        if (baseUrl == null || closed) throw CameraTransportException("wifiNotConnected", "相机尚未探测成功")
+        return BoundCompanionTransport(client, cameraIp) { !closed && baseUrl != null }
+    }
+
     fun close() {
+        closed = true
+        baseUrl = null
         photoCalls.close()
         stopLiveView()
         changeSocket.close()

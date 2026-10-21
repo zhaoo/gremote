@@ -223,6 +223,11 @@ protocol CameraDeviceHostApi {
   func writeOperationRequest(value: FlutterStandardTypedData, completion: @escaping (Result<Void, Error>) -> Void)
   func connectCameraWifi(ssid: String, passphrase: String, completion: @escaping (Result<Void, Error>) -> Void)
   func cameraRequest(method: String, url: String, headers: [String?: String?], body: FlutterStandardTypedData?, completion: @escaping (Result<NativeHttpResponse, Error>) -> Void)
+  func companionRequest(method: String, path: String, headers: [String?: String?], body: FlutterStandardTypedData?, completion: @escaping (Result<NativeHttpResponse, Error>) -> Void)
+  func pickCompanionFile(kind: String, completion: @escaping (Result<FlutterStandardTypedData?, Error>) -> Void)
+  func saveCompanionPairing(instanceId: String, keyBytes: FlutterStandardTypedData, completion: @escaping (Result<Void, Error>) -> Void)
+  func removeCompanionPairing(instanceId: String, completion: @escaping (Result<Void, Error>) -> Void)
+  func signCompanionRequest(instanceId: String, canonicalBytes: FlutterStandardTypedData, completion: @escaping (Result<FlutterStandardTypedData, Error>) -> Void)
   /// Streams one camera original directly into Android MediaStore.
   func downloadPhoto(directory: String, fileName: String, completion: @escaping (Result<String, Error>) -> Void)
   func startLiveView(url: String, completion: @escaping (Result<Void, Error>) -> Void)
@@ -404,6 +409,96 @@ class CameraDeviceHostApiSetup {
       }
     } else {
       cameraRequestChannel.setMessageHandler(nil)
+    }
+    let companionRequestChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.gremote.CameraDeviceHostApi.companionRequest\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      companionRequestChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let methodArg = args[0] as! String
+        let pathArg = args[1] as! String
+        let headersArg = args[2] as! [String?: String?]
+        let bodyArg: FlutterStandardTypedData? = nilOrValue(args[3])
+        api.companionRequest(method: methodArg, path: pathArg, headers: headersArg, body: bodyArg) { result in
+          switch result {
+          case .success(let res):
+            reply(wrapResult(res))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      companionRequestChannel.setMessageHandler(nil)
+    }
+    let pickCompanionFileChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.gremote.CameraDeviceHostApi.pickCompanionFile\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      pickCompanionFileChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let kindArg = args[0] as! String
+        api.pickCompanionFile(kind: kindArg) { result in
+          switch result {
+          case .success(let res):
+            reply(wrapResult(res))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      pickCompanionFileChannel.setMessageHandler(nil)
+    }
+    let saveCompanionPairingChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.gremote.CameraDeviceHostApi.saveCompanionPairing\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      saveCompanionPairingChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let instanceIdArg = args[0] as! String
+        let keyBytesArg = args[1] as! FlutterStandardTypedData
+        api.saveCompanionPairing(instanceId: instanceIdArg, keyBytes: keyBytesArg) { result in
+          switch result {
+          case .success:
+            reply(wrapResult(nil))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      saveCompanionPairingChannel.setMessageHandler(nil)
+    }
+    let removeCompanionPairingChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.gremote.CameraDeviceHostApi.removeCompanionPairing\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      removeCompanionPairingChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let instanceIdArg = args[0] as! String
+        api.removeCompanionPairing(instanceId: instanceIdArg) { result in
+          switch result {
+          case .success:
+            reply(wrapResult(nil))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      removeCompanionPairingChannel.setMessageHandler(nil)
+    }
+    let signCompanionRequestChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.gremote.CameraDeviceHostApi.signCompanionRequest\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      signCompanionRequestChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let instanceIdArg = args[0] as! String
+        let canonicalBytesArg = args[1] as! FlutterStandardTypedData
+        api.signCompanionRequest(instanceId: instanceIdArg, canonicalBytes: canonicalBytesArg) { result in
+          switch result {
+          case .success(let res):
+            reply(wrapResult(res))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      signCompanionRequestChannel.setMessageHandler(nil)
     }
     /// Streams one camera original directly into Android MediaStore.
     let downloadPhotoChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.gremote.CameraDeviceHostApi.downloadPhoto\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)

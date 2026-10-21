@@ -3,6 +3,8 @@ import Foundation
 import NetworkExtension
 import Photos
 import UIKit
+import Security
+import CryptoKit
 
 func nativeError(_ code: String, _ message: String) -> PigeonError {
   PigeonError(code: code, message: message, details: nil)
@@ -11,7 +13,7 @@ func onMain<T>(_ completion: @escaping (Result<T, Error>) -> Void, _ result: Res
   DispatchQueue.main.async { completion(result) }
 }
 
-final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate, URLSessionDownloadDelegate, URLSessionWebSocketDelegate {
+final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate, URLSessionDownloadDelegate, URLSessionWebSocketDelegate, UIDocumentPickerDelegate {
   private let flutter: CameraDeviceFlutterApi
   private let bluetooth = RicohBluetooth()
   private lazy var session: URLSession = makeSession()
@@ -24,6 +26,8 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
   private var stream: URLSessionDataTask?
   private var socket: URLSessionWebSocketTask?
   private var downloads: [ObjectIdentifier: (String, (Result<String, Error>) -> Void)] = [:]
+  private var companionFileResult: ((Result<FlutterStandardTypedData?, Error>) -> Void)?
+  private var companionFileLimit = 0
   private var connected = false
   private var generation = 0
   init(flutter: CameraDeviceFlutterApi) {
@@ -89,6 +93,60 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
         probe()
       }
     }
+  }
+  // Network binding for the companion service has not been proven on iOS.
+  func companionRequest(method: String, path: String, headers: [String?: String?], body: FlutterStandardTypedData?, completion: @escaping (Result<NativeHttpResponse, Error>) -> Void) {
+    completion(.failure(nativeError("companionUnsupported", "iOS 暂不支持相机伴侣网络；仍可离线试卷与整理数字胶卷")))
+  }
+  func pickCompanionFile(kind: String, completion: @escaping (Result<FlutterStandardTypedData?, Error>) -> Void) {
+    guard ["pairing", "film"].contains(kind), companionFileResult == nil else { completion(.failure(nativeError("companionPickerBusy", "文件选择暂不可用"))); return }
+    guard var controller = UIApplication.shared.windows.first(where: { $0.isKeyWindow })?.rootViewController else { completion(.failure(nativeError("companionPickerFailed", "无法打开文件选择器"))); return }
+    while let presented = controller.presentedViewController { controller = presented }
+    companionFileLimit = kind == "pairing" ? 4096 : 18432; companionFileResult = completion
+    let picker = UIDocumentPickerViewController(documentTypes: ["public.item"], in: .import); picker.delegate = self; picker.allowsMultipleSelection = false
+    controller.present(picker, animated: !UIAccessibility.isReduceMotionEnabled)
+  }
+  func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) { let completion = companionFileResult; companionFileResult = nil; completion?(.success(nil)) }
+  func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+    guard let completion = companionFileResult else { return }; companionFileResult = nil
+    do { guard let url = urls.first else { throw nativeError("invalidCompanionFile", "未选择文件") }
+      let access = url.startAccessingSecurityScopedResource(); defer { if access { url.stopAccessingSecurityScopedResource() } }
+      let handle = try FileHandle(forReadingFrom: url); defer { handle.closeFile() }
+      let data = handle.readData(ofLength: companionFileLimit + 1)
+      guard !data.isEmpty, data.count <= companionFileLimit else { throw nativeError("invalidCompanionFile", "文件为空或超过大小限制") }
+      completion(.success(FlutterStandardTypedData(bytes:data)))
+    } catch { completion(.failure(nativeError("invalidCompanionFile", "文件读取失败或超过大小限制"))) }
+  }
+  private func pairingQuery(_ instanceId: String) throws -> [String: Any] {
+    guard instanceId.range(of: "^[a-f0-9]{32}$", options: .regularExpression) != nil else { throw nativeError("invalidArgument", "无效相机身份") }
+    return [kSecClass as String:kSecClassGenericPassword, kSecAttrService as String:"com.izhaoo.gremote.companion", kSecAttrAccount as String:instanceId]
+  }
+  func saveCompanionPairing(instanceId: String, keyBytes: FlutterStandardTypedData, completion: @escaping (Result<Void, Error>) -> Void) {
+    do {
+      guard keyBytes.data.count == 32 else { throw nativeError("invalidArgument", "配对密钥长度无效") }
+      let query = try pairingQuery(instanceId)
+      let fields: [String: Any] = [kSecValueData as String:keyBytes.data, kSecAttrAccessible as String:kSecAttrAccessibleWhenUnlockedThisDeviceOnly]
+      var status = SecItemUpdate(query as CFDictionary, fields as CFDictionary)
+      if status == errSecItemNotFound { status = SecItemAdd(query.merging(fields) { _, new in new } as CFDictionary, nil) }
+      guard status == errSecSuccess else { throw nativeError("pairingStoreFailed", "无法保存相机配对") }
+      completion(.success(()))
+    } catch { completion(.failure(error)) }
+  }
+  func removeCompanionPairing(instanceId: String, completion: @escaping (Result<Void, Error>) -> Void) {
+    do { let status = SecItemDelete(try pairingQuery(instanceId) as CFDictionary)
+      guard status == errSecSuccess || status == errSecItemNotFound else { throw nativeError("pairingStoreFailed", "无法移除相机配对") }
+      completion(.success(()))
+    } catch { completion(.failure(error)) }
+  }
+  func signCompanionRequest(instanceId: String, canonicalBytes: FlutterStandardTypedData, completion: @escaping (Result<FlutterStandardTypedData, Error>) -> Void) {
+    do {
+      guard canonicalBytes.data.count <= 1024 else { throw nativeError("invalidArgument", "签名内容超限") }
+      var query = try pairingQuery(instanceId); query[kSecReturnData as String] = true; query[kSecMatchLimit as String] = kSecMatchLimitOne
+      var result: CFTypeRef?
+      guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess, let data = result as? Data, data.count == 32 else { throw nativeError("pairingMissing", "请重新导入相机配对") }
+      let mac = HMAC<SHA256>.authenticationCode(for: canonicalBytes.data, using: SymmetricKey(data:data))
+      completion(.success(FlutterStandardTypedData(bytes:Data(mac))))
+    } catch { completion(.failure(error)) }
   }
   func cameraRequest(method: String, url: String, headers: [String?: String?], body: FlutterStandardTypedData?, completion: @escaping (Result<NativeHttpResponse, Error>) -> Void) {
     do {

@@ -2,6 +2,7 @@ package com.izhaoo.gremote.device
 
 import android.content.Context
 import android.os.Build
+import com.izhaoo.gremote.device.companion.CompanionPairingStore
 import com.izhaoo.gremote.device.ble.GattOperationException
 import com.izhaoo.gremote.device.ble.RicohBleException
 import com.izhaoo.gremote.device.ble.RicohBleManager
@@ -19,17 +20,19 @@ class GRemoteDeviceHostApi(
     context: Context,
     private val flutterApi: CameraDeviceFlutterApi,
     private val keepScreenOn: (Boolean) -> Unit,
+    private val pickFile: (String, (Result<ByteArray?>) -> Unit) -> Unit,
 ) : CameraDeviceHostApi {
     private val appContext = context.applicationContext
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val pairing = CompanionPairingStore()
     private val ble = RicohBleManager(context, ::emitNativeEvent)
     @Volatile private var transport: BoundCameraTransport? = null
     private val networkManager = CameraNetworkManager(
         context = context,
         emitEvent = ::emitNativeEvent,
         onNetworkLost = {
-            transport?.stopLiveView()
-            transport?.closeChangeSocket()
+            transport?.close()
+            transport = null
         },
     )
 
@@ -106,6 +109,17 @@ class GRemoteDeviceHostApi(
         }.toMap()
         requireTransport().request(method, url, safeHeaders, body)
     }
+
+    override fun companionRequest(method: String, path: String, headers: Map<String?, String?>, body: ByteArray?, callback: (Result<NativeHttpResponse>) -> Unit) = launchResult(callback) {
+        val fields = headers.entries.associate { (key, value) ->
+            (key ?: throw IllegalArgumentException("Null companion header")) to (value ?: throw IllegalArgumentException("Null companion header"))
+        }
+        requireTransport().companion().request(method, path, fields, body)
+    }
+    override fun pickCompanionFile(kind: String, callback: (Result<ByteArray?>) -> Unit) = pickFile(kind, callback)
+    override fun saveCompanionPairing(instanceId: String, keyBytes: ByteArray, callback: (Result<Unit>) -> Unit) = launchResult(callback) { pairing.save(instanceId, keyBytes) }
+    override fun removeCompanionPairing(instanceId: String, callback: (Result<Unit>) -> Unit) = launchResult(callback) { pairing.remove(instanceId) }
+    override fun signCompanionRequest(instanceId: String, canonicalBytes: ByteArray, callback: (Result<ByteArray>) -> Unit) = launchResult(callback) { pairing.sign(instanceId, canonicalBytes) }
 
     override fun downloadPhoto(
         directory: String,
