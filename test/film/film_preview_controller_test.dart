@@ -52,6 +52,14 @@ void main() {
           as Map<String, dynamic>);
   PreviewImage image() =>
       PreviewImage(width: 8, height: 8, rgba: Uint8List(256));
+  test('sparse imported recipe preview uses registry halo defaults', () {
+    final sparse = FilmRecipe.fromJson({
+      ...catalog.recipe(33).toJson(),
+      'parameters': {'haloGain': 2}
+    });
+    expect(encodeFilmRecipe(sparse)[7],
+        catalog.film(33).parameters['haloProfile']!.defaultValue);
+  });
   test('only latest pending frame is rendered and stale completion never wins',
       () async {
     final engine = ControlledEngine(),

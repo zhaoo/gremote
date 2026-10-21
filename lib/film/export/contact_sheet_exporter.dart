@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:path_provider/path_provider.dart';
 import '../../darkroom/export/export_work_gate.dart';
@@ -52,6 +53,14 @@ class ContactSheetExporter {
   final GeneratedJpegEncoder encoder;
   final Future<Directory> Function() tempDir;
 
+  // Abandon read-only provider work on cancel/deadline. Its eventual result has
+  // no access to a native cancel pointer, temporary files, or publication.
+  Future<T> _read<T>(Future<T> work, ImagingCancelToken cancel) =>
+      Future.any<T>([
+        work.timeout(const Duration(seconds: 20)),
+        cancel.whenCancelled.then<T>((_) => throw const _ReadCancelled()),
+      ]);
+
   /// Consumes already rendered thumbnails. Never applies a film LUT again.
   /// Cancel tokens must remain alive until this stream finishes or is cancelled.
   Stream<ContactSheetProgress> export(FilmRoll roll, List<RollItem> items,
@@ -82,11 +91,15 @@ class ContactSheetExporter {
                 final verified = !local ||
                     (expected != null &&
                         RegExp(r'^[a-f0-9]{64}$').hasMatch(expected) &&
-                        await gateway.contentHash(item.mediaId!) == expected);
+                        await _read(
+                                gateway.contentHash(item.mediaId!), cancel) ==
+                            expected);
                 if (verified && !cancel.isCancelled) {
-                  thumbnail = await gateway.thumbnail(item.mediaId!, 324);
+                  thumbnail = await _read(
+                      gateway.thumbnail(item.mediaId!, 324), cancel);
                   if (local &&
-                      await gateway.contentHash(item.mediaId!) != expected) {
+                      await _read(gateway.contentHash(item.mediaId!), cancel) !=
+                          expected) {
                     thumbnail = null;
                   }
                 }
@@ -152,4 +165,8 @@ class ContactSheetExporter {
       release();
     }
   }
+}
+
+class _ReadCancelled implements Exception {
+  const _ReadCancelled();
 }

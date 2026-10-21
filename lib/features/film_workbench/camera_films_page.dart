@@ -302,6 +302,30 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
                               unawaited(controller!.reconcileUnknown()),
                           icon: const Icon(Icons.fact_check_outlined, size: 18),
                           label: const Text('核对结果'))),
+                if (controller?.state.canRetryOriginal == true)
+                  TextButton(
+                      onPressed: () async {
+                        final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                                    title: const Text('重试原操作？'),
+                                    content: const Text(
+                                        '将再次核对机身状态，并使用原操作编号和相同配置重试。不会重复创建装卷操作，也不会继续未确认的切换。'),
+                                    actions: [
+                                      TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context, false),
+                                          child: const Text('取消')),
+                                      FilledButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context, true),
+                                          child: const Text('以原操作重试'))
+                                    ]));
+                        if (confirmed == true && mounted) {
+                          await controller!.retryOriginalOperation();
+                        }
+                      },
+                      child: const Text('重试原操作')),
                 if (controller?.state.rebootNeedsConfirmation == true)
                   TextButton(
                       onPressed: () =>

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:gremote/darkroom/export/export_work_gate.dart';
 import 'dart:io';
 import 'dart:typed_data';
@@ -57,6 +58,15 @@ class ReusedPhotoId extends FakeMediaGateway {
   }
 }
 
+class StalledMedia extends FakeMediaGateway {
+  final started = Completer<void>();
+  @override
+  Future<Uint8List?> thumbnail(int id, int edge) {
+    started.complete();
+    return Completer<Uint8List?>().future;
+  }
+}
+
 void main() {
   final catalog = FilmCatalog.fromJson(
           jsonDecode(File('assets/films/catalog.json').readAsStringSync())
@@ -91,6 +101,25 @@ void main() {
       recipeFingerprint: catalog.recipe(33).fingerprint,
       status: FilmRollStatus.closed,
       createdAt: DateTime(2026));
+  test('cancel stalled media read releases gate for darkroom export', () async {
+    final gateway = StalledMedia(), cancel = ImagingCancelToken();
+    addTearDown(cancel.dispose);
+    final result = ContactSheetExporter(
+            gateway: gateway,
+            rasterizer: PageRasterizer(),
+            encoder: FileEncoder())
+        .export(roll, items(1), cancel: cancel)
+        .toList();
+    await gateway.started.future;
+    cancel.cancel();
+    expect(
+        (await result.timeout(const Duration(milliseconds: 150))).last.status,
+        ContactSheetStatus.cancelled);
+    final release = await ExportWorkGate.acquire()
+        .timeout(const Duration(milliseconds: 150));
+    release();
+    expect(gateway.generated, isEmpty);
+  });
   test('contact sheet paginates and retains missing cells without recoloring',
       () async {
     final pages = ContactSheetLayout.pages(items(25));

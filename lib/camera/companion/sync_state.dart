@@ -35,6 +35,7 @@ class CompanionSyncState {
       this.stale = true,
       this.rebootNeedsConfirmation = false,
       this.hasPreparedLoad = false,
+      this.canRetryOriginal = false,
       this.uploadBytes = 0});
   final SyncConnectionStatus connectionStatus;
   final SyncOperationStatus operationStatus;
@@ -43,6 +44,7 @@ class CompanionSyncState {
   final MergeResult? merge;
   final String message;
   final bool readOnly, stale, rebootNeedsConfirmation, hasPreparedLoad;
+  final bool canRetryOriginal;
   final int uploadBytes;
   bool get pending => {
         SyncOperationStatus.queued,
@@ -61,6 +63,7 @@ class CompanionSyncState {
           bool? stale,
           bool? rebootNeedsConfirmation,
           bool? hasPreparedLoad,
+          bool? canRetryOriginal,
           int? uploadBytes}) =>
       CompanionSyncState(
           connectionStatus: connectionStatus ?? this.connectionStatus,
@@ -78,5 +81,6 @@ class CompanionSyncState {
           rebootNeedsConfirmation:
               rebootNeedsConfirmation ?? this.rebootNeedsConfirmation,
           hasPreparedLoad: hasPreparedLoad ?? this.hasPreparedLoad,
+          canRetryOriginal: canRetryOriginal ?? this.canRetryOriginal,
           uploadBytes: uploadBytes ?? this.uploadBytes);
 }

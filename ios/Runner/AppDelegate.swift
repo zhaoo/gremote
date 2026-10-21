@@ -37,6 +37,7 @@ import UIKit
     return super.application(application,didFinishLaunchingWithOptions:launchOptions)
   }
   override func applicationDidEnterBackground(_ application: UIApplication) {
+    device?.cancelCompanionFileRead()
     location?.stop(); device?.disconnectBle { _ in }; application.isIdleTimerDisabled = false
     super.applicationDidEnterBackground(application)
   }

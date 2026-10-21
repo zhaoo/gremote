@@ -17,6 +17,13 @@ class FilmPreviewController extends ChangeNotifier {
   static const cacheBudget = 48 * 1024 * 1024;
   final FilmPreviewEngine engine;
   FilmPreviewResult? result;
+  Future<void> _running = Future.value();
+  Future<void> get whenIdle async {
+    while (busy) {
+      await _running;
+    }
+  }
+
   Object? error;
   _PreviewJob? _pending, _active;
   ImagingCancelToken? _cancel;
@@ -63,7 +70,7 @@ class FilmPreviewController extends ChangeNotifier {
     if (_disposed || _active != null || _pending == null) return;
     final job = _active = _pending!;
     _pending = null;
-    unawaited(_run(job));
+    unawaited(_running = _run(job));
   }
 
   bool _current(_PreviewJob job) => !_disposed && job.generation == _generation;
@@ -124,6 +131,13 @@ class FilmPreviewController extends ChangeNotifier {
         _pump();
       }
     }
+  }
+
+  void clear() {
+    _generation++;
+    _pending = null;
+    result = null;
+    _cancel?.cancel();
   }
 
   @override

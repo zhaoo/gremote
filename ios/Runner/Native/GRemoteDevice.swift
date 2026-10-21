@@ -28,6 +28,7 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
   private var downloads: [ObjectIdentifier: (String, (Result<String, Error>) -> Void)] = [:]
   private var companionFileResult: ((Result<FlutterStandardTypedData?, Error>) -> Void)?
   private var companionFileLimit = 0
+  private var companionFileGeneration = UUID()
   private var connected = false
   private var generation = 0
   init(flutter: CameraDeviceFlutterApi) {
@@ -102,20 +103,49 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
     guard ["pairing", "film"].contains(kind), companionFileResult == nil else { completion(.failure(nativeError("companionPickerBusy", "文件选择暂不可用"))); return }
     guard var controller = UIApplication.shared.windows.first(where: { $0.isKeyWindow })?.rootViewController else { completion(.failure(nativeError("companionPickerFailed", "无法打开文件选择器"))); return }
     while let presented = controller.presentedViewController { controller = presented }
+    companionFileGeneration = UUID()
     companionFileLimit = kind == "pairing" ? 4096 : 18432; companionFileResult = completion
     let picker = UIDocumentPickerViewController(documentTypes: ["public.item"], in: .import); picker.delegate = self; picker.allowsMultipleSelection = false
     controller.present(picker, animated: !UIAccessibility.isReduceMotionEnabled)
   }
-  func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) { let completion = companionFileResult; companionFileResult = nil; completion?(.success(nil)) }
+  func cancelCompanionFileRead() {
+    companionFileGeneration = UUID()
+    let completion = companionFileResult; companionFileResult = nil
+    completion?(.failure(nativeError("companionPickerCancelled", "文件读取已取消")))
+  }
+  func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+    companionFileGeneration = UUID()
+    let completion = companionFileResult; companionFileResult = nil; completion?(.success(nil))
+  }
   func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-    guard let completion = companionFileResult else { return }; companionFileResult = nil
-    do { guard let url = urls.first else { throw nativeError("invalidCompanionFile", "未选择文件") }
-      let access = url.startAccessingSecurityScopedResource(); defer { if access { url.stopAccessingSecurityScopedResource() } }
-      let handle = try FileHandle(forReadingFrom: url); defer { handle.closeFile() }
-      let data = handle.readData(ofLength: companionFileLimit + 1)
-      guard !data.isEmpty, data.count <= companionFileLimit else { throw nativeError("invalidCompanionFile", "文件为空或超过大小限制") }
-      completion(.success(FlutterStandardTypedData(bytes:data)))
-    } catch { completion(.failure(nativeError("invalidCompanionFile", "文件读取失败或超过大小限制"))) }
+    guard companionFileResult != nil else { return }
+    let token = companionFileGeneration, limit = companionFileLimit
+    guard let url = urls.first else { cancelCompanionFileRead(); return }
+    // Provider coordination and bounded reads can block; never run on UIKit's queue.
+    DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+      let result: Result<Data, Error>
+      do {
+        let access = url.startAccessingSecurityScopedResource()
+        defer { if access { url.stopAccessingSecurityScopedResource() } }
+        let handle = try FileHandle(forReadingFrom: url); defer { handle.closeFile() }
+        let data = handle.readData(ofLength: limit + 1)
+        guard !data.isEmpty, data.count <= limit else { throw nativeError("invalidCompanionFile", "文件为空或超过大小限制") }
+        result = .success(data)
+      } catch { result = .failure(nativeError("invalidCompanionFile", "文件读取失败或超过大小限制")) }
+      DispatchQueue.main.async { [weak self] in
+        guard let self = self, self.companionFileGeneration == token,
+          let completion = self.companionFileResult else { return }
+        self.companionFileResult = nil
+        self.companionFileGeneration = UUID()
+        completion(result.map { FlutterStandardTypedData(bytes: $0) })
+      }
+    }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 15) { [weak self] in
+      guard let self = self, self.companionFileGeneration == token,
+        let completion = self.companionFileResult else { return }
+      self.companionFileGeneration = UUID(); self.companionFileResult = nil
+      completion(.failure(nativeError("invalidCompanionFile", "文件读取超时，请下载到本机后重试")))
+    }
   }
   private func pairingQuery(_ instanceId: String) throws -> [String: Any] {
     guard instanceId.range(of: "^[a-f0-9]{32}$", options: .regularExpression) != nil else { throw nativeError("invalidArgument", "无效相机身份") }

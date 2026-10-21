@@ -8,6 +8,8 @@ import '../../film/catalog/film_catalog.dart';
 import '../../film/export/recipe_card_codec.dart';
 import '../../film/model/film_recipe.dart';
 import '../../film/preview/film_preview_controller.dart';
+import '../../film/preview/film_comparison_controller.dart';
+import 'widgets/film_comparison_grid.dart';
 import '../../imaging/imaging_engine.dart';
 import 'rolls_page.dart';
 import 'workbench_providers.dart';
@@ -31,6 +33,10 @@ class TrialPage extends ConsumerStatefulWidget {
 class _TrialPageState extends ConsumerState<TrialPage>
     with WidgetsBindingObserver {
   late final FilmPreviewController _preview;
+  late final FilmComparisonController _comparison;
+  List<FilmRecipe>? _comparisonRecipes;
+  bool _grid = false;
+  int _renderGeneration = 0;
   PreviewImage? _source;
   String _sourceLabel = '示例照片 · AI 生成', _sourceError = '';
   bool _processed = false, _reapply = false, _live = false, _decoding = false;
@@ -43,6 +49,8 @@ class _TrialPageState extends ConsumerState<TrialPage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _preview = FilmPreviewController(ref.read(filmPreviewEngineProvider))
+      ..addListener(_changed);
+    _comparison = FilmComparisonController(ref.read(filmPreviewEngineProvider))
       ..addListener(_changed);
     unawaited(_sample());
   }
@@ -69,9 +77,20 @@ class _TrialPageState extends ConsumerState<TrialPage>
     }
   }
 
-  void _render() {
+  Future<void> _render() async {
+    final token = ++_renderGeneration;
     final recipe = ref.read(selectedFilmRecipeProvider);
-    if (_source != null && recipe != null) {
+    if (_source == null || recipe == null) return;
+    if (_grid) {
+      _preview.clear();
+      await _preview.whenIdle;
+      if (!mounted || token != _renderGeneration) return;
+      _comparison.request(_source!, _comparisonRecipes!,
+          processed: _processed && !_reapply);
+    } else {
+      _comparison.clear();
+      await _comparison.whenIdle;
+      if (!mounted || token != _renderGeneration) return;
       _preview.request(
           source: _source!,
           recipe: recipe,
@@ -82,6 +101,7 @@ class _TrialPageState extends ConsumerState<TrialPage>
   void _choose(FilmCatalog catalog, FilmDefinition film) {
     ref.read(selectedFilmRecipeProvider.notifier).state =
         catalog.recipe(film.id);
+    if (_grid) _comparisonRecipes![0] = catalog.recipe(film.id);
     _render();
   }
 
@@ -119,7 +139,7 @@ class _TrialPageState extends ConsumerState<TrialPage>
       _sourceError = '';
     });
     _liveTimer = Timer.periodic(const Duration(milliseconds: 350), (_) {
-      if (!mounted || !_live || _preview.busy) return;
+      if (!mounted || !_live || _preview.busy || _comparison.busy) return;
       final bytes = ref.read(liveViewControllerProvider);
       if (bytes != null) {
         unawaited(_accept(bytes));
@@ -245,6 +265,8 @@ class _TrialPageState extends ConsumerState<TrialPage>
     WidgetsBinding.instance.removeObserver(this);
     _preview.removeListener(_changed);
     _preview.dispose();
+    _comparison.removeListener(_changed);
+    _comparison.dispose();
     super.dispose();
   }
 
@@ -260,14 +282,52 @@ class _TrialPageState extends ConsumerState<TrialPage>
               film = catalog.film(recipe.filmId);
           return ListView(key: const PageStorageKey('film-trial'), children: [
             const WorkbenchHeading('试卷台', '找到这一刻的颜色。', 'YOUR FILMS. YOUR GR.'),
-            ComparisonPreview(
-                original: _source,
-                effect:
-                    _preview.result?.recipeFingerprint == recipe.fingerprint &&
-                            _preview.result?.generation == _preview.generation
-                        ? _preview.result?.image
-                        : null,
-                effectName: film.name),
+            Padding(
+                padding: const EdgeInsets.fromLTRB(22, 0, 22, 14),
+                child: SegmentedButton<bool>(
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment(value: false, label: Text('滑动对比')),
+                      ButtonSegment(value: true, label: Text('四格对比')),
+                    ],
+                    selected: {_grid},
+                    onSelectionChanged: (values) {
+                      setState(() {
+                        _grid = values.single;
+                        _comparisonRecipes ??= [
+                          recipe,
+                          catalog.recipe(66),
+                          catalog.recipe(67)
+                        ];
+                      });
+                      _render();
+                    })),
+            if (_grid)
+              FilmComparisonGrid(
+                  original: _source,
+                  recipes: _comparisonRecipes!,
+                  images: _comparison.images,
+                  names: _comparisonRecipes!
+                      .map((r) => catalog.film(r.filmId).name)
+                      .toList(),
+                  onChoose: (index) async {
+                    final chosen = await showFilmPicker(context, catalog);
+                    if (chosen == null || !mounted) return;
+                    setState(() =>
+                        _comparisonRecipes![index] = catalog.recipe(chosen.id));
+                    ref.read(selectedFilmRecipeProvider.notifier).state =
+                        _comparisonRecipes![index];
+                    _render();
+                  })
+            else
+              ComparisonPreview(
+                  original: _source,
+                  effect: _preview.result?.recipeFingerprint ==
+                              recipe.fingerprint &&
+                          _preview.result?.generation == _preview.generation
+                      ? _preview.result?.image
+                      : null,
+                  effectName: film.name),
             Padding(
                 padding: const EdgeInsets.fromLTRB(22, 4, 12, 0),
                 child: Row(children: [
@@ -327,7 +387,7 @@ class _TrialPageState extends ConsumerState<TrialPage>
                   Row(children: [
                     Expanded(
                         child: Text(
-                            '颗粒 ${recipe.parameters['grain'] ?? 0}  /  光晕 ${recipe.parameters['haloGain'] ?? 0}',
+                            '颗粒 ${recipe.resolvedParameters['grain'] ?? 0}  /  光晕 ${recipe.resolvedParameters['haloGain'] ?? 0}',
                             style: const TextStyle(
                                 color: workbenchCream, fontSize: 11))),
                     TextButton(
@@ -347,16 +407,21 @@ class _TrialPageState extends ConsumerState<TrialPage>
                                       catalog.recipe(film.id,
                                           name: recipe.name,
                                           parameters: parameters);
+                                  if (_grid) {
+                                    _comparisonRecipes![0] =
+                                        ref.read(selectedFilmRecipeProvider)!;
+                                  }
                                   _render();
                                 })),
                         child:
                             const Text('调整质感', style: TextStyle(fontSize: 11)))
                   ]),
                 ])),
-            if (_preview.error != null)
+            if ((_grid ? _comparison.error : _preview.error) != null)
               Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 22),
-                  child: Text('预览暂不可用：${_preview.error}',
+                  child: Text(
+                      '预览暂不可用：${_grid ? _comparison.error : _preview.error}',
                       style:
                           const TextStyle(color: workbenchGold, fontSize: 11))),
             const Padding(

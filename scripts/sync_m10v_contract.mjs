@@ -7,7 +7,7 @@ import {execFileSync} from 'node:child_process';
 
 const digest=b=>createHash('sha256').update(b).digest('hex');
 const canonical=v=>Array.isArray(v)?'['+v.map(canonical).join(',')+']':v&&typeof v==='object'?'{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+canonical(v[k])).join(',')+'}':JSON.stringify(v);
-export async function syncContract({sourceDir,outputDir,check=false}){
+export async function syncContract({sourceDir,outputDir,check=false,publishFile=rename}){
  sourceDir=path.resolve(sourceDir);outputDir=path.resolve(outputDir);
  const sources=new Map(),outputs=new Map();
  async function source(name){if(!sources.has(name))sources.set(name,await readFile(path.join(sourceDir,name)));return sources.get(name);}
@@ -21,9 +21,30 @@ export async function syncContract({sourceDir,outputDir,check=false}){
  for(const [name,bytes] of sources)outputs.set('native/imaging/vendor/m10v/'+path.basename(name),bytes);
  const contractBytes=await source('contracts/companion-v1.json'),contract=JSON.parse(contractBytes);
  await source('web/gr3/film-icons/catalog.json');await source('web/gr3/film-catalog.json');await source('web/gr3/newstocks-luts.json');
- const {nativeCatalog}=await import(pathToFileURL(path.join(sourceDir,'node/gr3-native-library.mjs')));
- const {sdFilmRecord}=await import(pathToFileURL(path.join(sourceDir,'node/gr3-sd-film-pack.mjs')));
+ // Fresh process: module-level renderer digests must never survive a snapshot.
+ // Capture every data read, and explicitly bind the imported module closure.
+ async function moduleSource(name){
+  if(sources.has(name))return;
+  const bytes=await source(name);
+  for(const m of bytes.toString().matchAll(/(?:from\s*|import\s*)['"](\.[^'"\n]+)['"]/g))
+   await moduleSource(path.posix.normalize(path.posix.join(path.posix.dirname(name),m[1])));
+ }
+ await moduleSource('node/gr3-native-library.mjs');
+ await moduleSource('node/gr3-sd-film-pack.mjs');
+ const child=`
+ import fs from 'node:fs';import fsp from 'node:fs/promises';
+ import{syncBuiltinESMExports}from'node:module';import{fileURLToPath,pathToFileURL}from'node:url';import path from'node:path';import{createHash}from'node:crypto';
+ const root=process.argv[1],reads=new Map();
+ function remember(p,b){const name=path.relative(root,p instanceof URL?fileURLToPath(p):String(p));if(!name.startsWith('..')&&!path.isAbsolute(name)&&/\\.(mjs|json|c|h|rgba|png)$/.test(name))reads.set(name,createHash('sha256').update(b).digest('hex'));return b;}
+ const sync=fs.readFileSync.bind(fs),asyncRead=fsp.readFile.bind(fsp);
+ fs.readFileSync=(p,...a)=>remember(p,sync(p,...a));fsp.readFile=async(p,...a)=>remember(p,await asyncRead(p,...a));syncBuiltinESMExports();
+ const {nativeCatalog}=await import(pathToFileURL(path.join(root,'node/gr3-native-library.mjs')));
+ const {sdFilmRecord}=await import(pathToFileURL(path.join(root,'node/gr3-sd-film-pack.mjs')));
  const native=await nativeCatalog(),rendererHash=sdFilmRecord(33).subarray(8448,8480).toString('hex');
+ process.stdout.write(JSON.stringify({native,rendererHash,reads:[...reads]}));`;
+ const generated=JSON.parse(execFileSync(process.execPath,['--input-type=module','-e',child,sourceDir],{encoding:'utf8',maxBuffer:32*1024*1024}));
+ for(const [name,hash]of generated.reads){const bytes=await source(name);if(digest(bytes)!==hash)throw Error('source changed during generation: '+name);}
+ const {native,rendererHash}=generated;
  const entries=[];
  for(const f of native.films){
   const icon='assets/films/icons/'+f.id+'.png';outputs.set(icon,await source('web'+f.icon_url));
@@ -49,9 +70,22 @@ export async function syncContract({sourceDir,outputDir,check=false}){
   return manifest;
  }
  const temporary=await mkdtemp(path.join(os.tmpdir(),'gremote-film-sync-'));
+ const replaced=[];
  try{
-  for(const [name,value] of outputs){const staged=path.join(temporary,name);await mkdir(path.dirname(staged),{recursive:true});await writeFile(staged,value);}
-  for(const [name] of outputs){const target=path.join(outputDir,name);await mkdir(path.dirname(target),{recursive:true});await rename(path.join(temporary,name),target);}
+  for(const [name,value] of outputs){const staged=path.join(temporary,'new',name);await mkdir(path.dirname(staged),{recursive:true});await writeFile(staged,value);}
+  // Roll back every published path on any caught error. The identity marker and
+  // build-time --check also reject an externally interrupted partial snapshot.
+  for(const [name] of outputs){
+   const target=path.join(outputDir,name);await mkdir(path.dirname(target),{recursive:true});
+   let before=null;try{before=await readFile(target);}catch(error){if(error.code!=='ENOENT')throw error;}
+   replaced.push([target,before]);
+   await publishFile(path.join(temporary,'new',name),target);
+  }
+ }catch(error){
+  for(const[target,before]of replaced.reverse()){
+   if(before===null)await rm(target,{force:true});else await writeFile(target,before);
+  }
+  throw error;
  }finally{await rm(temporary,{recursive:true,force:true});}
  return manifest;
 }

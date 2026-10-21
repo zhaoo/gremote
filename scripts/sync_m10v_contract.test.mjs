@@ -22,3 +22,30 @@ test('generated catalog keeps stable film identity and detects snapshot corrupti
   await assert.rejects(syncContract({sourceDir,outputDir,check:true}),/snapshot mismatch/);
  }finally{await rm(outputDir,{recursive:true,force:true});}
 });
+
+test('repeat generation observes changed renderer and failed publication rolls back',async()=>{
+ const {cp}=await import('node:fs/promises');
+ const {execFileSync}=await import('node:child_process');
+ const root=await mkdtemp(path.join(os.tmpdir(),'gremote-snapshot-change-'));
+ const source=path.join(root,'source'),outputDir=path.join(root,'output');
+ try {
+  for(const name of ['native/gr3','node','web','vendor/darkslide','contracts','LICENSE','THIRD_PARTY_NOTICES.md'])
+   await cp(path.join(sourceDir,name),path.join(source,name),{recursive:true});
+  execFileSync('git',['init','-q',source]);
+  execFileSync('git',['-C',source,'-c','user.name=Test','-c','user.email=test@invalid','commit','--allow-empty','-qm','fixture']);
+  const first=await syncContract({sourceDir:source,outputDir});
+  const changed=path.join(source,'native/gr3/m10v_library.c');
+  await writeFile(changed,(await readFile(changed))+'\n/* generation change */\n');
+  const second=await syncContract({sourceDir:source,outputDir});
+  assert.notEqual(first.rendererHash,second.rendererHash);
+  assert.ok(second.files['node/gr3-sd-film-pack.mjs']);
+  const before=await readFile(path.join(outputDir,'native/imaging/vendor/m10v/m10v_library.c'));
+  await writeFile(changed,(await readFile(changed))+'\n/* interrupted publish */\n');
+  let writes=0;
+  await assert.rejects(syncContract({sourceDir:source,outputDir,publishFile:async(a,b)=>{
+    if(++writes===4)throw Error('injected publication failure');
+    const {rename}=await import('node:fs/promises');await rename(a,b);
+  }}),/injected/);
+  assert.deepEqual(await readFile(path.join(outputDir,'native/imaging/vendor/m10v/m10v_library.c')),before);
+ }finally{await rm(root,{recursive:true,force:true});}
+});

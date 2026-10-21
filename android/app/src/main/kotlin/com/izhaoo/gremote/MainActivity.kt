@@ -3,6 +3,9 @@ package com.izhaoo.gremote
 import android.view.WindowManager
 import android.content.Intent
 import android.app.Activity
+import android.os.CancellationSignal
+import kotlinx.coroutines.*
+import com.izhaoo.gremote.device.CompanionFileReader
 import com.izhaoo.gremote.device.FlutterError
 import com.izhaoo.gremote.location.ForegroundLocation
 import com.izhaoo.gremote.device.wifi.WifiScanController
@@ -18,6 +21,8 @@ import io.flutter.embedding.engine.FlutterEngine
 class MainActivity : FlutterActivity() {
     private var companionFileResult: ((Result<ByteArray?>) -> Unit)? = null
     private var companionFileLimit = 0
+    private var companionReadScope: CoroutineScope? = null
+    private var companionFileReader: CompanionFileReader? = null
     private var location: ForegroundLocation? = null
     private var wifiScanController: WifiScanController? = null
     private var deviceApi: GRemoteDeviceHostApi? = null
@@ -27,6 +32,8 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         val messenger = flutterEngine.dartExecutor.binaryMessenger
+        companionReadScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        companionFileReader = CompanionFileReader(companionReadScope!!)
         wifiScanController = WifiScanController(this, messenger)
         location = ForegroundLocation(this, messenger)
         deviceApi = GRemoteDeviceHostApi(
@@ -72,17 +79,21 @@ class MainActivity : FlutterActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode != 7214) { super.onActivityResult(requestCode, resultCode, data); return }
         val callback = companionFileResult ?: return
-        companionFileResult = null
-        if (resultCode != Activity.RESULT_OK) { callback(Result.success(null)); return }
-        try {
-            val uri = data?.data ?: throw IllegalArgumentException()
-            val bytes = contentResolver.openInputStream(uri)?.use { input ->
-                val output = java.io.ByteArrayOutputStream(); val buffer = ByteArray(4096)
-                while (true) { val count = input.read(buffer, 0, minOf(buffer.size, companionFileLimit + 1 - output.size())); if (count < 0) break; output.write(buffer, 0, count); if (output.size() > companionFileLimit) throw IllegalArgumentException() }
-                output.toByteArray()
-            } ?: throw IllegalArgumentException()
-            callback(Result.success(bytes))
-        } catch (error: Throwable) { callback(Result.failure(FlutterError("invalidCompanionFile", "文件读取失败或超过大小限制"))) }
+        if (resultCode != Activity.RESULT_OK) { companionFileResult = null; callback(Result.success(null)); return }
+        val uri = data?.data
+        val limit = companionFileLimit
+        if (uri == null) { companionFileResult = null; callback(Result.failure(FlutterError("invalidCompanionFile", "未选择文件"))); return }
+        val signal = CancellationSignal()
+        companionFileReader?.read(limit, {
+            contentResolver.openAssetFileDescriptor(uri, "r", signal)?.createInputStream()
+                ?: throw IllegalArgumentException()
+        }, { signal.cancel() }) { result ->
+            if (companionFileResult !== callback) return@read
+            companionFileResult = null
+            callback(result.fold({ Result.success(it) }, {
+                Result.failure(FlutterError("invalidCompanionFile", "文件读取失败、超时或超过大小限制"))
+            }))
+        }
     }
 
     private fun setKeepScreenOn(on: Boolean) = runOnUiThread {
@@ -101,7 +112,8 @@ class MainActivity : FlutterActivity() {
         wifiScanController = null
         CameraDeviceHostApi.setUp(messenger, null)
         MediaHostApi.setUp(messenger, null)
-        companionFileResult?.invoke(Result.failure(FlutterError("companionPickerCancelled", "文件选择已取消")))
+        companionFileReader?.close(); companionFileReader = null
+        companionReadScope?.cancel(); companionReadScope = null
         companionFileResult = null
         deviceApi?.close()
         deviceApi = null

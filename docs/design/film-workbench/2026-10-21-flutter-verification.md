@@ -11,3 +11,5 @@
 - 主机截图、单元测试、APK 构建均不能证明相机兼容性、真机帧率或传输性能。
 
 C2/C3 更新：新增 `2026-10-21-flutter-camera-slots-fixture.png` 与 `2026-10-21-flutter-load-confirmation-fixture.png`。它们是 **host UI fixture** 驱动的真实 Flutter 布局截图，供检查五槽、差异和确认面板；不是机身读回、无线可用或真机截图。截图测试仅补充字体族（含 FilledButton 字体，避免 Ahem 方块），不替换实际布局。选中导航图标已设为金色，保持深色底上的可见性。确认页把胶卷 ID 译为目录名称，实际协议不变。此处的后续网络与相机能力以验收文档的明确边界为准。
+
+四格对比补充：`2026-10-21-flutter-comparison-grid.png` 为真实 Flutter + M10V FFI 串行生成的原色及三款胶卷（640 长边），输入仍是 AI 示例，不是相机出图或设备性能证据。

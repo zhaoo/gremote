@@ -66,7 +66,7 @@ class FfiFilmPreviewEngine implements FilmPreviewEngine {
 }
 
 Uint8List encodeFilmRecipe(FilmRecipe recipe) {
-  final p = recipe.parameters, r = Uint8List(16);
+  final p = recipe.resolvedParameters, r = Uint8List(16);
   ByteData.sublistView(r).setUint16(0, recipe.filmId, Endian.little);
   r[2] = p['grain'] ?? 0;
   r[3] = p['grainSize'] ?? 1;

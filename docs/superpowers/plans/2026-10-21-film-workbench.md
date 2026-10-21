@@ -88,8 +88,10 @@
 
 ## 执行记录（2026-10-21）
 
-- A1–A6：源码与离线验证完成，真实 Flutter 截图见 `docs/design/film-workbench/`。
+- A1–A3/A5/A6：源码与离线验证完成，真实 Flutter 截图见 `docs/design/film-workbench/`。
 - C1/C2：Android 传输、保护配对、真实 host HTTP 联调、持久同步状态机与五槽 UI 完成离线检查；iOS 网络显式 unsupported，构建缺 Xcode；实际设备 smoke not-run。
 - B1/B2/B4/B5：受限协议、消息桥/事务/上传核心与 host/ARM 证据已具备；真实 RTOS owner/cache/wakeup/lifetime、菜单共用提交域、相机存储/Wi-Fi 适配仍未接通。对应目标任务保持未完成，所有真实能力默认关闭。
 - B3：签名 HTTP 与静态 ARM 禁用服务候选完成离线验证，不能视为可安装无线组件。
 - C3：离线候选、身份校验打包器、验收与源清单已准备；当前不满足完整无线功能的交付及真机验收门槛，不部署/发布。详细证据与条件跳过见 `docs/testing/film-workbench-acceptance.md`。
+
+独立审查澄清：A4 仅核心实现，未接通真实自动拍摄归档、RAW+JPEG 生产订阅、稳定身份补证与重连找回 UI；保持未完成。当前数字胶卷使用手动本地导入。

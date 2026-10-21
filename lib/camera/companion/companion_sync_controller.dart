@@ -184,6 +184,7 @@ class CompanionSyncController extends ChangeNotifier {
               : snapshot.busy
                   ? SyncConnectionStatus.busy
                   : SyncConnectionStatus.ready,
+          canRetryOriginal: false,
           rebootNeedsConfirmation: reboot);
       if (_hasPending) {
         next = next.copyWith(
@@ -225,16 +226,7 @@ class CompanionSyncController extends ChangeNotifier {
   }
 
   Map<String, Object?> _recipeSlot(FilmRecipe recipe) {
-    final parameters = <String, int>{};
-    for (final entry in (filmContract['parameters'] as Map).entries) {
-      final p = entry.value as Map;
-      if ((p['filmIds'] == null ||
-              (p['filmIds'] as List).contains(recipe.filmId)) &&
-          !(p['excludeFilmIds'] as List? ?? []).contains(recipe.filmId)) {
-        parameters[entry.key as String] = p['default'] as int;
-      }
-    }
-    parameters.addAll(recipe.parameters);
+    final parameters = recipe.resolvedParameters;
     return {
       'filmId': recipe.filmId,
       'parameters': parameters,
@@ -369,6 +361,7 @@ class CompanionSyncController extends ChangeNotifier {
         state.readOnly) return;
     if (_blocked()) return;
     _working = true;
+    _set(state.copyWith(canRetryOriginal: false));
     final epoch = _epoch;
     try {
       final fresh = await api.state();
@@ -679,6 +672,7 @@ class CompanionSyncController extends ChangeNotifier {
   Future<void> reconcileUnknown() async {
     if (!_alive || _working || !_hasPending) return;
     _working = true;
+    _set(state.copyWith(canRetryOriginal: false));
     final epoch = _epoch;
     try {
       final fresh = await api.state();
@@ -719,8 +713,75 @@ class CompanionSyncController extends ChangeNotifier {
         await _unknown(epoch);
         return;
       }
-      await _pollReceipt(await api.operation(_pending!.id), epoch);
+      try {
+        await _pollReceipt(await api.operation(_pending!.id), epoch);
+      } on CompanionException catch (error) {
+        if (error.code != 'resultUnknown') rethrow;
+        if (!_current(epoch)) return;
+        await _unknown(epoch);
+        if (!_current(epoch)) return;
+        final retry = _canRetry(fresh);
+        _set(state.copyWith(
+            snapshot: fresh,
+            canRetryOriginal: retry,
+            message: retry ? '相机没有可查询的回执；可确认后以原操作编号重试' : '结果待核对，当前配置不允许重试原操作'));
+      }
     } catch (error) {
+      if (_current(epoch)) await _unknown(epoch);
+    } finally {
+      _working = false;
+    }
+  }
+
+  bool _canRetry(CompanionSnapshot fresh) {
+    final pending = _pending, caps = state.capabilities;
+    return pending != null &&
+        caps != null &&
+        _active &&
+        !isWriteBlocked() &&
+        !state.readOnly &&
+        caps.supports('writeState') &&
+        caps.compatibleWith(catalogHash, rendererHash) &&
+        fresh.instanceId == caps.instanceId &&
+        fresh.bootId == pending.boot &&
+        fresh.revision == pending.wire['baseRevision'] &&
+        fresh.fresh &&
+        !fresh.busy &&
+        fresh.wire['catalogHash'] == catalogHash &&
+        fresh.wire['rendererHash'] == rendererHash &&
+        !fresh.hasUnknownFields &&
+        knownCompanionConfig(fresh.config);
+  }
+
+  /// Explicit user confirmation only. Never invent a replacement request ID.
+  Future<void> retryOriginalOperation() async {
+    if (!_alive || _working || !state.canRetryOriginal || _pending == null) {
+      return;
+    }
+    _working = true;
+    final epoch = _epoch;
+    _set(state.copyWith(canRetryOriginal: false));
+    try {
+      final fresh = await api.state();
+      if (!_current(epoch)) return;
+      if (!_canRetry(fresh)) {
+        await _unknown(epoch);
+        return;
+      }
+      // Query first: an old committed/applying/unknown receipt is authoritative.
+      try {
+        final receipt = await api.operation(_pending!.id);
+        if (_current(epoch)) await _pollReceipt(receipt, epoch);
+        return;
+      } on CompanionException catch (error) {
+        if (error.code != 'resultUnknown') rethrow;
+      }
+      if (!_current(epoch) || !_active || isWriteBlocked()) return;
+      await _persist('queued');
+      if (!_current(epoch) || !_active || isWriteBlocked()) return;
+      final receipt = await api.submit(_pending!.wire);
+      if (_current(epoch)) await _pollReceipt(receipt, epoch);
+    } catch (_) {
       if (_current(epoch)) await _unknown(epoch);
     } finally {
       _working = false;

@@ -1,4 +1,5 @@
 import 'dart:ffi';
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
@@ -78,13 +79,18 @@ class ImagingCancelToken {
   ImagingCancelToken() : _flag = calloc<Int32>();
 
   final Pointer<Int32> _flag;
+  final _cancelled = Completer<void>();
+  Future<void> get whenCancelled => _cancelled.future;
   bool _disposed = false;
 
   int get address => _flag.address;
   bool get isCancelled => !_disposed && _flag.value != 0;
 
   void cancel() {
-    if (!_disposed) _flag.value = 1;
+    if (!_disposed) {
+      _flag.value = 1;
+      if (!_cancelled.isCompleted) _cancelled.complete();
+    }
   }
 
   void dispose() {

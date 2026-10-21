@@ -26,6 +26,7 @@ import 'package:gremote/storage/gremote_database.dart';
 
 class _ObservedRealEngine implements FilmPreviewEngine {
   final ready = Completer<void>();
+  int completions = 0;
   final engine = const FfiFilmPreviewEngine(
       libraryPath: 'native/imaging/build/host/libgremote_imaging.dylib');
   @override
@@ -43,6 +44,7 @@ class _ObservedRealEngine implements FilmPreviewEngine {
         generation: generation,
         cancel: cancel,
         maxEdge: maxEdge);
+    completions++;
     if (!ready.isCompleted) ready.complete();
     return result;
   }
@@ -136,6 +138,23 @@ void main() {
     }
 
     await save('trial');
+    final before = engine.completions;
+    await tester.tap(find.text('四格对比'));
+    for (var attempt = 0;
+        attempt < 300 && engine.completions < before + 3;
+        attempt++) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)));
+      await tester.pump();
+    }
+    expect(engine.completions, greaterThanOrEqualTo(before + 3));
+    for (var i = 0; i < 10; i++) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)));
+      await tester.pump();
+    }
+    await tester.pumpAndSettle();
+    await save('comparison-grid');
     await tester.tap(find.text('数字胶卷'));
     await tester.pumpAndSettle();
     await save('rolls-empty');

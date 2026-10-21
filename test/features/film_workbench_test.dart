@@ -95,6 +95,25 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+  testWidgets(
+      'original and three selectable films render in bounded comparison mode',
+      (tester) async {
+    final engine = ObservedPreviewEngine();
+    await show(tester,
+        engine: engine,
+        sampleLoader: () async =>
+            PreviewImage(width: 2, height: 2, rgba: Uint8List(16)));
+    await tester.pump();
+    expect(find.text('四格对比'), findsOneWidget);
+    await tester.tap(find.text('四格对比'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('film-compare-original')), findsOneWidget);
+    for (var i = 0; i < 3; i++) {
+      expect(find.byKey(ValueKey('film-compare-$i')), findsOneWidget);
+    }
+    expect(find.byType(ComparisonPreview), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('digital roll empty state has no fictional photos or count',
       (tester) async {
     await show(tester, section: 1);

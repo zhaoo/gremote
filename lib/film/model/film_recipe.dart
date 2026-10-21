@@ -80,6 +80,18 @@ class FilmRecipe {
   final String catalogHash, rendererHash, name;
   final String? customHash;
   final Map<String, int> parameters;
+
+  /// Effective values from the same registry used by camera installation.
+  /// Keep the imported wire card and its fingerprint unchanged.
+  Map<String, int> get resolvedParameters => {
+        for (final entry in (filmContract['parameters'] as Map).entries)
+          if (((entry.value as Map)['filmIds'] == null ||
+                  ((entry.value as Map)['filmIds'] as List).contains(filmId)) &&
+              !((entry.value as Map)['excludeFilmIds'] as List? ?? [])
+                  .contains(filmId))
+            entry.key as String: (entry.value as Map)['default'] as int,
+        ...parameters,
+      };
   Map<String, Object?> toJson() => {
         'schemaVersion': 1,
         'filmId': filmId,

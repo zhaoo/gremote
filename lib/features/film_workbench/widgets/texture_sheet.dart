@@ -16,7 +16,7 @@ class TextureSheet extends StatefulWidget {
 }
 
 class _TextureSheetState extends State<TextureSheet> {
-  late final _values = {...widget.recipe.parameters};
+  late final _values = {...widget.recipe.resolvedParameters};
   @override
   Widget build(BuildContext context) => SafeArea(
       child: SizedBox(

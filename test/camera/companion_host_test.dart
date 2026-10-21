@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
@@ -31,12 +32,21 @@ class _Loopback implements CompanionTransport {
   _Loopback(this.port);
   final int port;
   final http = HttpClient();
+  bool dropNextOperation = false;
+  final operationBodies = <String>[];
   @override
   Future<CameraResponse> request(
       {required String method,
       required String path,
       required Map<String, String> headers,
       required Uint8List body}) async {
+    if (method == 'POST' && path == '/m10v/v1/operations') {
+      operationBodies.add(utf8.decode(body));
+      if (dropNextOperation) {
+        dropNextOperation = false;
+        throw TimeoutException('POST never reached server');
+      }
+    }
     final request = await http.openUrl(
         method, Uri(scheme: 'http', host: '127.0.0.1', port: port, path: path));
     request.followRedirects = false;
@@ -183,6 +193,22 @@ finally:
         await sync.confirm();
         expect(sync.state.operationStatus, SyncOperationStatus.synced);
         expect(sync.state.snapshot!.wire['journalSequence'], 2);
+        wire.dropNextOperation = true;
+        final next = FilmRecipe.fromJson({
+          ...target.toJson(),
+          'parameters': {...target.parameters, 'grain': 3}
+        });
+        await sync.prepareLoad(slot: 0, recipe: next, activate: false);
+        await sync.confirm();
+        expect(sync.state.operationStatus, SyncOperationStatus.unknown);
+        final originalPayload = wire.operationBodies.last;
+        await sync.reconcileUnknown();
+        expect(sync.state.canRetryOriginal, isTrue);
+        expect(wire.operationBodies.last, originalPayload);
+        await sync.retryOriginalOperation();
+        expect(wire.operationBodies.last, originalPayload);
+        expect(sync.state.operationStatus, SyncOperationStatus.synced);
+        expect(sync.state.snapshot!.wire['journalSequence'], 3);
       } finally {
         sync.dispose();
         await db.close();
