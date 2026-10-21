@@ -69,6 +69,19 @@ class HomePage extends ConsumerWidget {
           const SizedBox(height: 14),
           const _EditorialHero(),
           Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+              child: Card(
+                  child: ListTile(
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                leading: const Icon(Icons.local_movies_outlined,
+                    color: GRemoteColors.gold),
+                title: const Text('试卷台 · 数字胶卷'),
+                subtitle: const Text('选好感觉，把一天拍成一卷'),
+                trailing: const Icon(Icons.arrow_forward_rounded, size: 20),
+                onTap: () => context.push('/film-workbench'),
+              ))),
+          Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: ConnectionCard(
               state: state,

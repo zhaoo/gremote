@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../features/darkroom/darkroom_page.dart';
 import '../features/darkroom/editor/editor_page.dart';
 import '../features/home/home_page.dart';
+import '../features/film_workbench/film_workbench_page.dart';
 import '../features/library/batch_export_page.dart';
 import '../features/library/library_page.dart';
 import '../features/settings/protocol_probe_page.dart';
@@ -62,6 +63,11 @@ final appRouter = GoRouter(
       ],
     ),
     GoRoute(path: '/export-queue', builder: (_, __) => const BatchExportPage()),
+    GoRoute(
+        path: '/film-workbench',
+        builder: (_, state) => FilmWorkbenchPage(
+            initialSection:
+                int.tryParse(state.uri.queryParameters['section'] ?? '') ?? 0)),
     GoRoute(path: '/probe', builder: (_, __) => const ProtocolProbePage()),
     GoRoute(
       path: '/edit/:mediaId',

@@ -225,6 +225,7 @@ protocol MediaHostApi {
   func readExif(ids: [Int64], completion: @escaping (Result<[NativeExifSummary], Error>) -> Void)
   func thumbnail(id: Int64, edge: Int64, completion: @escaping (Result<FlutterStandardTypedData?, Error>) -> Void)
   func openReadFd(id: Int64, completion: @escaping (Result<Int64, Error>) -> Void)
+  func contentHash(id: Int64, completion: @escaping (Result<String, Error>) -> Void)
   func publishExport(tempPath: String, sourceId: Int64, displayName: String, keepGps: Bool, width: Int64, height: Int64, completion: @escaping (Result<String, Error>) -> Void)
   func publishGenerated(tempPath: String, displayName: String, width: Int64, height: Int64, completion: @escaping (Result<String, Error>) -> Void)
   func shareRecipe(card: FlutterStandardTypedData) throws
@@ -359,6 +360,23 @@ class MediaHostApiSetup {
       }
     } else {
       openReadFdChannel.setMessageHandler(nil)
+    }
+    let contentHashChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.gremote.MediaHostApi.contentHash\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      contentHashChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let idArg = args[0] as! Int64
+        api.contentHash(id: idArg) { result in
+          switch result {
+          case .success(let res):
+            reply(wrapResult(res))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      contentHashChannel.setMessageHandler(nil)
     }
     let publishExportChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.gremote.MediaHostApi.publishExport\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {

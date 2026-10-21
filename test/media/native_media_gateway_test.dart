@@ -8,6 +8,9 @@ class _FakeHostApi extends MediaHostApi {
   Object? error;
 
   @override
+  Future<String> contentHash(int id) async => id == 7 ? 'a' * 64 : 'invalid';
+
+  @override
   Future<NativeMediaAccess> access() async => NativeMediaAccess.partial;
 
   @override
@@ -76,5 +79,9 @@ void main() {
   test('rejects oversized portable recipe before calling platform', () async {
     await expectLater(
         gateway.shareRecipe(Uint8List(16385)), throwsFormatException);
+  });
+  test('content identity must be a real SHA256 from the platform', () async {
+    expect(await gateway.contentHash(7), 'a' * 64);
+    await expectLater(gateway.contentHash(8), throwsFormatException);
   });
 }

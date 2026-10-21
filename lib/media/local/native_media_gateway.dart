@@ -66,6 +66,15 @@ class NativeMediaGateway implements MediaGateway {
   Future<int> openReadFd(int id) => _guard(() => _api.openReadFd(id));
 
   @override
+  Future<String> contentHash(int id) async {
+    final hash = await _guard(() => _api.contentHash(id));
+    if (!RegExp(r'^[a-f0-9]{64}$').hasMatch(hash)) {
+      throw const FormatException('原片内容校验失败');
+    }
+    return hash;
+  }
+
+  @override
   Future<String> publishExport({
     required String tempPath,
     required int sourceId,

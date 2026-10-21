@@ -1,3 +1,4 @@
+import CryptoKit
 import CoreLocation
 import Darwin
 import Flutter
@@ -89,6 +90,17 @@ final class GRemoteMedia: MediaHostApi {
       if (info?[PHImageResultIsDegradedKey] as? Bool) == true { return }
       onMain(completion,.success(image?.jpegData(compressionQuality:0.85).map { FlutterStandardTypedData(bytes:$0) }))
     }
+  }
+  func contentHash(id: Int64, completion: @escaping (Result<String, Error>) -> Void) {
+    guard let asset = asset(id), let resource = PHAssetResource.assetResources(for:asset).first(where:{ PhotoPolicy.editable($0.originalFilename) }) else { completion(.failure(nativeError("photoUnavailable","原片不可用"))); return }
+    let options = PHAssetResourceRequestOptions(); options.isNetworkAccessAllowed = false
+    let lock = NSLock(); var digest = SHA256()
+    PHAssetResourceManager.default().requestData(for:resource,options:options,dataReceivedHandler:{ chunk in
+      lock.lock(); digest.update(data:chunk); lock.unlock()
+    },completionHandler:{ error in
+      if error != nil { onMain(completion,.failure(nativeError("photoUnavailable","请先下载原图"))) }
+      else { lock.lock(); let hash = digest.finalize().map { String(format:"%02x",$0) }.joined(); lock.unlock(); onMain(completion,.success(hash)) }
+    })
   }
   func openReadFd(id: Int64, completion: @escaping (Result<Int64, Error>) -> Void) {
     data(id) { result in

@@ -82,6 +82,11 @@ class FakeMediaGateway implements MediaGateway {
     return fd;
   }
 
+  final contentHashes = <int, String>{};
+  @override
+  Future<String> contentHash(int id) async =>
+      contentHashes[id] ?? (throw StateError("original unavailable"));
+
   @override
   Future<String> publishExport({
     required String tempPath,

@@ -75,6 +75,9 @@ abstract class MediaHostApi {
   int openReadFd(int id);
 
   @async
+  String contentHash(int id);
+
+  @async
   String publishExport(
     String tempPath,
     int sourceId,

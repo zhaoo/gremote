@@ -64,6 +64,9 @@ abstract interface class MediaGateway {
   /// Detached read-only descriptor; the receiver must close it.
   Future<int> openReadFd(int id);
 
+  /// SHA256 of the original JPEG, streamed by the platform.
+  Future<String> contentHash(int id);
+
   /// Writes filtered EXIF into [tempPath] and publishes it; returns the uri.
   Future<String> publishExport({
     required String tempPath,

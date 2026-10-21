@@ -198,6 +198,7 @@ interface MediaHostApi {
   fun readExif(ids: List<Long>, callback: (Result<List<NativeExifSummary>>) -> Unit)
   fun thumbnail(id: Long, edge: Long, callback: (Result<ByteArray?>) -> Unit)
   fun openReadFd(id: Long, callback: (Result<Long>) -> Unit)
+  fun contentHash(id: Long, callback: (Result<String>) -> Unit)
   fun publishExport(tempPath: String, sourceId: Long, displayName: String, keepGps: Boolean, width: Long, height: Long, callback: (Result<String>) -> Unit)
   fun publishGenerated(tempPath: String, displayName: String, width: Long, height: Long, callback: (Result<String>) -> Unit)
   fun shareRecipe(card: ByteArray)
@@ -344,6 +345,26 @@ interface MediaHostApi {
             val args = message as List<Any?>
             val idArg = args[0] as Long
             api.openReadFd(idArg) { result: Result<Long> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.gremote.MediaHostApi.contentHash$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val idArg = args[0] as Long
+            api.contentHash(idArg) { result: Result<String> ->
               val error = result.exceptionOrNull()
               if (error != null) {
                 reply.reply(wrapError(error))

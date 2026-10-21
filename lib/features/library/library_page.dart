@@ -55,25 +55,37 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-              child: Row(children: [
-                Text('图库', style: Theme.of(context).textTheme.headlineSmall),
-                const Spacer(),
-                SegmentedButton<_Source>(
-                  showSelectedIcon: false,
-                  segments: const [
-                    ButtonSegment(value: _Source.local, label: Text('本机')),
-                    ButtonSegment(value: _Source.camera, label: Text('相机')),
-                  ],
-                  selected: {_source},
-                  onSelectionChanged: (value) {
-                    final next = value.single;
-                    if (_source != _Source.local && next == _Source.local) {
-                      unawaited(_controller.refresh());
-                    }
-                    setState(() => _source = next);
-                  },
-                ),
-              ]),
+              child: Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 12,
+                  runSpacing: 8,
+                  children: [
+                    Row(mainAxisSize: MainAxisSize.min, children: [
+                      Text('图库',
+                          style: Theme.of(context).textTheme.headlineSmall),
+                      IconButton(
+                          tooltip: '数字胶卷',
+                          onPressed: () =>
+                              context.push('/film-workbench?section=1'),
+                          icon: const Icon(Icons.local_movies_outlined)),
+                    ]),
+                    SegmentedButton<_Source>(
+                      showSelectedIcon: false,
+                      segments: const [
+                        ButtonSegment(value: _Source.local, label: Text('本机')),
+                        ButtonSegment(value: _Source.camera, label: Text('相机')),
+                      ],
+                      selected: {_source},
+                      onSelectionChanged: (value) {
+                        final next = value.single;
+                        if (_source != _Source.local && next == _Source.local) {
+                          unawaited(_controller.refresh());
+                        }
+                        setState(() => _source = next);
+                      },
+                    ),
+                  ]),
             ),
             Expanded(
               child: _source == _Source.camera

@@ -42,6 +42,17 @@ class GRemoteMediaHostApi(private val activity: Activity) : MediaHostApi {
     override fun openReadFd(id: Long, callback: (Result<Long>) -> Unit) =
         launchIo(callback) { reader.openReadFd(id) }
 
+    override fun contentHash(id: Long, callback: (Result<String>) -> Unit) = launchIo(callback) {
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        val stream = activity.contentResolver.openInputStream(reader.uriOf(id))
+            ?: throw MediaException("openFailed", "原片不可用")
+        stream.use { input ->
+            val buffer = ByteArray(65536)
+            while (true) { val count = input.read(buffer); if (count < 0) break; digest.update(buffer, 0, count) }
+        }
+        digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xff) }
+    }
+
     override fun publishExport(
         tempPath: String,
         sourceId: Long,

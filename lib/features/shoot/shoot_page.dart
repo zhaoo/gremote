@@ -626,6 +626,13 @@ class _ShootPageState extends ConsumerState<ShootPage> {
           padding: const EdgeInsets.all(18),
           children: [
             Text('更多参数', style: Theme.of(context).textTheme.titleLarge),
+            ListTile(
+                leading: const Icon(Icons.local_movies_outlined),
+                title: const Text('试卷台 · 数字胶卷'),
+                onTap: () {
+                  Navigator.pop(context);
+                  unawaited(_exitTo('/film-workbench', push: true));
+                }),
             for (final param in camera.params.values.where((param) => !{
                   'av',
                   'tv',
