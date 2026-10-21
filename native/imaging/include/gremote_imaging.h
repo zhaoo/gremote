@@ -90,6 +90,7 @@ GREMOTE_EXPORT int32_t gremote_encode_generated_jpeg(const uint8_t* rgba,
  * 16-byte v1 little-endian data layout documented in m10v_preview.h.
  * stages=0 renders color and texture; stages=1 renders color only.
  * No camera services are linked. Only visible pixel bytes are written. */
+GREMOTE_EXPORT const char* gr_film_identity_v1(void);
 GREMOTE_EXPORT int32_t gr_film_preview_v1(const uint8_t* rgba,uint32_t width,
     uint32_t height,uint32_t pitch,const uint8_t* recipe,uint32_t recipe_bytes,
     uint32_t stages,uint8_t* out,const volatile int32_t* cancel);

@@ -1,4 +1,5 @@
 #include "m10v_preview.h"
+#include "build_identity.h"
 #include <algorithm>
 #include <cstring>
 #include <new>
@@ -67,3 +68,5 @@ extern "C" int32_t gr_film_preview_v1(const uint8_t* rgba,uint32_t width,
  catch(const std::bad_alloc&){return GREMOTE_OUT_OF_MEMORY;}
  catch(...){return GREMOTE_INVALID_ARGUMENT;}
 }
+
+extern "C" const char* gr_film_identity_v1(void){return GREMOTE_FILM_BUILD_IDENTITY;}

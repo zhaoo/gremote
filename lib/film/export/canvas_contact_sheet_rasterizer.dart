@@ -8,9 +8,10 @@ import 'contact_sheet_layout.dart';
 class CanvasContactSheetRasterizer implements ContactSheetRasterizer {
   const CanvasContactSheetRasterizer();
   @override
-  Future<PreviewImage> rasterize(FilmRoll roll, ContactSheetPage page,
+  Future<ContactSheetRaster> rasterize(FilmRoll roll, ContactSheetPage page,
       List<ContactSheetCell> cells) async {
     final recorder = ui.PictureRecorder();
+    var missing = 0;
     // Keep each decoded image alive only until the page has been rasterized.
     final draw = Canvas(recorder), images = <ui.Image>[];
     void text(String label, double x, double y, double size, Color color,
@@ -64,6 +65,7 @@ class CanvasContactSheetRasterizer implements ContactSheetRasterizer {
           }
         }
         if (image == null) {
+          missing++;
           text('原片暂不可用', x + 72, y + 94, 22, const Color(0xffa2aea4),
               width: 210);
         }
@@ -84,11 +86,13 @@ class CanvasContactSheetRasterizer implements ContactSheetRasterizer {
         final data =
             await rendered.toByteData(format: ui.ImageByteFormat.rawRgba);
         if (data == null) throw StateError('无法生成印样像素');
-        return PreviewImage(
-            width: rendered.width,
-            height: rendered.height,
-            rgba: data.buffer
-                .asUint8List(data.offsetInBytes, data.lengthInBytes));
+        return ContactSheetRaster(
+            PreviewImage(
+                width: rendered.width,
+                height: rendered.height,
+                rgba: data.buffer
+                    .asUint8List(data.offsetInBytes, data.lengthInBytes)),
+            missingCount: missing);
       } finally {
         rendered.dispose();
       }

@@ -1,6 +1,7 @@
 #include "test_main.h"
 #include "gremote_imaging.h"
 #include <vector>
+#include <cstring>
 
 TEST(FilmPreviewUsesRealFilmColorAndPreservesSourceAndAlpha) {
   const uint32_t w=65,h=17,pitch=w*4+12;
@@ -35,4 +36,15 @@ TEST(FilmPreviewRejectsBadRecipesAndCancellationWithoutPublishing) {
   recipe[2]=4;
   EXPECT_TRUE(gr_film_preview_v1(input.data(),8,8,32,recipe,16,0,out.data(),nullptr)!=0);
   EXPECT_EQ(out[0],177);
+}
+
+TEST(FilmPreviewCarriesItsArtifactSourceIdentity) {
+  const char* value=gr_film_identity_v1();
+  EXPECT_TRUE(value!=nullptr);
+  EXPECT_EQ(std::strlen(value),210u);
+  EXPECT_EQ(std::strncmp(value,"GREMOTE_FILM_V1:",16),0);
+  for(unsigned i=16;i<210;i++){
+    if(i==80||i==145)EXPECT_EQ(value[i],':');
+    else EXPECT_TRUE((value[i]>='0'&&value[i]<='9')||(value[i]>='a'&&value[i]<='f'));
+  }
 }

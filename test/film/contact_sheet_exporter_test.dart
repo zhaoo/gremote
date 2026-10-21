@@ -17,10 +17,12 @@ import '../support/fake_media_gateway.dart';
 class PageRasterizer implements ContactSheetRasterizer {
   final pages = <List<ContactSheetCell>>[];
   @override
-  Future<PreviewImage> rasterize(FilmRoll roll, ContactSheetPage page,
+  Future<ContactSheetRaster> rasterize(FilmRoll roll, ContactSheetPage page,
       List<ContactSheetCell> cells) async {
     pages.add(cells);
-    return PreviewImage(width: 2, height: 2, rgba: Uint8List(16));
+    return ContactSheetRaster(
+        PreviewImage(width: 2, height: 2, rgba: Uint8List(16)),
+        missingCount: cells.where((c) => c.thumbnail == null).length);
   }
 }
 
@@ -43,6 +45,15 @@ class FirstPublishFails extends FakeMediaGateway {
     attempts++;
     if (attempts == 1) throw const FileSystemException('No space');
     return 'content://generated/$attempts';
+  }
+}
+
+class ReusedPhotoId extends FakeMediaGateway {
+  int thumbnailCalls = 0;
+  @override
+  Future<Uint8List?> thumbnail(int id, int edge) async {
+    thumbnailCalls++;
+    return Uint8List.fromList([1, 2, 3]);
   }
 }
 
@@ -143,8 +154,10 @@ void main() {
       (tester) async {
     await tester.runAsync(() async {
       final page = ContactSheetLayout.pages(items(1)).single;
-      final image = await const CanvasContactSheetRasterizer()
+      final raster = await const CanvasContactSheetRasterizer()
           .rasterize(roll, page, [ContactSheetCell(page.items.single, null)]);
+      final image = raster.image;
+      expect(raster.missingCount, 1);
       expect(image.width, 1440);
       expect(image.height, page.height);
       final dir = await Directory.systemTemp.createTemp('contact-real-');
@@ -193,5 +206,60 @@ void main() {
     expect((await pending).single.status, ContactSheetStatus.cancelled);
     final next = await ExportWorkGate.acquire();
     next();
+  });
+  test('reused local media ID never exports a different original', () async {
+    final old = items(1).single;
+    final local = RollItem(
+        id: old.id,
+        rollId: old.rollId,
+        identity: CameraPhotoIdentity(
+            instanceId: 'local-photo',
+            storageId: 'local',
+            storageEpoch: 'sha256-v1',
+            dir: 'images',
+            baseName: 'old',
+            contentHash: 'a' * 64),
+        recipe: old.recipe,
+        files: old.files,
+        confidence: old.confidence,
+        createdAt: old.createdAt,
+        mediaId: 7);
+    final gateway = ReusedPhotoId()..contentHashes[7] = 'b' * 64;
+    final rasterizer = PageRasterizer(), cancel = ImagingCancelToken();
+    final dir = Directory.systemTemp.createTempSync('contact-id-reuse-');
+    addTearDown(cancel.dispose);
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final result = await ContactSheetExporter(
+            gateway: gateway,
+            rasterizer: rasterizer,
+            encoder: FileEncoder(),
+            tempDir: () async => dir)
+        .export(roll, [local], cancel: cancel)
+        .toList();
+    expect(result.last.missingCount, 1);
+    expect(gateway.thumbnailCalls, 0);
+    expect(rasterizer.pages.single.single.thumbnail, isNull);
+  });
+
+  testWidgets('corrupt thumbnail placeholder counts as a missing image',
+      (tester) async {
+    await tester.runAsync(() async {
+      final gateway = ReusedPhotoId(), cancel = ImagingCancelToken();
+      final dir = await Directory.systemTemp.createTemp('contact-corrupt-');
+      try {
+        final result = await ContactSheetExporter(
+                gateway: gateway,
+                rasterizer: const CanvasContactSheetRasterizer(),
+                encoder: FileEncoder(),
+                tempDir: () async => dir)
+            .export(roll, items(1), cancel: cancel)
+            .toList();
+        expect(result.last.status, ContactSheetStatus.done);
+        expect(result.last.missingCount, 1);
+      } finally {
+        cancel.dispose();
+        await dir.delete(recursive: true);
+      }
+    });
   });
 }

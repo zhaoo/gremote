@@ -2,6 +2,7 @@ package com.izhaoo.gremote.device.http
 
 import com.izhaoo.gremote.device.NativeHttpResponse
 import java.util.concurrent.TimeUnit
+import java.net.Proxy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -15,7 +16,7 @@ class BoundCompanionTransport internal constructor(
     private val host: String,
     private val isCurrent: () -> Boolean,
 ) {
-    private val client = client.newBuilder().followRedirects(false).followSslRedirects(false)
+    private val client = client.newBuilder().proxy(Proxy.NO_PROXY).followRedirects(false).followSslRedirects(false)
         .connectTimeout(1500, TimeUnit.MILLISECONDS).readTimeout(1500, TimeUnit.MILLISECONDS)
         .callTimeout(2, TimeUnit.SECONDS).build()
     private fun invalid(): Nothing = throw CameraTransportException("invalidCompanionTarget", "无效伴侣请求目标")

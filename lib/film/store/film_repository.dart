@@ -127,7 +127,9 @@ class FilmRepository {
             'film_roll_items',
             {
               'files_json': jsonEncode(merged),
-              if (mediaId != null && row['media_id'] == null)
+              if (mediaId != null &&
+                  (row['media_id'] == null ||
+                      identity.instanceId == 'local-photo'))
                 'media_id': mediaId
             },
             where: 'id=?',

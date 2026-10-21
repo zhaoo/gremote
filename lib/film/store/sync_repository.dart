@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
+import '../model/film_recipe.dart' show canonicalJson;
 
 /// Keeps the original wire snapshot, including newer read-only fields.
 class SyncRepository {
@@ -42,10 +43,12 @@ class SyncRepository {
     await db.transaction((tx) async {
       final rows = await tx.query('camera_sync_operations',
           where: 'request_id=?', whereArgs: [requestId], limit: 1);
-      final encoded = jsonEncode(payload);
+      final encoded = canonicalJson(payload);
       if (rows.isNotEmpty &&
           (rows.single['instance_id'] != instanceId ||
-              rows.single['payload_json'] != encoded)) {
+              canonicalJson(
+                      jsonDecode(rows.single['payload_json'] as String)) !=
+                  encoded)) {
         throw StateError('同步操作身份不可复用');
       }
       await tx.insert(

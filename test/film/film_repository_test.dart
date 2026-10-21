@@ -129,4 +129,73 @@ void main() {
     expect((await reloaded.baseline('camera-a'))!['future'], {'value': 3});
     expect((await reloaded.unresolved('camera-a')).single['status'], 'unknown');
   });
+  test(
+      'same operation accepts semantic JSON key order but rejects a changed payload',
+      () async {
+    final sync = SyncRepository(db);
+    await sync.saveOperation(
+        requestId: 'same',
+        instanceId: 'camera-a',
+        payload: {
+          'baseRevision': 'r',
+          'patch': [
+            {'slot': 0, 'grain': 2}
+          ]
+        },
+        status: 'unknown');
+    await sync.saveOperation(
+        requestId: 'same',
+        instanceId: 'camera-a',
+        payload: {
+          'patch': [
+            {'grain': 2, 'slot': 0}
+          ],
+          'baseRevision': 'r'
+        },
+        status: 'unknown');
+    await expectLater(
+        sync.saveOperation(
+            requestId: 'same',
+            instanceId: 'camera-a',
+            payload: {
+              'patch': [
+                {'grain': 1, 'slot': 0}
+              ],
+              'baseRevision': 'r'
+            },
+            status: 'queued'),
+        throwsStateError);
+  });
+  test(
+      'reimported identical local content refreshes media reference without changing count or recipe',
+      () async {
+    final recipe = catalog.recipe(33),
+        roll = await repo.createRoll(
+            name: 'local', targetCount: 24, recipe: catalog.recipe(33));
+    final id = CameraPhotoIdentity(
+        instanceId: 'local-photo',
+        storageId: 'local',
+        storageEpoch: 'sha256-v1',
+        dir: 'images',
+        baseName: 'hash',
+        contentHash: 'a' * 64);
+    await repo.addConfirmedPhoto(
+        rollId: roll.id,
+        identity: id,
+        recipe: recipe,
+        files: ['one.JPG'],
+        confidence: RecipeConfidence.userAssigned,
+        mediaId: 1);
+    await repo.addConfirmedPhoto(
+        rollId: roll.id,
+        identity: id,
+        recipe: catalog.recipe(75),
+        files: ['one.JPG'],
+        confidence: RecipeConfidence.userAssigned,
+        mediaId: 2);
+    final rows = await repo.listItems(roll.id);
+    expect(rows, hasLength(1));
+    expect(rows.single.mediaId, 2);
+    expect(rows.single.recipe.fingerprint, recipe.fingerprint);
+  });
 }

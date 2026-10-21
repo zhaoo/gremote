@@ -13,8 +13,14 @@ class ContactSheetCell {
   final Uint8List? thumbnail;
 }
 
+class ContactSheetRaster {
+  const ContactSheetRaster(this.image, {required this.missingCount});
+  final PreviewImage image;
+  final int missingCount;
+}
+
 abstract interface class ContactSheetRasterizer {
-  Future<PreviewImage> rasterize(
+  Future<ContactSheetRaster> rasterize(
       FilmRoll roll, ContactSheetPage page, List<ContactSheetCell> cells);
 }
 
@@ -71,7 +77,19 @@ class ContactSheetExporter {
             Uint8List? thumbnail;
             try {
               if (item.mediaId != null) {
-                thumbnail = await gateway.thumbnail(item.mediaId!, 324);
+                final local = item.identity.instanceId == 'local-photo';
+                final expected = item.identity.contentHash;
+                final verified = !local ||
+                    (expected != null &&
+                        RegExp(r'^[a-f0-9]{64}$').hasMatch(expected) &&
+                        await gateway.contentHash(item.mediaId!) == expected);
+                if (verified && !cancel.isCancelled) {
+                  thumbnail = await gateway.thumbnail(item.mediaId!, 324);
+                  if (local &&
+                      await gateway.contentHash(item.mediaId!) != expected) {
+                    thumbnail = null;
+                  }
+                }
               }
             } catch (_) {
               /* A single unavailable original keeps its position. */
@@ -88,7 +106,9 @@ class ContactSheetExporter {
                 ContactSheetStatus.cancelled, page.index, pages.length);
             return;
           }
-          final image = await rasterizer.rasterize(roll, page, cells);
+          final raster = await rasterizer.rasterize(roll, page, cells);
+          final image = raster.image;
+          missing = raster.missingCount;
           final dir = await tempDir();
           // mktemp-style directory avoids collisions across retries and old jobs.
           final ownDir = await dir.createTemp('gremote-contact-');

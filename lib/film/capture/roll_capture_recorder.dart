@@ -51,13 +51,18 @@ class RollCaptureRecorder {
   Future<void> appendFiles(CaptureFileUpdate update) async {
     final evidence = _known['${update.dir}/${update.baseName.toUpperCase()}'];
     if (evidence == null || evidence.sessionGeneration != generation()) return;
-    await repository.addConfirmedPhoto(
-        rollId: evidence.rollId,
-        identity: evidence.identity,
-        recipe: evidence.recipe,
-        files: update.files,
-        confidence: evidence.confidence,
-        isCurrent: () => evidence.sessionGeneration == generation());
+    try {
+      await repository.addConfirmedPhoto(
+          rollId: evidence.rollId,
+          identity: evidence.identity,
+          recipe: evidence.recipe,
+          files: update.files,
+          confidence: evidence.confidence,
+          isCurrent: () => evidence.sessionGeneration == generation());
+    } on StateError {
+      if (evidence.sessionGeneration != generation()) return;
+      rethrow;
+    }
   }
 
   void clear() => _known.clear();

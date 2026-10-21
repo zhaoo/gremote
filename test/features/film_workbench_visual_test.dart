@@ -1,6 +1,12 @@
 // Opt-in host rendering evidence, not camera/device evidence.
 // flutter test --dart-define=FILM_VISUALS=true test/features/film_workbench_visual_test.dart
 import 'dart:async';
+import 'dart:convert';
+import 'package:gremote/camera/companion/companion_sync_controller.dart';
+import 'package:gremote/film/store/sync_repository.dart';
+import 'package:gremote/film/catalog/film_catalog.dart';
+import 'package:gremote/features/film_workbench/companion_providers.dart';
+import '../camera/companion_sync_controller_test.dart' show FakeCompanion;
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -42,6 +48,16 @@ class _ObservedRealEngine implements FilmPreviewEngine {
   }
 }
 
+ThemeData _visualTheme() => GRemoteTheme.dark.copyWith(
+    textTheme:
+        GRemoteTheme.dark.textTheme.apply(fontFamily: 'FilmWorkbenchVisual'),
+    filledButtonTheme: FilledButtonThemeData(
+        style: GRemoteTheme.dark.filledButtonTheme.style!.copyWith(
+            textStyle: const WidgetStatePropertyAll(TextStyle(
+                fontFamily: 'FilmWorkbenchVisual',
+                fontSize: 15,
+                fontWeight: FontWeight.w700)))));
+
 void main() {
   testWidgets('capture real Flutter workbench surfaces', (tester) async {
     final fontPath = Platform.environment['FILM_VISUAL_FONT'];
@@ -49,6 +65,7 @@ void main() {
       await tester.runAsync(() async {
         final bytes = await File(fontPath).readAsBytes();
         for (final family in [
+          'FilmWorkbenchVisual',
           'Roboto',
           'Ahem',
           'PingFang SC',
@@ -84,9 +101,7 @@ void main() {
             key: key,
             child: MaterialApp(
                 debugShowCheckedModeBanner: false,
-                theme: GRemoteTheme.dark.copyWith(
-                    textTheme: GRemoteTheme.dark.textTheme
-                        .apply(fontFamily: "Roboto")),
+                theme: _visualTheme(),
                 home: const FilmWorkbenchPage()))));
     for (var attempt = 0;
         attempt < 200 && !engine.ready.isCompleted;
@@ -104,10 +119,11 @@ void main() {
       await tester.pump();
     }
     await tester.pumpAndSettle();
-    Future<void> save(String name) async {
+    Future<void> save(String name, {GlobalKey? surface}) async {
       await tester.runAsync(() async {
-        final image = await (key.currentContext!.findRenderObject()!
-                as RenderRepaintBoundary)
+        final image = await ((surface ?? key)
+                .currentContext!
+                .findRenderObject()! as RenderRepaintBoundary)
             .toImage(pixelRatio: 2);
         try {
           final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -126,6 +142,67 @@ void main() {
     await tester.tap(find.text('相机胶卷'));
     await tester.pumpAndSettle();
     await save('camera-offline');
+    // UI fixtures below are host-only layout evidence, never camera state proof.
+    final catalog = FilmCatalog.fromJson(
+        jsonDecode(File('assets/films/catalog.json').readAsStringSync())
+            as Map<String, dynamic>);
+    final fixture = FakeCompanion();
+    fixture.caps['catalogHash'] = catalog.hash;
+    fixture.caps['rendererHash'] = catalog.rendererHash;
+    fixture.current['slots'] = [
+      for (final id in [33, 67, 75, 78, 289])
+        {
+          'filmId': id,
+          'parameters': catalog.recipe(id).parameters,
+          'customHash': null
+        }
+    ];
+    final sync = CompanionSyncController(
+        api: fixture,
+        repository: SyncRepository(db),
+        catalogHash: catalog.hash,
+        rendererHash: catalog.rendererHash,
+        wait: () async {});
+    addTearDown(sync.dispose);
+    await tester.runAsync(sync.refresh);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+    final cameraKey = GlobalKey();
+    await tester.pumpWidget(ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          filmCatalogProvider.overrideWith((ref) async => catalog),
+          companionSyncControllerProvider.overrideWithValue(sync),
+          companionNetworkReadyProvider.overrideWithValue(true),
+          selectedFilmRecipeProvider.overrideWith((ref) => catalog.recipe(67))
+        ],
+        child: RepaintBoundary(
+            key: cameraKey,
+            child: MaterialApp(
+                debugShowCheckedModeBanner: false,
+                theme: _visualTheme(),
+                home: const FilmWorkbenchPage(initialSection: 2)))));
+    await tester.pump();
+    await tester.pump();
+    for (var i = 0; i < 6; i++) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)));
+      await tester.pump();
+    }
+    await save('camera-slots-fixture', surface: cameraKey);
+    await tester.scrollUntilVisible(find.text('装入槽位 01'), 220,
+        scrollable: find.byType(Scrollable).last);
+    await tester.ensureVisible(find.text('装入槽位 01'));
+    await tester.pump();
+    await tester.tap(find.text('装入槽位 01'));
+    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(find.text('确认装卷'), findsOneWidget);
+    await save('load-confirmation-fixture', surface: cameraKey);
+    expect(fixture.operations, isEmpty);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+
     expect(tester.takeException(), isNull);
   }, skip: !const bool.fromEnvironment('FILM_VISUALS'));
 }

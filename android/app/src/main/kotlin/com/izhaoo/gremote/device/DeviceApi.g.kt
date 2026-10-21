@@ -633,7 +633,7 @@ class CameraDeviceFlutterApi(private val binaryMessenger: BinaryMessenger, priva
         }
       } else {
         callback(Result.failure(createConnectionError(channelName)))
-      } 
+      }
     }
   }
   fun onNativeEvent(typeArg: String, jsonPayloadArg: String, callback: (Result<Unit>) -> Unit)
@@ -650,7 +650,7 @@ class CameraDeviceFlutterApi(private val binaryMessenger: BinaryMessenger, priva
         }
       } else {
         callback(Result.failure(createConnectionError(channelName)))
-      } 
+      }
     }
   }
 }

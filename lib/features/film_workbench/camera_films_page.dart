@@ -220,6 +220,7 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
                   duration: const Duration(milliseconds: 280),
                   reverseDuration: const Duration(milliseconds: 200)),
           builder: (context) => _LoadSheet(
+              catalog: ref.read(filmCatalogProvider).valueOrNull,
               controller: controller,
               slot: _slot,
               recipe: recipe,
@@ -490,10 +491,12 @@ String _parameters(Map<String, Object?> parameters) {
 class _LoadSheet extends StatefulWidget {
   const _LoadSheet(
       {required this.controller,
+      this.catalog,
       required this.slot,
       required this.recipe,
       required this.activate});
   final CompanionSyncController controller;
+  final FilmCatalog? catalog;
   final int slot;
   final FilmRecipe recipe;
   final bool activate;
@@ -564,7 +567,8 @@ class _LoadSheetState extends State<_LoadSheet> {
                                         color: workbenchCream, height: 1.6))),
                             if (state.merge != null)
                               for (final change in _changes(
-                                  state.snapshot?.config, state.merge!.merged))
+                                  state.snapshot?.config, state.merge!.merged,
+                                  catalog: widget.catalog))
                                 Padding(
                                     padding: const EdgeInsets.only(bottom: 8),
                                     child: Text(change,
@@ -657,15 +661,23 @@ String _fieldLabel(String path) {
   return '机身配置';
 }
 
-List<String> _changes(
-    Map<String, Object?>? before, Map<String, Object?> after) {
+List<String> _changes(Map<String, Object?>? before, Map<String, Object?> after,
+    {FilmCatalog? catalog}) {
   if (before == null) return [];
   final rows = <String>[];
   final a = before['slots'] as List, b = after['slots'] as List;
   for (var i = 0; i < 5; i++) {
     final old = wireMap(a[i]), next = wireMap(b[i]);
     if (old['filmId'] != next['filmId']) {
-      rows.add('槽位 ${i + 1}：配方 ${old['filmId']} → ${next['filmId']}');
+      String name(Object? id) {
+        for (final entry in catalog?.entries ?? <FilmDefinition>[]) {
+          if (entry.id == id) return entry.name;
+        }
+        return '配方 $id';
+      }
+
+      rows.add(
+          '槽位 ${(i + 1).toString().padLeft(2, '0')}：${name(old['filmId'])} → ${name(next['filmId'])}');
     }
     final oldParams = wireMap(old['parameters']);
     for (final entry in wireMap(next['parameters']).entries) {

@@ -70,11 +70,20 @@ class _FilmWorkbenchPageState extends State<FilmWorkbenchPage> {
             onDestinationSelected: (i) => setState(() => _section = i),
             destinations: const [
               NavigationDestination(
-                  icon: Icon(Icons.tune_outlined), label: '试卷台'),
+                  icon: Icon(Icons.tune_outlined, color: workbenchMuted),
+                  selectedIcon: Icon(Icons.tune_outlined, color: workbenchGold),
+                  label: '试卷台'),
               NavigationDestination(
-                  icon: Icon(Icons.local_movies_outlined), label: '数字胶卷'),
+                  icon:
+                      Icon(Icons.local_movies_outlined, color: workbenchMuted),
+                  selectedIcon:
+                      Icon(Icons.local_movies_outlined, color: workbenchGold),
+                  label: '数字胶卷'),
               NavigationDestination(
-                  icon: Icon(Icons.camera_alt_outlined), label: '相机胶卷'),
+                  icon: Icon(Icons.camera_alt_outlined, color: workbenchMuted),
+                  selectedIcon:
+                      Icon(Icons.camera_alt_outlined, color: workbenchGold),
+                  label: '相机胶卷'),
             ]),
       ));
 }

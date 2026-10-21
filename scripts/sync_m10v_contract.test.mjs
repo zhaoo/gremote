@@ -13,6 +13,8 @@ test('generated catalog keeps stable film identity and detects snapshot corrupti
   assert.equal(catalog.entries.length,47);assert.ok(catalog.entries.some(f=>f.id===289));
   assert.equal(new Set(catalog.entries.map(f=>f.id)).size,47);
   assert.match(manifest.rendererHash,/^[a-f0-9]{64}$/);
+  assert.deepEqual(JSON.parse(await readFile(path.join(outputDir,'assets/films/source-manifest.json'))),manifest);
+  assert.ok((await readFile(path.join(outputDir,'native/imaging/vendor/m10v/build_identity.h'),'utf8')).includes('GREMOTE_FILM_V1:'+manifest.rendererHash+':'+manifest.catalogHash+':'));
   assert.equal(catalog.entries.find(f=>f.id===67).parameters.filmExposure.max,1);
   assert.equal(catalog.entries.find(f=>f.id===75).parameters.haloGain,undefined);
   await syncContract({sourceDir,outputDir,check:true});

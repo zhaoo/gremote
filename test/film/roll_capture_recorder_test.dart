@@ -9,8 +9,37 @@ import 'package:gremote/film/capture/roll_capture_recorder.dart';
 import 'package:gremote/film/capture/roll_reconciliation.dart';
 import 'package:gremote/film/model/camera_photo_identity.dart';
 import 'package:gremote/film/model/film_roll.dart';
+import 'package:gremote/film/model/film_recipe.dart';
 import 'package:gremote/film/store/film_repository.dart';
 import '../support/test_darkroom.dart';
+
+class DelayedFilmRepository extends FilmRepository {
+  DelayedFilmRepository(super.db);
+  bool pause = false;
+  final started = Completer<void>(), release = Completer<void>();
+  @override
+  Future<RollItem> addConfirmedPhoto(
+      {required String rollId,
+      required CameraPhotoIdentity identity,
+      required FilmRecipe recipe,
+      required List<String> files,
+      required RecipeConfidence confidence,
+      int? mediaId,
+      bool Function()? isCurrent}) async {
+    if (pause) {
+      started.complete();
+      await release.future;
+    }
+    return super.addConfirmedPhoto(
+        rollId: rollId,
+        identity: identity,
+        recipe: recipe,
+        files: files,
+        confidence: confidence,
+        mediaId: mediaId,
+        isCurrent: isCurrent);
+  }
+}
 
 void main() {
   test('disposed tracker cannot publish an in-flight camera response',
@@ -150,5 +179,36 @@ void main() {
     expect(updates.single.files, contains('R1.DNG'));
     expect(rec.filmRecipeJson, 'frozen');
     expect(rec.filmRollId, 'roll1');
+  });
+  test(
+      'late RAW from a session replaced during persistence is discarded cleanly',
+      () async {
+    final recipe = catalog.recipe(33),
+        roll = await repo.createRoll(
+            name: 'race', targetCount: 24, recipe: catalog.recipe(33));
+    final delayed = DelayedFilmRepository(data.db);
+    final actual = RollCaptureRecorder(delayed, generation: () => generation);
+    await actual.record(
+        record(['R0000001.JPG']),
+        RecipeEvidence(
+            rollId: roll.id,
+            recipe: recipe,
+            identity: const CameraPhotoIdentity(
+                instanceId: 'camera',
+                storageId: 'sd',
+                storageEpoch: 'card1',
+                dir: '100RICOH',
+                baseName: 'R0000001',
+                captureId: 'shot1'),
+            sessionGeneration: 1,
+            confidence: RecipeConfidence.unverified));
+    delayed.pause = true;
+    final update = actual.appendFiles(const CaptureFileUpdate(
+        dir: '100RICOH', baseName: 'R0000001', files: ['R0000001.DNG']));
+    await delayed.started.future;
+    generation = 2;
+    delayed.release.complete();
+    await update;
+    expect((await repo.listItems(roll.id)).single.files, ['R0000001.JPG']);
   });
 }
