@@ -51,7 +51,7 @@
 - Flutter 全量：399 通过，1 个显式截图测试默认跳过；真实 C HTTP host 联调在设置 M10V_HOST_ROOT 后随全量执行。最新 UI 定向测试及显式截图另行通过。
 - Android JVM：41 通过，0 失败/跳过；arm64 debug APK 构建通过。没有安装或运行手机设备测试。
 - 主机 native CTest：1/1 测试程序通过，包含全部注册的图像、生成 JPEG 与真实胶卷预览/身份案例。
-- M10V Node 全量：317 项，307 通过、10 条件跳过、0 失败。跳过为旧备份、GR II 输入、外部 GRLife 黄金产物、显式 opt-in 组合矩阵等；不计为通过。补齐隔离目录的本地解释器/运行时/固定样本后完成。
+- M10V Node 全量：318 项，308 通过、10 条件跳过、0 失败。最终使用 `node --test --test-concurrency=4`，包含 node 与 web 用例。跳过为旧备份、GR II 输入、外部 GRLife 黄金产物、显式 opt-in 组合矩阵等；不计为通过。补齐隔离目录的本地解释器/运行时/固定样本后完成。
 - M10V 伴侣 Python/ARM/真实 sockets：40 通过；另有之前的 SD 全套与锁定官方 RTOS 指令回读（含缺夹具后补跑）记录。ARM ELF 静态/栈/64 KiB 暂存预算为构建模型证据，不是设备 RSS 或实时性证据。
 - ZIP/SHA/ABI 配套打包器：5 项通过；独立 Python 审计 zip CRC、文件 SHA256、SD CRC、实际 APK 每 ABI 的 native marker 与 renderer/catalog/source/registry 身份。
 - iOS：完整构建被缺少完整 Xcode/iOS SDK 阻挡；额外 Swift 语法探测也遇到本机 CLT 的 SwiftBridging module 重定义，未获得编译通过证据。
@@ -66,3 +66,5 @@
 保留的次要问题：离开试卷台时已在解码的画面可能完成一次后台渲染；结束胶卷尚不自动跳转出片、没有归档状态入口/满卷提示；胶卷缩略图只在读取前核验身份，读取期间替换可能短暂显示旧引用（联系印样前后均核验）。
 
 逐项审查结论见 [实施审查记录](film-workbench-review.md)。
+
+验证历史保留：修正后的首次 `node/*.test.mjs` 运行 304 项中有一项原有 CLI 参数测试未取得预期 stderr；其 5 秒子进程截止是否因并发负载触发，原因尚未证实。原测试单跑 3/3 通过，限制全量测试并发后 308/318 通过、10 跳过。未修改断言或截止时间；不能以最终通过掩盖原始失败。

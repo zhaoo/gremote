@@ -1,22 +1,22 @@
 {
   "schema": "gremote-film-workbench-source-evidence/v1",
-  "generatedAt": "2026-10-21T13:42:44.364307+00:00",
+  "generatedAt": "2026-10-21T14:17:21.531380+00:00",
   "fingerprintAlgorithm": "SHA256 of sorted unique [repo-relative path, SHA256(file)] JSON pairs; tracked and nonignored source files; excludes this evidence file itself",
   "buildVersion": "1.1.0+5",
   "repositories": {
     "gremote": {
-      "revision": "10ee7bf78a14e013f55073052fe0477cca416857",
+      "revision": "41906b5a10b67448bc6d3bc0584e520bad4b475f",
       "branch": "develop",
       "dirty": true,
-      "sourceFileCount": 980,
-      "sourceFingerprint": "d0386580077229a7e9d7c64a1b7afd0a3b8a177bbf716bfca3eade2cee52e646"
+      "sourceFileCount": 987,
+      "sourceFingerprint": "2982dac423945b23df80d5c716c98e3cb89a66503006ad352de4e2fde441324c"
     },
     "m10vIsolated": {
-      "revision": "5ae1f66c75505505e353ca72db5506208e4982a3",
+      "revision": "3df40e15ea9954604ae7e0689327b7c7735a96a8",
       "branch": "daily/film-companion",
       "dirty": false,
       "sourceFileCount": 1144,
-      "sourceFingerprint": "d34807542c2a8ebc0525893b9368629217ad38cac6302724f670c9d6bf1fbc8b"
+      "sourceFingerprint": "8ae9a013c7fa7a31830564cc220e272a86c439a1bcfd8797e54c2ea6d487307d"
     },
     "grkitReadOnly": {
       "revision": "8a886cbfa7ca3af7726c942d4b0d367d9486acb4",
@@ -30,15 +30,12 @@
     "revision": "c988e7a907d22fa68a8412a656f3c8b0bb40ff1a",
     "branch": "daily/gr3-appended-film-slots-20261021",
     "dirty": true,
-    "sourceFileCount": 1137,
-    "sourceFingerprint": "48f4565f5aaf2486bbbb2fc55aa22560d9e7bb68627e75aa562d1f7bf41b73bc",
+    "sourceFileCount": 1140,
+    "sourceFingerprint": "f8d88bbb23d93138a1c66105d1e6793d72e4ee3c594802c1f711edcdac3093f5",
     "isolationSourceHead": "c988e7a907d22fa68a8412a656f3c8b0bb40ff1a",
     "baselineSourceFiles": 93,
     "changedSinceIsolation": [
       "README.md",
-      "native/gr3/m10v_ab.h",
-      "native/gr3/m10v_ab_camera.inc",
-      "native/gr3/m10v_ab_host.inc",
       "native/gr3/m10v_detail.c",
       "native/gr3/m10v_library_capture.c",
       "native/gr3/m10v_library_menu.c",
@@ -46,23 +43,33 @@
       "native/gr3/m10v_settings_controller.c",
       "native/gr3/m10v_settings_controller.h",
       "native/gr3/m10v_settings_view.c",
+      "node/gr3-integrated-export.test.mjs",
       "node/gr3-m10v-native-build.mjs",
       "node/gr3-native-library.mjs",
+      "node/gr3-native-node-path.test.mjs",
       "node/gr3-native-routes.test.mjs",
+      "node/gr3-settings-menu.mjs",
       "scripts/build_gr3_m10v_library.py",
       "scripts/build_gr3_native_detail.py",
-      "tests/test_gr3_native_ab_host.py",
+      "scripts/build_gr3_settings_hooks.py",
+      "tests/test_gr3_m10v_library_arm.py",
       "tests/test_gr3_settings_controller.py",
       "tests/test_gr3_settings_view.py",
       "web/gr3/native-library-controls.html",
       "web/gr3/native-library.html",
-      "web/gr3/sd-library.html"
+      "web/gr3/sd-library.html",
+      "native/gr3/m10v_ab.h",
+      "native/gr3/m10v_ab_camera.inc",
+      "native/gr3/m10v_ab_host.inc",
+      "scripts/build_gr3_ab_candidate.mjs",
+      "scripts/probe_gr3_ab_queue.py",
+      "tests/test_gr3_native_ab_host.py"
     ],
     "policy": "Original source and branch left untouched; parallel changes are not merged into this isolated candidate"
   },
   "shared": {
     "schemaVersion": 1,
-    "sourceRevision": "5ae1f66c75505505e353ca72db5506208e4982a3",
+    "sourceRevision": "3df40e15ea9954604ae7e0689327b7c7735a96a8",
     "sourceDirty": false,
     "rendererHash": "f2aa5411ff40808612b5c232dc854e248b0aa0890c903eb8b319a93d8acf73b2",
     "catalogHash": "e0a5fe1be29c20274edd537fd234905fb6f1ac4b60a5f5b99355f43d57aa14d5",
@@ -105,6 +112,28 @@
       "web/gr3/film-icons/catalog.json": "a07fe4dcecea1afc2e97af333d4df0fe5273e2601166933c10b897b8455ac617",
       "web/gr3/film-catalog.json": "62f07c358f937c340964ac54431ce9f8c31cf15132c348f26614572657e2f2ea",
       "web/gr3/newstocks-luts.json": "7db64c059e3ef643d4d2271e3b0276574d2714fa30ed71bc9ecd85a7626b7f5b",
+      "node/gr3-native-library.mjs": "1ed7a83501d85fcc39da5a3f7c5a113bca5697e9801585f8bc5479f3cbfcbcba",
+      "web/gr3/native-library-state.mjs": "31077529e779e72f3557a20319e3b43e2b83f2b7949f9bee3ca8617db72c3d93",
+      "node/firmware.mjs": "1641c3d1f08465617ba9a221febfba2aaff06f383085c588aed0419d8a891249",
+      "node/gr3-m10v-native-build.mjs": "2310ac976d732df65e741801aa58581a3cb0c06c10337c295161056c7a595fdc",
+      "node/gr3-native-budget.mjs": "d50b8d1fc7e2ec73d9b40008ec32d7e2723e7cedca9a13076647534268dd0951",
+      "node/gr3-frames.mjs": "0d140b042f475b7aa15503d278403057d4884f58383f939ff5dcea6e429642de",
+      "node/gr3-settings-menu.mjs": "dacff667b11a27f247ab2fad28eb75795448f65b655d7d72b70ce561f4d72c4a",
+      "node/gr3-digital-hdf.mjs": "da780270ad3b261d15b934139cb256d4dd1710cc165636553a411b40d3ba834c",
+      "node/gr3-candidate-audit.mjs": "5ff61fef21a57ebed03405092fefaacff082133cea629437ac75672782e1605e",
+      "node/gr3-integrated-components.mjs": "8fa9e565ae946252a18ea5f384de7f061e8934e05b0f9592e040bb82cac15ba8",
+      "node/gr3-store-plan.mjs": "9dc7a4fc1dae022f04ab5148af079a4752fbd8a7db3574cb151b41b52615ac7c",
+      "node/gr3-film-plan.mjs": "54ed539d8b52ee61a73ae438e3ede1200ec080f5822e4f78a24300b348eb543b",
+      "node/gr3-runtime.mjs": "62804055ccbb4d65ffbeb683604d96faff1df369bdcf38dcd9b2c311ac429aa6",
+      "node/gr3-raw-nr.mjs": "1b692ce05962985d854f8f9ffdea646b73dee207e4154e231ef5423928f87e0d",
+      "node/gr3-stock-presets.mjs": "6385746886ef3f5e59f11031a38d14765d2f54c5e31ad53011d1b7e231d2af1d",
+      "node/gr3-version-unlock.mjs": "875217d6aecfe7cd94fbef244c075514f3f9b8fd65a503e5ec1eabb2af2bdbd3",
+      "node/gr3x-native-port.mjs": "ad87a1d8f0e6f799d1d91d1d39732cff76c64a1d1a6c720bb7f6d7bb8927d4af",
+      "node/gr3-sd-film-pack.mjs": "4378583cf20fe02e38b215c969e0ffce12dc1e2ca40434b775b478a247c58060",
+      "vendor/darkslide/gr3_v210.json": "e049916d238a057b602ee17e64466ce53e786b43b2dfcc8d138bcfccb21c729f",
+      "native/gr3/m10v_icons.rgba": "7ab980b0752723f00bd4ed6cc65716b0f63d1cb26d3283075ac38917358d8e92",
+      "node/gr3-sd-prior-contract.json": "fcaca9db34e782159466e181eec41648a5ad301f8fbb33ba9819f6ffcdf3ff1a",
+      "node/gr3-sd-v1-legacy-hashes.json": "d4efbbce22121c8075cdec1b410961e7f21bab869d8e3c59c3dc7888b2fd39f1",
       "web/gr3/film-icons/33.png": "d8aa2293f77c4d67e0d410ba31ae541ae3e338df8d1d31f396f097f3e9a7db31",
       "web/gr3/film-icons/66.png": "7ca34ba99fdf8bd8a1cc410fab26439945516678691aa4a3e2159813f62a979f",
       "web/gr3/film-icons/67.png": "dc9b1f81da7b9fea42b8d9348633a03880362312c377577f544712e494b1f86b",
@@ -164,5 +193,11 @@
     "installable": false,
     "cameraPassed": false,
     "missing": "Actual RTOS owner/cache/wakeup/lifetime/local-menu domain and camera storage/Wi-Fi adapter"
-  }
+  },
+  "remainingDelivery": [
+    "realTargetOwnerCacheWakeupLifetimeMenuBankWifiAdapters",
+    "productionCaptureArchivalAndReconnectEvidenceUI",
+    "deviceValidation",
+    "threeDeferredMinorIssues"
+  ]
 }
