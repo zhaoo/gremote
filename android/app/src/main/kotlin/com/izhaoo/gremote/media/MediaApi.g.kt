@@ -199,6 +199,8 @@ interface MediaHostApi {
   fun thumbnail(id: Long, edge: Long, callback: (Result<ByteArray?>) -> Unit)
   fun openReadFd(id: Long, callback: (Result<Long>) -> Unit)
   fun publishExport(tempPath: String, sourceId: Long, displayName: String, keepGps: Boolean, width: Long, height: Long, callback: (Result<String>) -> Unit)
+  fun publishGenerated(tempPath: String, displayName: String, width: Long, height: Long, callback: (Result<String>) -> Unit)
+  fun shareRecipe(card: ByteArray)
   fun share(uri: String)
 
   companion object {
@@ -375,6 +377,47 @@ interface MediaHostApi {
                 reply.reply(wrapResult(data))
               }
             }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.gremote.MediaHostApi.publishGenerated$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val tempPathArg = args[0] as String
+            val displayNameArg = args[1] as String
+            val widthArg = args[2] as Long
+            val heightArg = args[3] as Long
+            api.publishGenerated(tempPathArg, displayNameArg, widthArg, heightArg) { result: Result<String> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.gremote.MediaHostApi.shareRecipe$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val cardArg = args[0] as ByteArray
+            val wrapped: List<Any?> = try {
+              api.shareRecipe(cardArg)
+              listOf(null)
+            } catch (exception: Throwable) {
+              wrapError(exception)
+            }
+            reply.reply(wrapped)
           }
         } else {
           channel.setMessageHandler(null)

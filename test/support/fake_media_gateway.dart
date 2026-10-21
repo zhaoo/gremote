@@ -15,6 +15,13 @@ class PublishCall {
   final int height;
 }
 
+class GeneratedPublishCall {
+  GeneratedPublishCall(
+      this.tempPath, this.displayName, this.width, this.height);
+  final String tempPath, displayName;
+  final int width, height;
+}
+
 class FakeMediaGateway implements MediaGateway {
   FakeMediaGateway({
     this.entries = const [],
@@ -34,6 +41,7 @@ class FakeMediaGateway implements MediaGateway {
   Future<void> Function()? beforeExif;
   final exifRequests = <List<int>>[];
   final publishes = <PublishCall>[];
+  final generated = <GeneratedPublishCall>[];
   final shared = <String>[];
   final openedFds = <int>[];
   int _nextFd = 100;
@@ -88,6 +96,21 @@ class FakeMediaGateway implements MediaGateway {
         PublishCall(tempPath, sourceId, displayName, keepGps, width, height));
     return 'content://media/external/images/media/${9000 + publishes.length}';
   }
+
+  @override
+  Future<String> publishGenerated(
+      {required String tempPath,
+      required String displayName,
+      required int width,
+      required int height}) async {
+    if (publishError != null) throw publishError!;
+    generated.add(GeneratedPublishCall(tempPath, displayName, width, height));
+    return "content://generated/${generated.length}";
+  }
+
+  final recipeCards = <Uint8List>[];
+  @override
+  Future<void> shareRecipe(Uint8List card) async => recipeCards.add(card);
 
   @override
   Future<void> share(String uri) async => shared.add(uri);

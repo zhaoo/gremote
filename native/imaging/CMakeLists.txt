@@ -61,6 +61,7 @@ set(GREMOTE_CORE_SOURCES
   src/orientation.cpp
   src/resize.cpp
   src/jpeg_io.cpp
+  src/generated_jpeg.cpp
   src/frame_compositor.cpp
   src/api.cpp)
 list(APPEND GREMOTE_CORE_SOURCES

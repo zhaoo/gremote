@@ -30,6 +30,18 @@ class MediaStorePublisher(context: Context) {
         }
     }
 
+    fun publishGenerated(temp: File, displayName: String, width: Int, height: Int): Uri {
+        require(temp.isFile && width > 0 && height > 0)
+        val out = ExifInterface(temp)
+        ExifPolicy.filter(emptyMap(), false, width, height).forEach { (tag, value) ->
+            out.setAttribute(tag, value)
+        }
+        out.saveAttributes()
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            insertPending(temp, displayName)
+        } else { insertLegacy(temp, displayName) }
+    }
+
     private fun writeExif(temp: File, source: Uri, keepGps: Boolean, width: Int, height: Int) {
         val tags = resolver.openInputStream(source)?.use { stream ->
             val exif = ExifInterface(stream)

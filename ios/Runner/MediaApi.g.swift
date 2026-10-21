@@ -226,6 +226,8 @@ protocol MediaHostApi {
   func thumbnail(id: Int64, edge: Int64, completion: @escaping (Result<FlutterStandardTypedData?, Error>) -> Void)
   func openReadFd(id: Int64, completion: @escaping (Result<Int64, Error>) -> Void)
   func publishExport(tempPath: String, sourceId: Int64, displayName: String, keepGps: Bool, width: Int64, height: Int64, completion: @escaping (Result<String, Error>) -> Void)
+  func publishGenerated(tempPath: String, displayName: String, width: Int64, height: Int64, completion: @escaping (Result<String, Error>) -> Void)
+  func shareRecipe(card: FlutterStandardTypedData) throws
   func share(uri: String) throws
 }
 
@@ -379,6 +381,41 @@ class MediaHostApiSetup {
       }
     } else {
       publishExportChannel.setMessageHandler(nil)
+    }
+    let publishGeneratedChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.gremote.MediaHostApi.publishGenerated\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      publishGeneratedChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let tempPathArg = args[0] as! String
+        let displayNameArg = args[1] as! String
+        let widthArg = args[2] as! Int64
+        let heightArg = args[3] as! Int64
+        api.publishGenerated(tempPath: tempPathArg, displayName: displayNameArg, width: widthArg, height: heightArg) { result in
+          switch result {
+          case .success(let res):
+            reply(wrapResult(res))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      publishGeneratedChannel.setMessageHandler(nil)
+    }
+    let shareRecipeChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.gremote.MediaHostApi.shareRecipe\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      shareRecipeChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let cardArg = args[0] as! FlutterStandardTypedData
+        do {
+          try api.shareRecipe(card: cardArg)
+          reply(wrapResult(nil))
+        } catch {
+          reply(wrapError(error))
+        }
+      }
+    } else {
+      shareRecipeChannel.setMessageHandler(nil)
     }
     let shareChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.gremote.MediaHostApi.share\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {

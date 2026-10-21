@@ -92,3 +92,19 @@ TEST(RowWriterRejectsBadArguments) {
   gremote::JpegRowWriter io;
   EXPECT_EQ(io.Open("/nonexistent-dir/x.jpg", 4, 4, 90), GREMOTE_IO);
 }
+
+TEST(GeneratedRgbaJpegPreservesDimensionsAndCancelsAtomically) {
+  const auto path = gremote_test::TempPath("generated.jpg");
+  std::vector<uint8_t> rgba(30 * 20 * 4, 180);
+  EXPECT_EQ(gremote_encode_generated_jpeg(rgba.data(),30,20,path.c_str(),nullptr),GREMOTE_OK);
+  const auto bytes = gremote_test::ReadFile(path);
+  int width=0,height=0;
+  EXPECT_EQ(gremote::ReadJpegSize(bytes.data(),bytes.size(),&width,&height),GREMOTE_OK);
+  EXPECT_EQ(width,30); EXPECT_EQ(height,20);
+  const auto cancelled = gremote_test::TempPath("cancel-generated.jpg");
+  int32_t cancel=1;
+  EXPECT_EQ(gremote_encode_generated_jpeg(rgba.data(),30,20,cancelled.c_str(),&cancel),GREMOTE_CANCELLED);
+  EXPECT_TRUE(!gremote_test::FileExists(cancelled));
+  EXPECT_TRUE(!gremote_test::FileExists(cancelled+".part"));
+  EXPECT_EQ(gremote_encode_generated_jpeg(nullptr,30,20,path.c_str(),nullptr),GREMOTE_INVALID_ARGUMENT);
+}

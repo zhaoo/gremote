@@ -150,6 +150,32 @@ final class GRemoteMedia: MediaHostApi {
       } catch { completion(.failure(error)) }
     }
   }
+  func publishGenerated(tempPath: String, displayName: String, width: Int64, height: Int64, completion: @escaping (Result<String, Error>) -> Void) {
+    let input = URL(fileURLWithPath:tempPath)
+    let tempRoot = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().path+"/"
+    let cacheRoot = (NSSearchPathForDirectoriesInDomains(.cachesDirectory,.userDomainMask,true).first ?? "")+"/"
+    let resolved = input.resolvingSymlinksInPath().path
+    guard (resolved.hasPrefix(tempRoot) || resolved.hasPrefix(cacheRoot)), width > 0, height > 0,
+          let source = CGImageSourceCreateWithURL(input as CFURL,nil),
+          (CGImageSourceCopyPropertiesAtIndex(source,0,nil) as? [String:Any])?[kCGImagePropertyPixelWidth as String] as? Int == Int(width),
+          (CGImageSourceCopyPropertiesAtIndex(source,0,nil) as? [String:Any])?[kCGImagePropertyPixelHeight as String] as? Int == Int(height)
+    else { completion(.failure(nativeError("invalidExport","印样路径或尺寸无效"))); return }
+    Self.savePhoto(input,name:displayName,completion:completion)
+  }
+  func shareRecipe(card: FlutterStandardTypedData) throws {
+    guard card.data.count > 0, card.data.count <= 16384, let controller = controller else { throw nativeError("invalidRecipe","配方卡无效") }
+    let dir = FileManager.default.temporaryDirectory.appendingPathComponent("recipe-share",isDirectory:true)
+    try FileManager.default.createDirectory(at:dir,withIntermediateDirectories:true)
+    for file in (try? FileManager.default.contentsOfDirectory(at:dir,includingPropertiesForKeys:[.contentModificationDateKey])) ?? [] {
+      if let date = try? file.resourceValues(forKeys:[.contentModificationDateKey]).contentModificationDate, date < Date().addingTimeInterval(-86400) { try? FileManager.default.removeItem(at:file) }
+    }
+    let file = dir.appendingPathComponent("recipe-"+UUID().uuidString+".json")
+    try card.data.write(to:file,options:.atomic)
+    let sheet = UIActivityViewController(activityItems:[file],applicationActivities:nil)
+    sheet.popoverPresentationController?.sourceView = controller.view
+    sheet.popoverPresentationController?.sourceRect = CGRect(x:controller.view.bounds.midX,y:controller.view.bounds.midY,width:1,height:1)
+    controller.present(sheet,animated:true)
+  }
   func share(uri: String) throws {
     guard uri.hasPrefix("ph://"), let controller = controller,
           let asset = PHAsset.fetchAssets(withLocalIdentifiers:[String(uri.dropFirst(5))],options:nil).firstObject else { throw nativeError("photoUnavailable","照片不可用") }

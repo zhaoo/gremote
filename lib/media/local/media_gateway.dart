@@ -74,5 +74,14 @@ abstract interface class MediaGateway {
     required int height,
   });
 
+  /// Publishes a newly generated JPEG with no source-photo metadata.
+  Future<String> publishGenerated(
+      {required String tempPath,
+      required String displayName,
+      required int width,
+      required int height});
+
+  Future<void> shareRecipe(Uint8List card);
+
   Future<void> share(String uri);
 }

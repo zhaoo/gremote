@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 
 import '../../darkroom/model/photo_meta.dart';
+import '../../film/export/recipe_card_codec.dart';
 import '../../platform/media_api.g.dart';
 import 'media_gateway.dart';
 
@@ -75,6 +76,20 @@ class NativeMediaGateway implements MediaGateway {
   }) =>
       _guard(() => _api.publishExport(
           tempPath, sourceId, displayName, keepGps, width, height));
+
+  @override
+  Future<String> publishGenerated(
+          {required String tempPath,
+          required String displayName,
+          required int width,
+          required int height}) =>
+      _guard(() => _api.publishGenerated(tempPath, displayName, width, height));
+
+  @override
+  Future<void> shareRecipe(Uint8List card) async {
+    RecipeCardCodec.decode(card);
+    await _guard(() => _api.shareRecipe(card));
+  }
 
   @override
   Future<void> share(String uri) => _guard(() => _api.share(uri));

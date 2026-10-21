@@ -81,6 +81,11 @@ GREMOTE_EXPORT int32_t gremote_export_jpeg(const gremote_export_request* request
 
 GREMOTE_EXPORT void gremote_free(void* pointer);
 
+/* Generated opaque RGBA contact sheet. Max 4M pixels, written atomically.
+ * No source image or EXIF is read. Caller owns pixels and cancellation flag. */
+GREMOTE_EXPORT int32_t gremote_encode_generated_jpeg(const uint8_t* rgba,
+    int32_t width,int32_t height,const char* path,const volatile int32_t* cancel);
+
 /* Pure M10V preview. Input and output must not alias. Recipe is the fixed
  * 16-byte v1 little-endian data layout documented in m10v_preview.h.
  * stages=0 renders color and texture; stages=1 renders color only.

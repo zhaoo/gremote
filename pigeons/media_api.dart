@@ -47,7 +47,7 @@ class NativeExifSummary {
 
 @ConfigurePigeon(PigeonOptions(
   dartOut: 'lib/platform/media_api.g.dart',
-  kotlinOut: 'android/app/src/main/kotlin/com/zhaoo/gremote/media/MediaApi.g.kt',
+  kotlinOut: 'android/app/src/main/kotlin/com/izhaoo/gremote/media/MediaApi.g.kt',
   kotlinOptions: KotlinOptions(package: 'com.izhaoo.gremote.media'),
 ))
 @HostApi()
@@ -83,6 +83,11 @@ abstract class MediaHostApi {
     int width,
     int height,
   );
+
+  @async
+  String publishGenerated(String tempPath, String displayName, int width, int height);
+
+  void shareRecipe(Uint8List card);
 
   void share(String uri);
 }

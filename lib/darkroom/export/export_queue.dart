@@ -7,6 +7,7 @@ import '../darkroom_providers.dart';
 import '../model/edit_document.dart';
 import '../model/export_recipe.dart';
 import 'export_service.dart';
+import 'export_work_gate.dart';
 
 enum ExportItemStatus {
   pending('等待'),
@@ -113,58 +114,64 @@ class ExportQueueController extends Notifier<ExportQueueState> {
   }
 
   Future<void> _run() async {
-    final service = ref.read(exportServiceProvider);
-    for (var i = 0; i < state.items.length; i++) {
-      var entry = state.items[i];
-      if (entry.status != ExportItemStatus.pending) continue;
-      if (_cancelRequested) {
-        _update(i, entry.withStatus(ExportItemStatus.cancelled));
-        continue;
-      }
-      _update(i, entry.withStatus(ExportItemStatus.running));
-      final token = _token = ImagingCancelToken();
-      try {
-        try {
-          final saved =
-              await ref.read(darkroomStoreProvider).loadEdit(entry.item.id);
-          if (saved != null) {
-            entry = ExportQueueItem(
-              item: entry.item,
-              doc: saved.copyWith(recipe: entry.doc.recipe),
-            );
-            _update(i, entry.withStatus(ExportItemStatus.running));
-          }
-        } catch (error) {
-          throw ExportFailure(
-            stage: ExportStage.read,
-            fileName: entry.item.displayName,
-            code: 'edit_read_failed',
-            reason: '无法读取已保存的编辑：$error',
-          );
+    final release = await ExportWorkGate.acquire();
+    try {
+      final service = ref.read(exportServiceProvider);
+      for (var i = 0; i < state.items.length; i++) {
+        var entry = state.items[i];
+        if (entry.status != ExportItemStatus.pending) continue;
+        if (_cancelRequested) {
+          _update(i, entry.withStatus(ExportItemStatus.cancelled));
+          continue;
         }
-        final outcome =
-            await service.export(entry.item, entry.doc, cancel: token);
-        _update(i, entry.withStatus(ExportItemStatus.done, outcome: outcome));
-      } on ExportCancelled {
-        _update(i, entry.withStatus(ExportItemStatus.cancelled));
-      } on ExportFailure catch (failure) {
-        _update(i, entry.withStatus(ExportItemStatus.failed, failure: failure));
-      } catch (error) {
-        _update(
-          i,
-          entry.withStatus(ExportItemStatus.failed,
-              failure: ExportFailure(
-                  stage: ExportStage.compose,
-                  fileName: entry.item.displayName,
-                  code: 'unknown',
-                  reason: '$error')),
-        );
-      } finally {
-        _token = null;
-        token.dispose();
+        _update(i, entry.withStatus(ExportItemStatus.running));
+        final token = _token = ImagingCancelToken();
+        try {
+          try {
+            final saved =
+                await ref.read(darkroomStoreProvider).loadEdit(entry.item.id);
+            if (saved != null) {
+              entry = ExportQueueItem(
+                item: entry.item,
+                doc: saved.copyWith(recipe: entry.doc.recipe),
+              );
+              _update(i, entry.withStatus(ExportItemStatus.running));
+            }
+          } catch (error) {
+            throw ExportFailure(
+              stage: ExportStage.read,
+              fileName: entry.item.displayName,
+              code: 'edit_read_failed',
+              reason: '无法读取已保存的编辑：$error',
+            );
+          }
+          final outcome =
+              await service.export(entry.item, entry.doc, cancel: token);
+          _update(i, entry.withStatus(ExportItemStatus.done, outcome: outcome));
+        } on ExportCancelled {
+          _update(i, entry.withStatus(ExportItemStatus.cancelled));
+        } on ExportFailure catch (failure) {
+          _update(
+              i, entry.withStatus(ExportItemStatus.failed, failure: failure));
+        } catch (error) {
+          _update(
+            i,
+            entry.withStatus(ExportItemStatus.failed,
+                failure: ExportFailure(
+                    stage: ExportStage.compose,
+                    fileName: entry.item.displayName,
+                    code: 'unknown',
+                    reason: '$error')),
+          );
+        } finally {
+          _token = null;
+          token.dispose();
+        }
       }
+      state = ExportQueueState(items: state.items);
+    } finally {
+      release();
     }
-    state = ExportQueueState(items: state.items);
   }
 
   void _update(int index, ExportQueueItem item) {

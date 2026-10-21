@@ -73,4 +73,8 @@ void main() {
           .having((e) => e.message, 'message', 'No space')),
     );
   });
+  test('rejects oversized portable recipe before calling platform', () async {
+    await expectLater(
+        gateway.shareRecipe(Uint8List(16385)), throwsFormatException);
+  });
 }

@@ -65,6 +65,27 @@ class GRemoteMediaHostApi(private val activity: Activity) : MediaHostApi {
         }
     }
 
+    override fun publishGenerated(tempPath: String, displayName: String, width: Long, height: Long,
+        callback: (Result<String>) -> Unit) = launchIo(callback) {
+        publisher.publishGenerated(File(tempPath), displayName, width.toInt(), height.toInt()).toString()
+    }
+
+    override fun shareRecipe(card: ByteArray) {
+        require(card.isNotEmpty() && card.size <= 16384)
+        val dir = File(activity.cacheDir, "recipe-share").apply { mkdirs() }
+        // Cards contain no private metadata. Keep them available to the receiving app.
+        dir.listFiles()?.filter { it.lastModified() < System.currentTimeMillis()-86400000L }?.forEach { it.delete() }
+        val file = File(dir, "recipe-${java.util.UUID.randomUUID()}.json").apply { writeBytes(card) }
+        val uri = androidx.core.content.FileProvider.getUriForFile(activity, activity.packageName+".recipe-files", file)
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "application/json"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            clipData = android.content.ClipData.newRawUri("胶卷配方卡", uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        activity.startActivity(Intent.createChooser(send, "分享配方卡"))
+    }
+
     override fun share(uri: String) {
         val send = Intent(Intent.ACTION_SEND).apply {
             type = "image/jpeg"
