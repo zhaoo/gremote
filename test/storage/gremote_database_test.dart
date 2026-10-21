@@ -13,12 +13,12 @@ Future<Set<String>> _tables(Database db) async => {
 void main() {
   setUpAll(sqfliteFfiInit);
 
-  test('a new database is created at version 3 with every table', () async {
+  test('a new database is created at version 4 with every table', () async {
     final db = await GRemoteDatabase.open(
         factory: databaseFactoryFfiNoIsolate, path: inMemoryDatabasePath);
     addTearDown(db.close);
 
-    expect(await db.getVersion(), 3);
+    expect(await db.getVersion(), 4);
     expect(
       await _tables(db),
       containsAll([
@@ -31,6 +31,11 @@ void main() {
         'capture_tags',
         'program_runs',
         'shot_locations',
+        'film_recipes',
+        'film_rolls',
+        'film_roll_items',
+        'camera_sync_baselines',
+        'camera_sync_operations',
       ]),
     );
   });
@@ -69,7 +74,7 @@ void main() {
     final db = await GRemoteDatabase.open(
         factory: databaseFactoryFfiNoIsolate, path: path);
     addTearDown(db.close);
-    expect(await db.getVersion(), 3);
+    expect(await db.getVersion(), 4);
     expect((await db.query('app_kv')).single['value'], 'yes');
     expect(await db.query('shot_locations'), isEmpty);
   });
@@ -105,12 +110,59 @@ void main() {
         factory: databaseFactoryFfiNoIsolate, path: path);
     addTearDown(db.close);
 
-    expect(await db.getVersion(), 3);
+    expect(await db.getVersion(), 4);
     expect(
         await _tables(db),
         containsAll(
             ['app_kv', 'combo_recipes', 'capture_tags', 'program_runs']));
     expect(
         (await db.query('local_media')).single['display_name'], 'R0000007.JPG');
+  });
+  test('version 3 upgrade keeps media edits recipes and location rows',
+      () async {
+    final dir = Directory.systemTemp.createTempSync('gremote-v3-db');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final path = '${dir.path}/gremote.db';
+    final previous = await GRemoteDatabase.open(
+        factory: databaseFactoryFfiNoIsolate, path: path);
+    await previous.insert('app_kv', {'key': 'retained', 'value': 'yes'});
+    await previous.insert('local_media', {
+      'media_id': 8,
+      'uri': 'content://8',
+      'display_name': 'R0000008.JPG',
+      'date_modified': 1,
+      'width': 6000,
+      'height': 4000
+    });
+    await previous.insert('edit_documents', {
+      'media_id': 8,
+      'recipe_json': '{}',
+      'title': '保留编辑',
+      'location': '街角',
+      'hidden_fields_json': '[]',
+      'updated_at': 1
+    });
+    await previous.insert('combo_recipes',
+        {'id': 'old-recipe', 'name': '保留配方', 'sort': 1, 'created_at': 1});
+    for (final table in [
+      'film_recipes',
+      'film_rolls',
+      'film_roll_items',
+      'camera_sync_baselines',
+      'camera_sync_operations'
+    ]) {
+      await previous.execute('DROP TABLE $table');
+    }
+    await previous.setVersion(3);
+    await previous.close();
+    final db = await GRemoteDatabase.open(
+        factory: databaseFactoryFfiNoIsolate, path: path);
+    addTearDown(db.close);
+    expect(await db.getVersion(), 4);
+    expect((await db.query('app_kv')).single['value'], 'yes');
+    expect((await db.query('local_media')).single['media_id'], 8);
+    expect((await db.query('edit_documents')).single['title'], '保留编辑');
+    expect((await db.query('combo_recipes')).single['id'], 'old-recipe');
+    expect(await db.query('film_rolls'), isEmpty);
   });
 }

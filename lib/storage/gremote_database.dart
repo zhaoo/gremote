@@ -5,7 +5,7 @@ import 'package:sqflite/sqflite.dart';
 
 /// Opens the single app database and owns its schema.
 abstract final class GRemoteDatabase {
-  static const version = 3;
+  static const version = 4;
 
   static Future<Database> open({
     DatabaseFactory? factory,
@@ -40,11 +40,39 @@ abstract final class GRemoteDatabase {
     await _createV1(db);
     await _createV2(db);
     await _createV3(db);
+    await _createV4(db);
   }
 
   static Future<void> _upgrade(Database db, int from, int to) async {
     if (from < 2) await _createV2(db);
     if (from < 3) await _createV3(db);
+    if (from < 4) await _createV4(db);
+  }
+
+  static Future<void> _createV4(Database db) async {
+    final batch = db.batch()
+      ..execute(
+          'CREATE TABLE film_recipes (fingerprint TEXT PRIMARY KEY, recipe_json TEXT NOT NULL, created_at INTEGER NOT NULL)')
+      ..execute(
+          '''CREATE TABLE film_rolls (id TEXT PRIMARY KEY, name TEXT NOT NULL,
+        target_count INTEGER NOT NULL CHECK(target_count BETWEEN 1 AND 999),
+        recipe_fingerprint TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('open','closed','archived')),
+        created_at INTEGER NOT NULL, closed_at INTEGER)''')
+      ..execute(
+          "CREATE UNIQUE INDEX film_rolls_one_open ON film_rolls(status) WHERE status='open'")
+      ..execute(
+          '''CREATE TABLE film_roll_items (id TEXT PRIMARY KEY, roll_id TEXT NOT NULL,
+        camera_key TEXT NOT NULL UNIQUE, identity_json TEXT NOT NULL,
+        recipe_fingerprint TEXT NOT NULL, recipe_json TEXT NOT NULL, files_json TEXT NOT NULL,
+        confidence TEXT NOT NULL, media_id INTEGER, created_at INTEGER NOT NULL,
+        selected INTEGER NOT NULL DEFAULT 0)''')
+      ..execute(
+          'CREATE INDEX film_roll_items_roll ON film_roll_items(roll_id,created_at)')
+      ..execute(
+          'CREATE TABLE camera_sync_baselines (instance_id TEXT PRIMARY KEY,snapshot_json TEXT NOT NULL,updated_at INTEGER NOT NULL)')
+      ..execute(
+          'CREATE TABLE camera_sync_operations (request_id TEXT PRIMARY KEY,instance_id TEXT NOT NULL,payload_json TEXT NOT NULL,status TEXT NOT NULL,updated_at INTEGER NOT NULL)');
+    await batch.commit(noResult: true);
   }
 
   static Future<void> _createV3(Database db) async {
