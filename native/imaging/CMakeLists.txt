@@ -63,9 +63,17 @@ set(GREMOTE_CORE_SOURCES
   src/jpeg_io.cpp
   src/frame_compositor.cpp
   src/api.cpp)
+list(APPEND GREMOTE_CORE_SOURCES
+  src/m10v_preview.cpp
+  vendor/m10v/m10v_library.c
+  vendor/m10v/halation_core.c
+  vendor/m10v/film_5207.c
+  vendor/m10v/film_harman.c
+  vendor/m10v/film_curated.c
+  vendor/m10v/film_newstocks.c)
 
 add_library(gremote_core OBJECT ${GREMOTE_CORE_SOURCES})
-target_include_directories(gremote_core PUBLIC include src)
+target_include_directories(gremote_core PUBLIC include src PRIVATE vendor/m10v)
 target_link_libraries(gremote_core PUBLIC gremote_jpeg)
 find_package(Threads REQUIRED)
 target_link_libraries(gremote_core PUBLIC Threads::Threads)
@@ -93,6 +101,7 @@ if(NOT ANDROID AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
     tests/orientation_resize_test.cpp
     tests/jpeg_io_test.cpp
     tests/compositor_api_test.cpp)
+  target_sources(gremote_imaging_tests PRIVATE tests/m10v_preview_test.cpp)
   target_link_libraries(gremote_imaging_tests PRIVATE gremote_core)
   add_test(NAME gremote_imaging_tests COMMAND gremote_imaging_tests)
 endif()
