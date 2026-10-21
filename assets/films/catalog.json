@@ -1,0 +1,2152 @@
+{
+  "schemaVersion": 1,
+  "rendererHash": "f2aa5411ff40808612b5c232dc854e248b0aa0890c903eb8b319a93d8acf73b2",
+  "entries": [
+    {
+      "id": 33,
+      "name": "800T",
+      "group": "M10V精选",
+      "icon": "assets/films/icons/33.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 3,
+          "default": 2,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 66,
+      "name": "5207",
+      "group": "M10V精选",
+      "icon": "assets/films/icons/66.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 67,
+      "name": "蓝凤凰",
+      "group": "M10V精选",
+      "icon": "assets/films/icons/67.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 3,
+          "default": 2,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        },
+        "filmExposure": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "模拟曝光"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 68,
+      "name": "哈曼 RED",
+      "group": "M10V精选",
+      "icon": "assets/films/icons/68.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        },
+        "filmExposure": {
+          "min": 0,
+          "max": 2,
+          "default": 0,
+          "label": "模拟曝光"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 69,
+      "name": "Portra 160",
+      "group": "M10V精选",
+      "icon": "assets/films/icons/69.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 70,
+      "name": "富士业务用 100",
+      "group": "M10V精选",
+      "icon": "assets/films/icons/70.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 71,
+      "name": "乐凯 C200",
+      "group": "M10V精选",
+      "icon": "assets/films/icons/71.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 72,
+      "name": "CCD Classic",
+      "group": "M10V精选",
+      "icon": "assets/films/icons/72.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 73,
+      "name": "富士 C200",
+      "group": "M10V精选",
+      "icon": "assets/films/icons/73.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 74,
+      "name": "ProImage 100",
+      "group": "M10V精选",
+      "icon": "assets/films/icons/74.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 75,
+      "name": "T-Max 100",
+      "group": "M10V精选",
+      "icon": "assets/films/icons/75.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 76,
+      "name": "Aerochrome",
+      "group": "M10V精选",
+      "icon": "assets/films/icons/76.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 77,
+      "name": "2460",
+      "group": "M10V精选",
+      "icon": "assets/films/icons/77.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 78,
+      "name": "5203",
+      "group": "M10V精选",
+      "icon": "assets/films/icons/78.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 289,
+      "name": "Kodak Charmera",
+      "group": "M10V精选",
+      "icon": "assets/films/icons/289.png",
+      "parameters": {
+        "charmeraColor": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "机身颜色"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 34,
+      "name": "Ektar 100",
+      "group": "内置胶片",
+      "icon": "assets/films/icons/34.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 35,
+      "name": "Gold 200",
+      "group": "内置胶片",
+      "icon": "assets/films/icons/35.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 36,
+      "name": "Pro 400H",
+      "group": "内置胶片",
+      "icon": "assets/films/icons/36.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 37,
+      "name": "Portra 400",
+      "group": "内置胶片",
+      "icon": "assets/films/icons/37.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 38,
+      "name": "Vision3 250D",
+      "group": "内置胶片",
+      "icon": "assets/films/icons/38.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 39,
+      "name": "HB HNCS",
+      "group": "哈苏风格",
+      "icon": "assets/films/icons/39.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 40,
+      "name": "HB Portrait",
+      "group": "哈苏风格",
+      "icon": "assets/films/icons/40.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 41,
+      "name": "HB LowSat",
+      "group": "哈苏风格",
+      "icon": "assets/films/icons/41.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 42,
+      "name": "HB HiCon",
+      "group": "哈苏风格",
+      "icon": "assets/films/icons/42.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 43,
+      "name": "PX Miyabi",
+      "group": "宾得风格",
+      "icon": "assets/films/icons/43.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 44,
+      "name": "PX Gold",
+      "group": "宾得风格",
+      "icon": "assets/films/icons/44.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 45,
+      "name": "PX Reversal",
+      "group": "宾得风格",
+      "icon": "assets/films/icons/45.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 46,
+      "name": "PX Kyushu",
+      "group": "宾得风格",
+      "icon": "assets/films/icons/46.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 47,
+      "name": "PX Harubeni",
+      "group": "宾得风格",
+      "icon": "assets/films/icons/47.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 48,
+      "name": "PX Muted",
+      "group": "宾得风格",
+      "icon": "assets/films/icons/48.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 49,
+      "name": "PX Radiant",
+      "group": "宾得风格",
+      "icon": "assets/films/icons/49.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 50,
+      "name": "PX Fuyuno",
+      "group": "宾得风格",
+      "icon": "assets/films/icons/50.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 51,
+      "name": "PX Katen",
+      "group": "宾得风格",
+      "icon": "assets/films/icons/51.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 52,
+      "name": "PX Satobi",
+      "group": "宾得风格",
+      "icon": "assets/films/icons/52.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 53,
+      "name": "PX Bleach",
+      "group": "宾得风格",
+      "icon": "assets/films/icons/53.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 54,
+      "name": "M9",
+      "group": "徕卡 M9 风格",
+      "icon": "assets/films/icons/54.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 55,
+      "name": "M9 Std",
+      "group": "徕卡 M9 风格",
+      "icon": "assets/films/icons/55.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 56,
+      "name": "Superia 200",
+      "group": "富士 Superia",
+      "icon": "assets/films/icons/56.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 57,
+      "name": "Superia 200B",
+      "group": "富士 Superia",
+      "icon": "assets/films/icons/57.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 58,
+      "name": "UMax 400",
+      "group": "柯达 UltraMax 400",
+      "icon": "assets/films/icons/58.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 59,
+      "name": "UMax 400 W",
+      "group": "柯达 UltraMax 400",
+      "icon": "assets/films/icons/59.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 60,
+      "name": "UMax 400 RC",
+      "group": "柯达 UltraMax 400",
+      "icon": "assets/films/icons/60.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 61,
+      "name": "V3 250D Flat",
+      "group": "柯达 Vision3",
+      "icon": "assets/films/icons/61.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 62,
+      "name": "V3 500T",
+      "group": "柯达 Vision3",
+      "icon": "assets/films/icons/62.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 63,
+      "name": "V3 500T N",
+      "group": "柯达 Vision3",
+      "icon": "assets/films/icons/63.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 64,
+      "name": "V3 5207",
+      "group": "柯达 Vision3",
+      "icon": "assets/films/icons/64.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 65,
+      "name": "GR2 Vivid",
+      "group": "理光 GR II 风格",
+      "icon": "assets/films/icons/65.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    }
+  ],
+  "hash": "e0a5fe1be29c20274edd537fd234905fb6f1ac4b60a5f5b99355f43d57aa14d5"
+}

@@ -61,6 +61,9 @@ flutter:
   assets:
     - assets/images/street_moment.jpg
     - assets/images/gr_compact_camera.png
+    - assets/images/film_workbench_sample.jpg
+    - assets/films/
+    - assets/films/icons/
     - assets/luts/
   fonts:
     - family: GRemoteEditorial
