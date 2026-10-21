@@ -23,6 +23,7 @@ abstract interface class CompanionApi {
   Future<FilmUploadReceipt> stageFilm(FilmUploadMetadata metadata);
   Future<FilmUploadReceipt> sendFilmChunk(
       String uploadId, int index, Uint8List bytes);
+  Future<FilmUploadReceipt> filmUpload(String uploadId);
   Future<FilmUploadReceipt> verifyFilm(String uploadId);
   void invalidate();
 }
@@ -73,7 +74,7 @@ class CompanionClient implements CompanionApi {
       {Object? payload, Uint8List? binary, bool bootstrap = false}) async {
     final epoch = _epoch;
     if (!RegExp(
-            r'^/m10v/v1/(capabilities|state|operations(/[a-f0-9]{32})?|films/stage(/[a-f0-9]{32}/(verify|chunks/[0-2]))?)$')
+            r'^/m10v/v1/(capabilities|state|operations(/[a-f0-9]{32})?|films/stage(/[a-f0-9]{32}(/(verify|chunks/[0-2]))?)?)$')
         .hasMatch(path)) {
       throw const CompanionException('invalidCompanionTarget');
     }
@@ -230,6 +231,15 @@ class CompanionClient implements CompanionApi {
         final value = FilmUploadReceipt.fromJson(await _request(
             'PUT', '/m10v/v1/films/stage/$uploadId/chunks/$index',
             binary: bytes));
+        if (value.uploadId != uploadId) {
+          throw const CompanionException('identityMismatch');
+        }
+        return value;
+      });
+  @override
+  Future<FilmUploadReceipt> filmUpload(String uploadId) => _serial(() async {
+        final value = FilmUploadReceipt.fromJson(
+            await _request('GET', '/m10v/v1/films/stage/$uploadId'));
         if (value.uploadId != uploadId) {
           throw const CompanionException('identityMismatch');
         }

@@ -95,6 +95,7 @@ class CaptureTracker {
   var _primed = false;
   bool _disposed = false;
   Future<List<CaptureRecord>>? _inFlight;
+  bool get isDetecting => _inFlight != null;
   CaptureContext? _context;
 
   Stream<CaptureRecord> get records => _records.stream;

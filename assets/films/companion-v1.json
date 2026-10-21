@@ -176,6 +176,7 @@
     "chunkBytes": 4096,
     "stageTargetSlotRequired": true,
     "bankScope": "per-slot",
-    "chunkHashHeader": "X-M10V-Chunk-Hash"
+    "chunkHashHeader": "X-M10V-Chunk-Hash",
+    "readOnlyStatusRoute": "/m10v/v1/films/stage/{uploadId}"
   }
 }

@@ -255,6 +255,7 @@ class FilmUploadReceipt {
         wire['receivedBytes'] is! int ||
         (wire['receivedBytes'] as int) < 0 ||
         (wire['receivedBytes'] as int) > 12288 ||
+        (wire['receivedBytes'] as int) % 4096 != 0 ||
         wire['targetSlot'] is! int ||
         (wire['targetSlot'] as int) < 0 ||
         (wire['targetSlot'] as int) > 4 ||
@@ -262,7 +263,8 @@ class FilmUploadReceipt {
         (wire['stableId'] as int) < 79 ||
         (wire['stableId'] as int) > 288 ||
         (wire['status'] == 'verified' &&
-            (wire['receivedBytes'] != 12288 || ![0, 1].contains(wire['bank'])))) {
+            (wire['receivedBytes'] != 12288 ||
+                ![0, 1].contains(wire['bank'])))) {
       throw const FormatException('胶卷上传收据无效');
     }
   }

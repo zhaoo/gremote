@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceRevision": "7dd0ea341e5f54760db57453ee53cbea2978ef7e",
+  "sourceRevision": "06c54f131584284f4a2705e99681dd681575b71d",
   "sourceDirty": false,
   "rendererHash": "f2aa5411ff40808612b5c232dc854e248b0aa0890c903eb8b319a93d8acf73b2",
   "catalogHash": "e0a5fe1be29c20274edd537fd234905fb6f1ac4b60a5f5b99355f43d57aa14d5",
@@ -39,7 +39,7 @@
     "native/gr3/film_newstocks_data.h": "0a655f80db5d1641335d8fccc324484828bfbfa215be999f06a32b134a392971",
     "native/gr3/m10v_spatial_accel.c": "db5143901f73f568259cbe8c60ce6ea119099f80cb93fb852d4f434b42807c10",
     "native/gr3/m10v_texture_accel.c": "c95e6620a3c7e14d7d652f288e8a205ba27fcf9db46c4545f4ece1ef42914d96",
-    "contracts/companion-v1.json": "1e6586b7b1115d47ddff74353675165db3908edba97a9ebf459c552875283c2c",
+    "contracts/companion-v1.json": "e1d8bc55f815d8d3978d417f8d5764c710bc6a9a6182568f4740193bd0c4b386",
     "web/gr3/film-icons/catalog.json": "a07fe4dcecea1afc2e97af333d4df0fe5273e2601166933c10b897b8455ac617",
     "web/gr3/film-catalog.json": "62f07c358f937c340964ac54431ce9f8c31cf15132c348f26614572657e2f2ea",
     "web/gr3/newstocks-luts.json": "7db64c059e3ef643d4d2271e3b0276574d2714fa30ed71bc9ecd85a7626b7f5b",

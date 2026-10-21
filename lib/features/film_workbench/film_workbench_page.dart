@@ -58,7 +58,7 @@ class _FilmWorkbenchPageState extends State<FilmWorkbenchPage> {
                   onStartRoll: () => setState(() => _section = 1),
                   onLoadCamera: () => setState(() => _section = 2)),
               const RollsPage(),
-              const CameraFilmsPage()
+              CameraFilmsPage(active: _section == 2)
             ])),
         bottomNavigationBar: NavigationBar(
             animationDuration: MediaQuery.of(context).disableAnimations

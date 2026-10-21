@@ -21,6 +21,12 @@ class FilmRepository {
         'created_at': _clock().millisecondsSinceEpoch
       },
       conflictAlgorithm: ConflictAlgorithm.ignore);
+  Future<void> saveRecipe(FilmRecipe recipe) => _recipe(db, recipe);
+  Future<List<FilmRecipe>> savedRecipes() async =>
+      (await db.query('film_recipes', orderBy: 'created_at DESC', limit: 100))
+          .map((row) => FilmRecipe.fromJson(
+              jsonDecode(row['recipe_json'] as String) as Map<String, dynamic>))
+          .toList();
   Future<FilmRoll> createRoll(
       {required String name,
       required int targetCount,

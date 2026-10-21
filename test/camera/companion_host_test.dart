@@ -2,6 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:gremote/storage/gremote_database.dart';
+import 'package:gremote/film/store/sync_repository.dart';
+import 'package:gremote/film/model/film_recipe.dart';
+import 'package:gremote/camera/companion/companion_sync_controller.dart';
+import 'package:gremote/camera/companion/sync_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gremote/camera/companion/companion_client.dart';
 import 'package:gremote/camera/companion/companion_protocol.dart';
@@ -39,7 +45,8 @@ class _Loopback implements CompanionTransport {
     request.add(body);
     final response = await request.close();
     final bytes = await response.fold<List<int>>([], (a, b) => a..addAll(b));
-    final fields=<String,String>{};response.headers.forEach((name,values)=>fields[name]=values.join(","));
+    final fields = <String, String>{};
+    response.headers.forEach((name, values) => fields[name] = values.join(","));
     return CameraResponse(
         statusCode: response.statusCode,
         headers: fields,
@@ -154,6 +161,32 @@ finally:
       expect(receipt.snapshot!.activeSlot, before.activeSlot);
       expect(
           (await client.submit(payload)).snapshot!.wire['journalSequence'], 1);
+
+      sqfliteFfiInit();
+      final db = await GRemoteDatabase.open(
+          factory: databaseFactoryFfi, path: inMemoryDatabasePath);
+      final sync = CompanionSyncController(
+          api: client,
+          repository: SyncRepository(db),
+          catalogHash: caps.catalogHash,
+          rendererHash: caps.rendererHash,
+          wait: () async {});
+      try {
+        final current = await client.state();
+        final original = current.recipeAt(0);
+        final target = FilmRecipe.fromJson({
+          ...original.toJson(),
+          'parameters': {...original.parameters, 'grain': 2}
+        });
+        await sync.prepareLoad(slot: 0, recipe: target, activate: false);
+        expect(sync.state.readOnly, isFalse);
+        await sync.confirm();
+        expect(sync.state.operationStatus, SyncOperationStatus.synced);
+        expect(sync.state.snapshot!.wire['journalSequence'], 2);
+      } finally {
+        sync.dispose();
+        await db.close();
+      }
     } finally {
       wire.http.close(force: true);
       await wrapper.stdin.close();

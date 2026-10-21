@@ -7,6 +7,7 @@ class CameraTransferGate {
   int _active = 0;
   int _generation = 0;
   bool _saving = false;
+  bool get savingOriginals => _saving;
   Completer<void>? _drained;
   Completer<void>? _released;
 
