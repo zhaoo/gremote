@@ -301,7 +301,8 @@ class CompanionClient implements CompanionApi, CompanionExtensionsApi {
 
   void _extensionIdentity(ExtensionSnapshot snapshot) {
     if (snapshot.instanceId != identity.instanceId ||
-        snapshot.bootId != _boot) {
+        snapshot.bootId != _boot ||
+        snapshot.buildId != _capBuild) {
       throw const CompanionException('identityMismatch');
     }
   }
