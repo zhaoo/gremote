@@ -285,11 +285,12 @@ void main() {
 
   test('authenticated body identities must match paired instance and boot',
       () async {
-    for (final field in ['bootId', 'instanceId']) {
+    for (final field in ['bootId', 'instanceId', 'buildId']) {
       final wire = _SignedWire();
       final client = _client(wire);
       await client.capabilities();
-      wire.transform = (path, v) => {...v, field: '09' * 16};
+      wire.transform =
+          (path, v) => {...v, field: '09' * (field == 'buildId' ? 32 : 16)};
       await expectLater(client.extensionState(), _error('identityMismatch'));
     }
   });

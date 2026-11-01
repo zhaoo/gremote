@@ -44,7 +44,7 @@ class CompanionClient implements CompanionApi, CompanionExtensionsApi {
   final CompanionTransport transport;
   final PairingStore pairingStore;
   final PairingIdentity identity;
-  String? _boot, _session;
+  String? _boot, _session, _capBuild;
   int _sequence = 0, _epoch = 0;
   Future<void> _tail = Future.value();
   @override
@@ -54,6 +54,7 @@ class CompanionClient implements CompanionApi, CompanionExtensionsApi {
     _epoch++;
     _boot = null;
     _session = null;
+    _capBuild = null;
     _sequence = 0;
   }
 
@@ -179,6 +180,7 @@ class CompanionClient implements CompanionApi, CompanionExtensionsApi {
           caps.instanceId != identity.instanceId) {
         throw const CompanionException('identityMismatch');
       }
+      _capBuild = caps.wire['buildId'] as String;
       _boot = boot;
       _session = session;
       _sequence = 0;
