@@ -16,6 +16,7 @@ import '../../camera/http/camera_api.dart';
 import '../../camera/http/camera_files.dart';
 import '../../platform/device_api.g.dart';
 import 'camera_transfer.dart';
+import 'library_controller.dart';
 import '../home/import_history.dart';
 
 final cameraGalleryServiceProvider = Provider<CameraGalleryService>((ref) {
@@ -69,6 +70,7 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
   bool _downloading = false;
   bool _selectionMode = false;
   int _session = 0;
+  String? _cameraKey;
   String _format = 'RAW+JPG';
   StreamSubscription<CameraDeviceEvent>? _progressSubscription;
   int _received = 0;
@@ -98,6 +100,8 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
   void initState() {
     super.initState();
     _service = ref.read(cameraGalleryServiceProvider);
+    final connection = ref.read(connectionControllerProvider);
+    if (connection is ConnectionReady) _cameraKey = connection.cameraKey;
     _progressSubscription = _service.events.listen((event) {
       if (!mounted || !_downloading || event.type != 'photoProgress') return;
       try {
@@ -162,6 +166,7 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
       _downloading = true;
       _completed = 0;
       _total = files.length;
+      _selected.addAll(files.map((f) => f.remoteId));
       _stopAfterCurrent = false;
       _currentId = null;
       _currentFile = null;
@@ -192,6 +197,8 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
               await ref
                   .read(localMediaRepositoryProvider)
                   .addUriToAlbum(uri, source: 'camera');
+              // A download can finish after the user has switched to the local grid.
+              unawaited(ref.read(libraryControllerProvider.notifier).refresh());
             }
             if (!mounted || session != _session) break;
             successes++;
@@ -253,11 +260,8 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
           _session++;
           _service.transferGate.invalidate();
           _files = const [];
-          _selected.clear();
-          _saved.clear();
           _thumbnails.clear();
-          _failures.clear();
-          _selectionMode = false;
+          _selectionMode = _selected.isNotEmpty;
           _loading = false;
           _downloading = false;
           _error = null;
@@ -265,7 +269,20 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
           _result = null;
         });
       }
-      if (previous is! ConnectionReady && next is ConnectionReady) {
+      if (next is ConnectionReady &&
+          (previous is! ConnectionReady ||
+              previous.cameraKey != next.cameraKey)) {
+        if (_cameraKey == null || _cameraKey != next.cameraKey) {
+          _selected.clear();
+          _saved.clear();
+          _failures.clear();
+          _selectionMode = false;
+          _error = null;
+        } else if (_selected.isNotEmpty) {
+          _selectionMode = true;
+          _error = '已保留未完成选择，请核对后重试';
+        }
+        _cameraKey = next.cameraKey;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) unawaited(_refresh());
         });

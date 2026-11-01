@@ -11,6 +11,11 @@ import 'package:gremote/camera/http/camera_files.dart';
 import 'package:gremote/features/library/camera_gallery.dart';
 import 'package:gremote/platform/device_api.g.dart';
 import '../../support/camera_harness.dart';
+import '../../support/fake_media_gateway.dart';
+import '../../support/test_darkroom.dart';
+import 'package:gremote/darkroom/darkroom_providers.dart';
+import 'package:gremote/features/library/library_page.dart';
+import 'package:go_router/go_router.dart';
 
 class GalleryFixture extends CameraGalleryService {
   GalleryFixture(CameraApi api,
@@ -37,6 +42,43 @@ class GalleryFixture extends CameraGalleryService {
 }
 
 void main() {
+  testWidgets(
+      'download finishing while local album is visible refreshes its grid',
+      (tester) async {
+    final gateway = FakeMediaGateway();
+    final harness = (await tester.runAsync(() => CameraHarness.create(
+        overrides: [mediaGatewayProvider.overrideWithValue(gateway)])))!;
+    addTearDown(harness.dispose);
+    await tester.runAsync(harness.connect);
+    final fixture = GalleryFixture(CameraApi(harness.gateways.transport))
+      ..pending = Completer<String>();
+    final router = GoRouter(initialLocation: '/library', routes: [
+      GoRoute(path: '/library', builder: (_, __) => const LibraryPage())
+    ]);
+    await tester.pumpWidget(UncontrolledProviderScope(
+        container: harness.container,
+        child: ProviderScope(
+            overrides: [
+              cameraGalleryServiceProvider.overrideWithValue(fixture)
+            ],
+            child: MaterialApp.router(
+                theme: GRemoteTheme.dark, routerConfig: router))));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('相机'));
+    await tester.pumpAndSettle();
+    await tester.longPress(find.text('R002'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('保存原图'));
+    await tester.pump();
+    await tester.tap(find.text('相册').last);
+    await tester.pump();
+    gateway.entries = [mediaEntry(900)];
+    gateway.exif = {900: grMeta()};
+    fixture.pending!.complete('content://media/external/images/media/900');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('media-900')), findsOneWidget);
+  });
+
   testWidgets(
       'explicit selection and JPEG filter save all, retain failure for retry',
       (tester) async {
@@ -154,7 +196,7 @@ void main() {
     expect(find.text('已选 2 张'), findsWidgets);
   });
   testWidgets(
-      'tap toggles groups and disconnect clears selection and stale save',
+      'disconnect keeps same-camera retry selection and ignores stale completion',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -236,8 +278,18 @@ void main() {
     expect(find.text('等待 GR III 连接'), findsOneWidget);
     await tester.runAsync(harness.connect);
     await tester.pumpAndSettle();
-    expect(find.text('多选'), findsOneWidget);
+    expect(find.text('已选 1 张'), findsWidgets);
     expect(find.textContaining('保存完成'), findsNothing);
+    expect(fixture.downloaded, ['100RICOH/R001.JPG']);
+    await tester.runAsync(() =>
+        harness.container.read(connectionControllerProvider.notifier).cancel());
+    await tester.pumpAndSettle();
+    await tester.runAsync(() => harness.container
+        .read(connectionControllerProvider.notifier)
+        .connectWifiManually(ssid: 'another-camera', passphrase: '12345678'));
+    await tester.pumpAndSettle();
+    expect(find.text('多选'), findsOneWidget);
+    expect(find.text('已选 1 张'), findsNothing);
     expect(fixture.downloaded, ['100RICOH/R001.JPG']);
   });
 }

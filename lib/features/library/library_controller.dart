@@ -57,7 +57,7 @@ final libraryControllerProvider =
     NotifierProvider<LibraryController, LibraryState>(LibraryController.new);
 
 class LibraryController extends Notifier<LibraryState> {
-  bool _scanning = false;
+  bool _scanning = false, _scanAgain = false;
 
   @override
   LibraryState build() => const LibraryState();
@@ -68,9 +68,13 @@ class LibraryController extends Notifier<LibraryState> {
 
   /// Re-checks permission (it may change in system settings) and rescans.
   Future<void> refresh() async {
-    final access = await _gateway.access();
-    state = state.copyWith(access: access);
-    if (access != MediaAccess.denied) await _scan();
+    try {
+      final access = await _gateway.access();
+      state = state.copyWith(access: access);
+      if (access != MediaAccess.denied) await _scan();
+    } on MediaException catch (e) {
+      state = state.copyWith(error: () => '读取相册失败（${e.code}）');
+    }
   }
 
   Future<void> requestAccess() async {
@@ -129,17 +133,24 @@ class LibraryController extends Notifier<LibraryState> {
   }
 
   Future<void> _scan() async {
-    if (_scanning) return;
+    if (_scanning) {
+      _scanAgain = true;
+      return;
+    }
     _scanning = true;
     try {
-      await _reload();
-      await for (final progress in _repository.scan()) {
-        state = state.copyWith(scan: () => progress, error: () => null);
-        await _reload();
-      }
-    } on MediaException catch (e) {
-      state =
-          state.copyWith(error: () => '读取相册失败（${e.code}）：${e.message ?? ''}');
+      do {
+        _scanAgain = false;
+        try {
+          await _reload();
+          await for (final progress in _repository.scan()) {
+            state = state.copyWith(scan: () => progress, error: () => null);
+            await _reload();
+          }
+        } on MediaException catch (e) {
+          state = state.copyWith(error: () => '读取相册失败（${e.code}）');
+        }
+      } while (_scanAgain && state.access != MediaAccess.denied);
     } finally {
       _scanning = false;
       state = state.copyWith(scan: () => null);

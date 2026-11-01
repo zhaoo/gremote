@@ -315,7 +315,11 @@ class _LocalLibrary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final access = state.access;
-    if (access == null) return const SizedBox.shrink();
+    if (access == null) {
+      return state.error == null
+          ? const SizedBox.shrink()
+          : Center(child: Text(state.error!));
+    }
     if (access == MediaAccess.denied) {
       return _AccessCard(onRequest: controller.requestAccess);
     }

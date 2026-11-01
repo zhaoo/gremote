@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/services.dart';
+import 'package:crypto/crypto.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../diagnostics/diagnostic_event.dart';
@@ -189,6 +190,7 @@ class ConnectionController extends Notifier<CameraConnectionState> {
             snapshot: _snapshot!,
             firmwareWarning: !identity.isVerifiedFirmware,
             wifiOnly: true,
+            cameraKey: sha256.convert(utf8.encode('wifi:$ssid')).toString(),
           ));
     } on _StaleAttempt {
       return;
@@ -401,6 +403,11 @@ class ConnectionController extends Notifier<CameraConnectionState> {
         generation,
         ConnectionReady(
           snapshot: snapshot,
+          cameraKey: _selectedDevice == null
+              ? null
+              : sha256
+                  .convert(utf8.encode('ble:${_selectedDevice!.id}'))
+                  .toString(),
           firmwareWarning: !snapshot.identity.isVerifiedFirmware,
         ),
       );

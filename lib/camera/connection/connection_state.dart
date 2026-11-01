@@ -167,6 +167,7 @@ final class ConnectionReady extends CameraConnectionState {
     required this.firmwareWarning,
     this.lastShutterPath,
     this.wifiOnly = false,
+    this.cameraKey,
   });
 
   final CameraSnapshot snapshot;
@@ -174,11 +175,15 @@ final class ConnectionReady extends CameraConnectionState {
   final ShutterPath? lastShutterPath;
   final bool wifiOnly;
 
+  /// Opaque connection identity used only to scope pending user selections.
+  final String? cameraKey;
+
   ConnectionReady copyWith({ShutterPath? lastShutterPath}) => ConnectionReady(
         snapshot: snapshot,
         firmwareWarning: firmwareWarning,
         lastShutterPath: lastShutterPath ?? this.lastShutterPath,
         wifiOnly: wifiOnly,
+        cameraKey: cameraKey,
       );
 
   @override
