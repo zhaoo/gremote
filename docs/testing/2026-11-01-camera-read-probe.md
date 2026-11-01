@@ -49,3 +49,7 @@ SD卡已挂载并只读检查：没有SCRIPT目录、STARTUP.TTL或ModeSet启用
 已本地准备m10v-probe-script-switch-20261101-v1.zip，SHA256为9fcba9fe9791185b9a12c797539a721b770c10668ee89f34858f8c603782df5e。01_ENTRY仅在STARTUP入口通过RTOS文件API写START.TXT后include既有探针；02_ENABLE与03_DISABLE分别包含GR III的00078350.588和DEVELOP.MOD，不能混合复制。模式命令及10字节钥匙逐字节核对固定GRKit源码，包不含固件或runtime。SD卡未被电脑修改，模式命令未执行；持久开关原值未知。
 
 原卡根目录当前仅见fwdc239b.bin这一BIN。MENU模式步骤前须由用户手机备份并移出根目录，避免进入固件升级；不删除原件，不移动SCRIPT中的探针BIN。正常启动采集前移除本轮两个ModeSet文件，不把固件升级文件放回根目录。关闭包是独立可选全局操作，不承诺恢复未知原值；启用需用户明确确认持久设置变更。
+
+## 脚本启用反馈
+
+用户明确同意持久SD脚本启用后，通过手机复制专用包，反馈相机显示“Script - Enable”和“Complete”并自动关机。记录为用户观察到的模式命令完成反馈；尚未观察到普通启动入口标记、Linux探针或无线传输，不能记为无线装卷通过。下一步须关机移除本轮00078350.588和DEVELOP.MOD，保留固件备份位置，再正常开机；无需再次确认已授权的脚本开关。
