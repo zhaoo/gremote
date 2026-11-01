@@ -18,6 +18,7 @@ import '../../darkroom/darkroom_providers.dart';
 import '../../platform/device_api.g.dart';
 import '../library/camera_gallery.dart';
 import 'workbench_providers.dart';
+import '../../camera/companion/companion_operation_gate.dart';
 
 final cameraFilmCatalogProvider = FutureProvider<CameraFilmCatalog>(
     (ref) async => CameraFilmCatalog.fromJson(jsonDecode(
@@ -67,6 +68,11 @@ final companionSyncControllerProvider =
       rendererHash: catalog.rendererHash,
       cameraCatalog: catalog,
       isWriteBlocked: () =>
+          ref.read(extensionMutationPendingProvider(identity.instanceId)) ||
+          ref
+                  .read(extensionPendingPresenceProvider(identity.instanceId))
+                  .valueOrNull !=
+              false ||
           !ref.read(appForegroundProvider) ||
           !ref.read(companionNetworkReadyProvider) ||
           ref.read(shootPageVisibleProvider) ||
@@ -79,6 +85,12 @@ final companionSyncControllerProvider =
           : ref.read(filmRepositoryProvider).saveRecipe(recipe));
   ref.listen(companionNetworkReadyProvider, (_, ready) {
     if (!ready) controller.disconnected();
+  });
+  ref.listen(extensionPendingPresenceProvider(identity.instanceId), (_, __) {
+    if (ref.read(appForegroundProvider) &&
+        ref.read(companionNetworkReadyProvider)) {
+      unawaited(controller.refresh());
+    }
   });
   ref.onDispose(controller.dispose);
   return controller;

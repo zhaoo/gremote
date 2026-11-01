@@ -6,6 +6,7 @@ import 'package:crypto/crypto.dart';
 import 'companion_protocol.dart';
 import 'companion_transport.dart';
 import 'pairing_store.dart';
+import 'extensions_protocol.dart';
 
 class CompanionException implements Exception {
   const CompanionException(this.code);
@@ -28,7 +29,7 @@ abstract interface class CompanionApi {
   void invalidate();
 }
 
-class CompanionClient implements CompanionApi {
+class CompanionClient implements CompanionApi, CompanionExtensionsApi {
   CompanionClient(
       {required this.transport,
       required this.pairingStore,
@@ -81,7 +82,7 @@ class CompanionClient implements CompanionApi {
       {Object? payload, Uint8List? binary, bool bootstrap = false}) async {
     final epoch = _epoch;
     if (!RegExp(
-            r'^/m10v/v1/(capabilities|state|operations(/[a-f0-9]{32})?|films/stage(/[a-f0-9]{32}(/(verify|chunks/[0-2]))?)?)$')
+            r'^/m10v/v1/(capabilities|state|extensions/(capabilities|state|operations(/[a-f0-9]{32})?)|operations(/[a-f0-9]{32})?|films/stage(/[a-f0-9]{32}(/(verify|chunks/[0-2]))?)?)$')
         .hasMatch(path)) {
       throw const CompanionException('invalidCompanionTarget');
     }
@@ -161,6 +162,10 @@ class CompanionClient implements CompanionApi {
     }
     final raw = jsonDecode(utf8.decode(response.body));
     if (raw is! Map<String, dynamic>) throw const FormatException('伴侣响应无效');
+    if (response.statusCode == 404 &&
+        path == '/m10v/v1/extensions/capabilities') {
+      throw const CompanionException('extensionsUnsupported');
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final error = (raw['error'] as Map?)?['code'];
       throw CompanionException(error is String && error.length <= 48
@@ -275,4 +280,67 @@ class CompanionClient implements CompanionApi {
         }
         return value;
       });
+  @override
+  Future<ExtensionCapabilities> extensionCapabilities() => _serial(() async {
+        final epoch = _epoch;
+        for (var attempt = 0;; attempt++) {
+          try {
+            return ExtensionCapabilities.fromJson(
+                await _request('GET', '/m10v/v1/extensions/capabilities'));
+          } on CompanionException catch (e) {
+            if (e.code != 'busy' || attempt >= 3) rethrow;
+            await _busyWait();
+            if (epoch != _epoch) {
+              throw const CompanionException('sessionChanged');
+            }
+          }
+        }
+      });
+
+  void _extensionIdentity(ExtensionSnapshot snapshot) {
+    if (snapshot.instanceId != identity.instanceId ||
+        snapshot.bootId != _boot) {
+      throw const CompanionException('identityMismatch');
+    }
+  }
+
+  @override
+  Future<ExtensionSnapshot> extensionState() => _serial(() async {
+        final epoch = _epoch;
+        for (var attempt = 0;; attempt++) {
+          try {
+            final value = ExtensionSnapshot.fromJson(
+                await _request('GET', '/m10v/v1/extensions/state'));
+            _extensionIdentity(value);
+            return value;
+          } on CompanionException catch (e) {
+            if (e.code != 'busy' || attempt >= 3) rethrow;
+            await _busyWait();
+            if (epoch != _epoch) {
+              throw const CompanionException('sessionChanged');
+            }
+          }
+        }
+      });
+  Future<ExtensionReceipt> _extensionReceipt(
+      String method, String path, String id,
+      {Object? payload}) async {
+    final value = ExtensionReceipt.fromJson(
+        await _request(method, path, payload: payload));
+    if (value.requestId != id || value.bootId != _boot) {
+      throw const CompanionException('identityMismatch');
+    }
+    if (value.snapshot != null) _extensionIdentity(value.snapshot!);
+    return value;
+  }
+
+  @override
+  Future<ExtensionReceipt> submitExtension(Map<String, Object?> operation) =>
+      _serial(() => _extensionReceipt('POST', '/m10v/v1/extensions/operations',
+          operation['requestId'] as String,
+          payload: operation));
+  @override
+  Future<ExtensionReceipt> extensionOperation(String requestId) =>
+      _serial(() => _extensionReceipt(
+          'GET', '/m10v/v1/extensions/operations/$requestId', requestId));
 }

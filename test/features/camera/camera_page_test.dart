@@ -44,7 +44,7 @@ void main() {
       expect(tester.takeException(), isNull);
       await tester.tap(find.text('扩展'));
       await tester.pumpAndSettle();
-      expect(find.text('胶卷参数'), findsOneWidget);
+      expect(find.text('连接并配对 M10V 相机'), findsOneWidget);
       expect(find.byType(Switch), findsNothing);
       expect(tester.takeException(), isNull);
     });
