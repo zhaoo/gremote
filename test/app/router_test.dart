@@ -37,6 +37,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('首页'), findsOneWidget);
+    expect(find.image(const AssetImage('assets/images/home_header.jpg')),
+        findsOneWidget);
     expect(find.text('拍摄'), findsOneWidget);
     expect(find.text('相册').last, findsOneWidget);
     expect(find.text('相机'), findsOneWidget);

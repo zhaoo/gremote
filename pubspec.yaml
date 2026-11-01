@@ -59,6 +59,7 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
   assets:
+    - assets/images/home_header.jpg
     - assets/images/street_moment.jpg
     - assets/images/gr_compact_camera.png
     - assets/images/film_workbench_sample.jpg

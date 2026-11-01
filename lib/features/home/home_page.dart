@@ -26,10 +26,41 @@ class HomePage extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.only(top: 16, bottom: 28),
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(20, 8, 20, 24),
-            child: Text('GRemote',
-                style: TextStyle(fontSize: 32, fontWeight: FontWeight.w700)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 12, 20),
+            child: Row(children: [
+              const Expanded(
+                  child: Text('GRemote',
+                      style: TextStyle(
+                          fontSize: 28,
+                          color: GRemoteColors.text,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: -.8))),
+              PopupMenuButton<String>(
+                tooltip: '更多连接选项',
+                icon: const Icon(Icons.more_horiz),
+                onSelected: (value) {
+                  if (value == 'wifi') {
+                    _showManualWifi(context, controller);
+                  } else {
+                    _showDiagnostics(
+                        context, state, ref.read(diagnosticStoreProvider));
+                  }
+                },
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'wifi', child: Text('手动连接 Wi-Fi')),
+                  PopupMenuItem(value: 'diagnostics', child: Text('诊断信息')),
+                ],
+              ),
+            ]),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.asset('assets/images/home_header.jpg',
+                  height: 205, width: double.infinity, fit: BoxFit.cover),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),

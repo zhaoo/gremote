@@ -160,13 +160,6 @@ class GRemoteShell extends StatelessWidget {
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
                     color: selected ? GRemoteColors.gold : GRemoteColors.muted,
                   )),
-              const SizedBox(height: 6),
-              AnimatedContainer(
-                duration: motionDuration,
-                width: selected ? 20 : 0,
-                height: 2,
-                color: GRemoteColors.gold,
-              ),
             ],
           ),
         ),
