@@ -223,9 +223,10 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
                 ]));
     if (confirmed == true && mounted) {
       await controller.set(key, value, expectedRevision: revision);
-      if (mounted && controller.message != null)
+      if (mounted && controller.message != null) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(controller.message!)));
+      }
     }
   }
 

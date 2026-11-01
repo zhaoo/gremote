@@ -49,11 +49,13 @@ const extensionFields = <String, ExtensionField>{
       ExtensionField('边框', '效果', 0, 2, choices: {0: '关闭', 1: '拍立得', 2: '胶片'}),
   'grainMode': ExtensionField('颗粒', '效果', 0, 4,
       choices: {0: '跟随胶卷', 1: '关闭', 2: '弱', 3: '中', 4: '强'}),
-  'grainSize': ExtensionField('颗粒尺寸', '效果', 0, 2, choices: _sizes),
+  'grainSize':
+      ExtensionField('颗粒尺寸', '效果', 0, 2, choices: {0: '细', 1: '标准', 2: '粗'}),
   'leakGain': ExtensionField('漏光', '效果', 0, 3, choices: _levels),
   'leakPosition':
       ExtensionField('漏光位置', '效果', 0, 2, choices: {0: '左侧', 1: '右侧', 2: '两侧'}),
-  'leakSpread': ExtensionField('漏光范围', '效果', 0, 2, choices: _sizes),
+  'leakSpread':
+      ExtensionField('漏光范围', '效果', 0, 2, choices: {0: '窄', 1: '中', 2: '宽'}),
   'blurGain': ExtensionField('模糊', '效果', 0, 3, choices: _levels),
   'blurRange': ExtensionField('模糊范围', '效果', 0, 2, choices: _sizes),
   'stamp':
