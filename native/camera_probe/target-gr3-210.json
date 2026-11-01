@@ -1,0 +1,24 @@
+{
+  "schema": "m10v-read-probe-target/v1",
+  "model": "GR III",
+  "firmwareVersion": "2.10",
+  "firmwareSha256": "ba11ed85bf28d75d7c9cac192c82ea33dcbc9b6f300198169e4623cf663e2a31",
+  "buildId": "e78dd1d7",
+  "arrayCount": 1429732184,
+  "arrayTable": 1429737324,
+  "heapMin": 1434469236,
+  "heapEnd": 1610612736,
+  "romAnchors": [
+    1394013008,
+    1401061396,
+    1399504168
+  ],
+  "decoderFiles": {
+    "node/gr3-frames.mjs": "caaea129f333755d9e21e2f5e313ec4b00b9a9c67283619337b2343278968d68",
+    "node/firmware.mjs": "371c530fa534dc4bd7c15542c43b2565319a02adf3798cd699976139a83293f8",
+    "node/gr3-native-budget.mjs": "1931c30a9734b29537247cf1c8029690f49dbdc9e2f31ade99798104d9bffd49"
+  },
+  "grkitReferenceRevision": "f62cd016298c97a1cfc3427b5cfeaf68780e7068",
+  "m10vRevision": "a24ccc2618aff06baf9359808120ce6a4e881ab0",
+  "firmwareBytes": 32277488
+}
