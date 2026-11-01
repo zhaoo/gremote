@@ -67,6 +67,16 @@ class LocalMediaRepository {
     }).toList();
 
     final cleanup = _db.batch();
+    for (final e in entries.where((e) => e.appAlbum)) {
+      cleanup.insert(
+          'album_collection',
+          {
+            'media_id': e.id,
+            'source': 'camera',
+            'added_at': DateTime.now().millisecondsSinceEpoch
+          },
+          conflictAlgorithm: ConflictAlgorithm.ignore);
+    }
     for (final id in vanished) {
       cleanup.delete('local_media', where: 'media_id = ?', whereArgs: [id]);
     }
@@ -109,6 +119,52 @@ class LocalMediaRepository {
     );
     return rows.map(_item).toList();
   }
+
+  Future<void> addToAlbum(int id,
+      {required String source, String? sourceHash}) async {
+    await _db.transaction((txn) async {
+      if (sourceHash != null) {
+        await txn.update('album_collection', {'source_hash': null},
+            where: 'source_hash = ? AND media_id != ?',
+            whereArgs: [sourceHash, id]);
+      }
+      await txn.insert(
+          'album_collection',
+          {
+            'media_id': id,
+            'source': source,
+            'source_hash': sourceHash,
+            'added_at': DateTime.now().millisecondsSinceEpoch
+          },
+          conflictAlgorithm: ConflictAlgorithm.ignore);
+      if (sourceHash != null) {
+        await txn.update('album_collection', {'source_hash': sourceHash},
+            where: 'media_id = ?', whereArgs: [id]);
+      }
+    });
+  }
+
+  Future<void> addUriToAlbum(String uri,
+      {required String source, String? sourceHash}) async {
+    final id = int.tryParse(Uri.parse(uri).pathSegments.lastOrNull ?? '');
+    if (id != null) {
+      await addToAlbum(id, source: source, sourceHash: sourceHash);
+    }
+  }
+
+  Future<int?> importedId(String hash) async {
+    final rows = await _db.query('album_collection',
+        columns: ['media_id'],
+        where: 'source_hash = ?',
+        whereArgs: [hash],
+        limit: 1);
+    return rows.isEmpty ? null : rows.single['media_id'] as int;
+  }
+
+  Future<List<LocalMediaItem>> album() async => (await _db.rawQuery(
+          'SELECT m.* FROM local_media m INNER JOIN album_collection a ON m.media_id=a.media_id ORDER BY coalesce(date_taken,date_modified*1000) DESC, m.media_id DESC'))
+      .map(_item)
+      .toList();
 
   Future<LocalMediaItem?> find(int id) async {
     final rows = await _db.query('local_media',

@@ -84,6 +84,7 @@ class MediaStoreReader(context: Context) {
                             dateTaken = if (c.isNull(taken)) null else c.getLong(taken),
                             width = c.getLong(width),
                             height = c.getLong(height),
+                            appAlbum = isAppAlbumDirectory(directory),
                         ),
                     )
                 }

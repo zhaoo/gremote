@@ -81,6 +81,12 @@ class GRemoteMediaHostApi(private val activity: Activity) : MediaHostApi {
         publisher.publishGenerated(File(tempPath), displayName, width.toInt(), height.toInt()).toString()
     }
 
+    override fun importPhoto(tempPath: String, displayName: String, callback: (Result<String>) -> Unit) = launchIo(callback) {
+        val file = File(tempPath).canonicalFile
+        require(file.path.startsWith(activity.cacheDir.canonicalPath + File.separator))
+        publisher.importPhoto(file, displayName).toString()
+    }
+
     override fun shareRecipe(card: ByteArray) {
         require(card.isNotEmpty() && card.size <= 16384)
         val dir = File(activity.cacheDir, "recipe-share").apply { mkdirs() }

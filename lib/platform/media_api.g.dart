@@ -30,6 +30,7 @@ class NativeMediaEntry {
     this.dateTaken,
     required this.width,
     required this.height,
+    this.appAlbum,
   });
 
   int id;
@@ -46,6 +47,8 @@ class NativeMediaEntry {
 
   int height;
 
+  bool? appAlbum;
+
   Object encode() {
     return <Object?>[
       id,
@@ -55,6 +58,7 @@ class NativeMediaEntry {
       dateTaken,
       width,
       height,
+      appAlbum,
     ];
   }
 
@@ -68,6 +72,7 @@ class NativeMediaEntry {
       dateTaken: result[4] as int?,
       width: result[5]! as int,
       height: result[6]! as int,
+      appAlbum: result[7] as bool?,
     );
   }
 }
@@ -153,6 +158,7 @@ class NativeExifSummary {
   }
 }
 
+
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
   @override
@@ -160,13 +166,13 @@ class _PigeonCodec extends StandardMessageCodec {
     if (value is int) {
       buffer.putUint8(4);
       buffer.putInt64(value);
-    } else if (value is NativeMediaAccess) {
+    }    else if (value is NativeMediaAccess) {
       buffer.putUint8(129);
       writeValue(buffer, value.index);
-    } else if (value is NativeMediaEntry) {
+    }    else if (value is NativeMediaEntry) {
       buffer.putUint8(130);
       writeValue(buffer, value.encode());
-    } else if (value is NativeExifSummary) {
+    }    else if (value is NativeExifSummary) {
       buffer.putUint8(131);
       writeValue(buffer, value.encode());
     } else {
@@ -194,11 +200,9 @@ class MediaHostApi {
   /// Constructor for [MediaHostApi].  The [binaryMessenger] named argument is
   /// available for dependency injection.  If it is left null, the default
   /// BinaryMessenger will be used which routes to the host platform.
-  MediaHostApi(
-      {BinaryMessenger? binaryMessenger, String messageChannelSuffix = ''})
+  MediaHostApi({BinaryMessenger? binaryMessenger, String messageChannelSuffix = ''})
       : pigeonVar_binaryMessenger = binaryMessenger,
-        pigeonVar_messageChannelSuffix =
-            messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
+        pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
   final BinaryMessenger? pigeonVar_binaryMessenger;
 
   static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
@@ -206,10 +210,8 @@ class MediaHostApi {
   final String pigeonVar_messageChannelSuffix;
 
   Future<NativeMediaAccess> access() async {
-    final String pigeonVar_channelName =
-        'dev.flutter.pigeon.gremote.MediaHostApi.access$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel =
-        BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.MediaHostApi.access$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -235,10 +237,8 @@ class MediaHostApi {
   }
 
   Future<NativeMediaAccess> requestAccess() async {
-    final String pigeonVar_channelName =
-        'dev.flutter.pigeon.gremote.MediaHostApi.requestAccess$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel =
-        BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.MediaHostApi.requestAccess$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -264,10 +264,8 @@ class MediaHostApi {
   }
 
   Future<bool> hasLocationAccess() async {
-    final String pigeonVar_channelName =
-        'dev.flutter.pigeon.gremote.MediaHostApi.hasLocationAccess$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel =
-        BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.MediaHostApi.hasLocationAccess$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -293,10 +291,8 @@ class MediaHostApi {
   }
 
   Future<bool> requestLocationAccess() async {
-    final String pigeonVar_channelName =
-        'dev.flutter.pigeon.gremote.MediaHostApi.requestLocationAccess$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel =
-        BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.MediaHostApi.requestLocationAccess$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -322,10 +318,8 @@ class MediaHostApi {
   }
 
   Future<List<NativeMediaEntry>> queryImages() async {
-    final String pigeonVar_channelName =
-        'dev.flutter.pigeon.gremote.MediaHostApi.queryImages$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel =
-        BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.MediaHostApi.queryImages$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -346,16 +340,13 @@ class MediaHostApi {
         message: 'Host platform returned null value for non-null return value.',
       );
     } else {
-      return (pigeonVar_replyList[0] as List<Object?>?)!
-          .cast<NativeMediaEntry>();
+      return (pigeonVar_replyList[0] as List<Object?>?)!.cast<NativeMediaEntry>();
     }
   }
 
   Future<List<NativeExifSummary>> readExif(List<int> ids) async {
-    final String pigeonVar_channelName =
-        'dev.flutter.pigeon.gremote.MediaHostApi.readExif$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel =
-        BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.MediaHostApi.readExif$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -376,16 +367,13 @@ class MediaHostApi {
         message: 'Host platform returned null value for non-null return value.',
       );
     } else {
-      return (pigeonVar_replyList[0] as List<Object?>?)!
-          .cast<NativeExifSummary>();
+      return (pigeonVar_replyList[0] as List<Object?>?)!.cast<NativeExifSummary>();
     }
   }
 
   Future<Uint8List?> thumbnail(int id, int edge) async {
-    final String pigeonVar_channelName =
-        'dev.flutter.pigeon.gremote.MediaHostApi.thumbnail$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel =
-        BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.MediaHostApi.thumbnail$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -406,10 +394,8 @@ class MediaHostApi {
   }
 
   Future<int> openReadFd(int id) async {
-    final String pigeonVar_channelName =
-        'dev.flutter.pigeon.gremote.MediaHostApi.openReadFd$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel =
-        BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.MediaHostApi.openReadFd$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -435,10 +421,8 @@ class MediaHostApi {
   }
 
   Future<String> contentHash(int id) async {
-    final String pigeonVar_channelName =
-        'dev.flutter.pigeon.gremote.MediaHostApi.contentHash$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel =
-        BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.MediaHostApi.contentHash$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -463,19 +447,15 @@ class MediaHostApi {
     }
   }
 
-  Future<String> publishExport(String tempPath, int sourceId,
-      String displayName, bool keepGps, int width, int height) async {
-    final String pigeonVar_channelName =
-        'dev.flutter.pigeon.gremote.MediaHostApi.publishExport$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel =
-        BasicMessageChannel<Object?>(
+  Future<String> publishExport(String tempPath, int sourceId, String displayName, bool keepGps, int width, int height) async {
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.MediaHostApi.publishExport$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final List<Object?>? pigeonVar_replyList = await pigeonVar_channel.send(
-            <Object?>[tempPath, sourceId, displayName, keepGps, width, height])
-        as List<Object?>?;
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_channel.send(<Object?>[tempPath, sourceId, displayName, keepGps, width, height]) as List<Object?>?;
     if (pigeonVar_replyList == null) {
       throw _createConnectionError(pigeonVar_channelName);
     } else if (pigeonVar_replyList.length > 1) {
@@ -494,19 +474,42 @@ class MediaHostApi {
     }
   }
 
-  Future<String> publishGenerated(
-      String tempPath, String displayName, int width, int height) async {
-    final String pigeonVar_channelName =
-        'dev.flutter.pigeon.gremote.MediaHostApi.publishGenerated$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel =
-        BasicMessageChannel<Object?>(
+  Future<String> publishGenerated(String tempPath, String displayName, int width, int height) async {
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.MediaHostApi.publishGenerated$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final List<Object?>? pigeonVar_replyList = await pigeonVar_channel
-            .send(<Object?>[tempPath, displayName, width, height])
-        as List<Object?>?;
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_channel.send(<Object?>[tempPath, displayName, width, height]) as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else if (pigeonVar_replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (pigeonVar_replyList[0] as String?)!;
+    }
+  }
+
+  Future<String> importPhoto(String tempPath, String displayName) async {
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.MediaHostApi.importPhoto$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_channel.send(<Object?>[tempPath, displayName]) as List<Object?>?;
     if (pigeonVar_replyList == null) {
       throw _createConnectionError(pigeonVar_channelName);
     } else if (pigeonVar_replyList.length > 1) {
@@ -526,10 +529,8 @@ class MediaHostApi {
   }
 
   Future<void> shareRecipe(Uint8List card) async {
-    final String pigeonVar_channelName =
-        'dev.flutter.pigeon.gremote.MediaHostApi.shareRecipe$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel =
-        BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.MediaHostApi.shareRecipe$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
@@ -550,10 +551,8 @@ class MediaHostApi {
   }
 
   Future<void> share(String uri) async {
-    final String pigeonVar_channelName =
-        'dev.flutter.pigeon.gremote.MediaHostApi.share$pigeonVar_messageChannelSuffix';
-    final BasicMessageChannel<Object?> pigeonVar_channel =
-        BasicMessageChannel<Object?>(
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.gremote.MediaHostApi.share$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,

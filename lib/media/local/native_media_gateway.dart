@@ -36,6 +36,7 @@ class NativeMediaGateway implements MediaGateway {
             dateTaken: e.dateTaken,
             width: e.width,
             height: e.height,
+            appAlbum: e.appAlbum ?? false,
           ),
       ]);
 
@@ -93,6 +94,10 @@ class NativeMediaGateway implements MediaGateway {
           required int width,
           required int height}) =>
       _guard(() => _api.publishGenerated(tempPath, displayName, width, height));
+
+  @override
+  Future<String> importPhoto(String tempPath, String displayName) =>
+      _guard(() => _api.importPhoto(tempPath, displayName));
 
   @override
   Future<void> shareRecipe(Uint8List card) async {

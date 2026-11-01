@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:typed_data';
+import 'package:file_selector/file_selector.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,7 +15,8 @@ import '../support/fake_media_gateway.dart';
 import '../support/test_darkroom.dart';
 
 Future<TestDarkroom> pumpLibrary(WidgetTester tester,
-    {required FakeMediaGateway gateway}) async {
+    {required FakeMediaGateway gateway,
+    Future<List<XFile>> Function()? pickPhotos}) async {
   tester.view.physicalSize = const Size(390, 844);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
@@ -28,7 +31,12 @@ Future<TestDarkroom> pumpLibrary(WidgetTester tester,
     GoRoute(path: '/export-queue', builder: (_, __) => const Text('queue')),
   ]);
   await tester.pumpWidget(ProviderScope(
-    overrides: env.overrides,
+    overrides: [
+      ...env.overrides,
+      if (pickPhotos != null)
+        albumPhotoPickerProvider.overrideWithValue(pickPhotos),
+      albumTemporaryDirectoryProvider.overrideWithValue(() async => env.dir)
+    ],
     child: MaterialApp.router(theme: GRemoteTheme.dark, routerConfig: router),
   ));
   await tester.pumpAndSettle();
@@ -48,7 +56,47 @@ FakeMediaGateway library({MediaAccess access = MediaAccess.granted}) =>
 
 Finder tile(int id) => find.byKey(ValueKey('media-$id'));
 
+class ImportGateway extends FakeMediaGateway {
+  int imported = 0;
+  @override
+  Future<String> importPhoto(String path, String name) async {
+    imported++;
+    entries = [
+      ...entries,
+      LocalMediaEntry(
+          id: 900,
+          uri: 'content://media/images/900',
+          displayName: name,
+          dateModified: 1)
+    ];
+    exif = {900: const PhotoMeta(width: 40, height: 30, model: 'Phone')};
+    return 'content://media/images/900';
+  }
+}
+
 void main() {
+  testWidgets(
+      'import deduplicates repeated source bytes and keeps non-GR photo',
+      (tester) async {
+    final gateway = ImportGateway();
+    await pumpLibrary(tester,
+        gateway: gateway,
+        pickPhotos: () async => [
+              XFile.fromData(Uint8List.fromList([255, 216, 255]),
+                  name: 'phone.jpg'),
+              XFile.fromData(Uint8List.fromList([255, 216, 255]),
+                  name: 'again.jpg')
+            ]);
+    await tester.runAsync(() async {
+      await tester.tap(find.byTooltip('导入照片'));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+    expect(gateway.imported, 1);
+    expect(tile(900), findsOneWidget);
+    expect(find.text('已导入 1 张'), findsOneWidget);
+  });
+
   testWidgets('asks for photo access before scanning', (tester) async {
     final gateway = library(access: MediaAccess.denied)
       ..accessAfterRequest = MediaAccess.granted;
@@ -77,23 +125,35 @@ void main() {
     expect(find.byType(LinearProgressIndicator), findsNothing);
   });
 
-  testWidgets('filters GR III by default and can show everything',
+  testWidgets('album keeps imported photos regardless of camera model',
       (tester) async {
     await pumpLibrary(tester, gateway: library());
     expect(tile(1), findsOneWidget);
-    expect(tile(3), findsOneWidget);
-    expect(tile(2), findsNothing);
-    expect(find.text('按配方'), findsNothing);
-
-    await tester.tap(find.text('全部'));
-    await tester.pumpAndSettle();
     expect(tile(2), findsOneWidget);
+    expect(find.text('GR III'), findsNothing);
+  });
+
+  testWidgets('long press opens save and share actions', (tester) async {
+    final gateway = library();
+    final env = await pumpLibrary(tester, gateway: gateway);
+    await tester.longPress(tile(3));
+    await tester.pumpAndSettle();
+    expect(find.text('保存'), findsOneWidget);
+    expect(find.text('分享'), findsOneWidget);
+    await tester.tap(find.text('分享'));
+    await tester.pumpAndSettle();
+    expect(find.text('edit 3'), findsNothing);
+    expect(gateway.shared, hasLength(1));
+    expect(gateway.publishes, hasLength(1));
+    expect(env.engine.jobs, hasLength(1));
   });
 
   testWidgets('long press starts multi-select for batch export',
       (tester) async {
     await pumpLibrary(tester, gateway: library());
     await tester.longPress(tile(3));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('选择照片'));
     await tester.pumpAndSettle();
     expect(find.text('批量出图 (1)'), findsOneWidget);
     await tester.tap(tile(1));
@@ -131,7 +191,7 @@ void main() {
     await tester.pumpAndSettle();
     gateway.entries = [...gateway.entries, mediaEntry(4)];
     gateway.exif = {...gateway.exif, 4: grMeta()};
-    await tester.tap(find.text('本机'));
+    await tester.tap(find.text('相册').last);
     await tester.pumpAndSettle();
     expect(tile(4), findsOneWidget);
   });

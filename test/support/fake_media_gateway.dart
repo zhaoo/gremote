@@ -47,6 +47,9 @@ class FakeMediaGateway implements MediaGateway {
   int _nextFd = 100;
 
   @override
+  Future<String> importPhoto(String tempPath, String displayName) async => 'content://media/external/images/media/999';
+
+  @override
   Future<MediaAccess> access() async => mediaAccess;
 
   @override

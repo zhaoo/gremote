@@ -23,26 +23,44 @@ class MediaGrid extends StatelessWidget {
   final ValueChanged<LocalMediaItem> onLongPress;
 
   @override
-  Widget build(BuildContext context) => GridView.builder(
-        padding: const EdgeInsets.fromLTRB(2, 2, 2, 24),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          mainAxisSpacing: 2,
-          crossAxisSpacing: 2,
-        ),
-        itemCount: items.length,
-        itemBuilder: (context, index) {
-          final item = items[index];
-          return MediaTile(
-            key: ValueKey('media-${item.id}'),
-            item: item,
-            selected: selected.contains(item.id),
-            tagMatch: tags[item.id],
-            onTap: () => onTap(item),
-            onLongPress: () => onLongPress(item),
-          );
-        },
-      );
+  Widget build(BuildContext context) {
+    final groups = <DateTime, List<LocalMediaItem>>{};
+    for (final item in items) {
+      final time = DateTime.fromMillisecondsSinceEpoch(
+          item.dateTaken ?? item.dateModified * 1000);
+      groups
+          .putIfAbsent(DateTime(time.year, time.month, time.day), () => [])
+          .add(item);
+    }
+    final now = DateTime.now();
+    return CustomScrollView(slivers: [
+      for (final group in groups.entries) ...[
+        SliverToBoxAdapter(
+            child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 14),
+                child: Text(
+                    '${group.key.year == now.year && group.key.month == now.month && group.key.day == now.day ? '今天 · ' : ''}${group.key.year == now.year ? '' : '${group.key.year} 年 '}${group.key.month} 月 ${group.key.day} 日',
+                    style: Theme.of(context).textTheme.bodyMedium))),
+        SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3, mainAxisSpacing: 3, crossAxisSpacing: 3),
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final item = group.value[index];
+                return MediaTile(
+                    key: ValueKey('media-${item.id}'),
+                    item: item,
+                    selected: selected.contains(item.id),
+                    tagMatch: tags[item.id],
+                    onTap: () => onTap(item),
+                    onLongPress: () => onLongPress(item));
+              }, childCount: group.value.length),
+            )),
+      ],
+      const SliverToBoxAdapter(child: SizedBox(height: 24)),
+    ]);
+  }
 }
 
 class MediaTile extends ConsumerWidget {
@@ -94,7 +112,9 @@ class MediaTile extends ConsumerWidget {
                   child: Text(
                     match.usable ? '◍' : '待确认',
                     style: TextStyle(
-                      color: match.usable ? GRemoteColors.gold : GRemoteColors.muted,
+                      color: match.usable
+                          ? GRemoteColors.gold
+                          : GRemoteColors.muted,
                       fontSize: match.usable ? 15 : 9,
                     ),
                   ),
@@ -106,7 +126,8 @@ class MediaTile extends ConsumerWidget {
             const Positioned(
               top: 6,
               right: 6,
-              child: Icon(Icons.check_circle, color: GRemoteColors.gold, size: 22),
+              child:
+                  Icon(Icons.check_circle, color: GRemoteColors.gold, size: 22),
             ),
           ],
         ]),

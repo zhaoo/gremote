@@ -66,7 +66,8 @@ data class NativeMediaEntry (
   val dateModified: Long,
   val dateTaken: Long? = null,
   val width: Long,
-  val height: Long
+  val height: Long,
+  val appAlbum: Boolean? = null
 )
  {
   companion object {
@@ -78,7 +79,8 @@ data class NativeMediaEntry (
       val dateTaken = pigeonVar_list[4] as Long?
       val width = pigeonVar_list[5] as Long
       val height = pigeonVar_list[6] as Long
-      return NativeMediaEntry(id, uri, displayName, dateModified, dateTaken, width, height)
+      val appAlbum = pigeonVar_list[7] as Boolean?
+      return NativeMediaEntry(id, uri, displayName, dateModified, dateTaken, width, height, appAlbum)
     }
   }
   fun toList(): List<Any?> {
@@ -90,6 +92,7 @@ data class NativeMediaEntry (
       dateTaken,
       width,
       height,
+      appAlbum,
     )
   }
 }
@@ -201,6 +204,7 @@ interface MediaHostApi {
   fun contentHash(id: Long, callback: (Result<String>) -> Unit)
   fun publishExport(tempPath: String, sourceId: Long, displayName: String, keepGps: Boolean, width: Long, height: Long, callback: (Result<String>) -> Unit)
   fun publishGenerated(tempPath: String, displayName: String, width: Long, height: Long, callback: (Result<String>) -> Unit)
+  fun importPhoto(tempPath: String, displayName: String, callback: (Result<String>) -> Unit)
   fun shareRecipe(card: ByteArray)
   fun share(uri: String)
 
@@ -413,6 +417,27 @@ interface MediaHostApi {
             val widthArg = args[2] as Long
             val heightArg = args[3] as Long
             api.publishGenerated(tempPathArg, displayNameArg, widthArg, heightArg) { result: Result<String> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.gremote.MediaHostApi.importPhoto$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val tempPathArg = args[0] as String
+            val displayNameArg = args[1] as String
+            api.importPhoto(tempPathArg, displayNameArg) { result: Result<String> ->
               val error = result.exceptionOrNull()
               if (error != null) {
                 reply.reply(wrapError(error))

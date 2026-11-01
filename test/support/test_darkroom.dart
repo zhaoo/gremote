@@ -18,6 +18,7 @@ import 'fake_media_gateway.dart';
 
 LocalMediaEntry mediaEntry(int id) => LocalMediaEntry(
       id: id,
+      appAlbum: true,
       uri: 'content://media/external/images/media/$id',
       displayName: 'R00$id.JPG',
       dateModified: 100,

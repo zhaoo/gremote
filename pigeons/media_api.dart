@@ -19,6 +19,7 @@ class NativeMediaEntry {
   int? dateTaken;
   int width;
   int height;
+  bool? appAlbum;
 }
 
 class NativeExifSummary {
@@ -89,6 +90,9 @@ abstract class MediaHostApi {
 
   @async
   String publishGenerated(String tempPath, String displayName, int width, int height);
+
+  @async
+  String importPhoto(String tempPath, String displayName);
 
   void shareRecipe(Uint8List card);
 

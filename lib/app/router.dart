@@ -7,6 +7,7 @@ import 'app_presence.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/darkroom/darkroom_page.dart';
+import '../features/camera/camera_page.dart';
 import '../features/darkroom/editor/editor_page.dart';
 import '../features/home/home_page.dart';
 import '../features/film_workbench/film_workbench_page.dart';
@@ -19,7 +20,7 @@ import 'theme/app_colors.dart';
 final _homeKey = GlobalKey<NavigatorState>();
 final _shootKey = GlobalKey<NavigatorState>();
 final _libraryKey = GlobalKey<NavigatorState>();
-final _darkroomKey = GlobalKey<NavigatorState>();
+final _cameraKey = GlobalKey<NavigatorState>();
 
 final appRouter = GoRouter(
   initialLocation: '/home',
@@ -35,6 +36,18 @@ final appRouter = GoRouter(
           ],
         ),
         StatefulShellBranch(
+          navigatorKey: _libraryKey,
+          routes: [
+            GoRoute(path: '/library', builder: (_, __) => const LibraryPage()),
+          ],
+        ),
+        StatefulShellBranch(
+          navigatorKey: _cameraKey,
+          routes: [
+            GoRoute(path: '/camera', builder: (_, __) => const CameraPage())
+          ],
+        ),
+        StatefulShellBranch(
           navigatorKey: _shootKey,
           routes: [
             GoRoute(
@@ -47,21 +60,9 @@ final appRouter = GoRouter(
                 }),
           ],
         ),
-        StatefulShellBranch(
-          navigatorKey: _libraryKey,
-          routes: [
-            GoRoute(path: '/library', builder: (_, __) => const LibraryPage()),
-          ],
-        ),
-        StatefulShellBranch(
-          navigatorKey: _darkroomKey,
-          routes: [
-            GoRoute(
-                path: '/darkroom', builder: (_, __) => const DarkroomPage()),
-          ],
-        ),
       ],
     ),
+    GoRoute(path: '/darkroom', builder: (_, __) => const DarkroomPage()),
     GoRoute(path: '/export-queue', builder: (_, __) => const BatchExportPage()),
     GoRoute(
         path: '/film-workbench',
@@ -88,7 +89,7 @@ class GRemoteShell extends StatelessWidget {
         MediaQuery.maybeOf(context)?.disableAnimations == true
             ? Duration.zero
             : const Duration(milliseconds: 180);
-    final hideNavigation = navigationShell.currentIndex == 1;
+    final hideNavigation = navigationShell.currentIndex == 3;
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: hideNavigation
@@ -108,21 +109,15 @@ class GRemoteShell extends StatelessWidget {
                         children: [
                           _destination(0, '首页', Icons.home_outlined, Icons.home,
                               motionDuration),
-                          _destination(1, '拍摄', Icons.camera_alt_outlined,
+                          _destination(1, '相册', Icons.photo_library_outlined,
+                              Icons.photo_library, motionDuration),
+                          _destination(2, '相机', Icons.camera_outlined,
+                              Icons.camera, motionDuration),
+                          _destination(3, '拍摄', Icons.camera_alt_outlined,
                               Icons.camera_alt, motionDuration),
-                          _destination(2, '图库', Icons.photo_outlined,
-                              Icons.photo, motionDuration),
-                          _destination(3, '暗房', Icons.tune_outlined, Icons.tune,
-                              motionDuration),
                         ],
                       ),
                     ),
-                    const Text('GOOD PHOTOS  A KINDER WORLD',
-                        style: TextStyle(
-                            color: GRemoteColors.muted,
-                            fontSize: 7,
-                            letterSpacing: 2)),
-                    const SizedBox(height: 3),
                   ],
                 ),
               ),
@@ -139,7 +134,7 @@ class GRemoteShell extends StatelessWidget {
         selected: selected,
         child: InkWell(
           onTap: () {
-            if (index != 1) {
+            if (index != 3) {
               unawaited(SystemChrome.setPreferredOrientations(
                 const [DeviceOrientation.portraitUp],
               ));

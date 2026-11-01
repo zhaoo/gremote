@@ -12,7 +12,6 @@ import '../../media/local/media_gateway.dart';
 class LibraryState {
   const LibraryState({
     this.access,
-    this.grOnly = true,
     this.items = const [],
     this.tags = const {},
     this.scan,
@@ -22,7 +21,6 @@ class LibraryState {
 
   /// Null until the first permission check returns.
   final MediaAccess? access;
-  final bool grOnly;
   final List<LocalMediaItem> items;
   final Map<int, TagMatch> tags;
 
@@ -39,7 +37,6 @@ class LibraryState {
 
   LibraryState copyWith({
     MediaAccess? access,
-    bool? grOnly,
     List<LocalMediaItem>? items,
     Map<int, TagMatch>? tags,
     ScanProgress? Function()? scan,
@@ -48,7 +45,6 @@ class LibraryState {
   }) =>
       LibraryState(
         access: access ?? this.access,
-        grOnly: grOnly ?? this.grOnly,
         items: items ?? this.items,
         tags: tags ?? this.tags,
         scan: scan == null ? this.scan : scan(),
@@ -81,11 +77,6 @@ class LibraryController extends Notifier<LibraryState> {
     final access = await _gateway.requestAccess();
     state = state.copyWith(access: access);
     if (access != MediaAccess.denied) await _scan();
-  }
-
-  Future<void> setGrOnly(bool grOnly) async {
-    state = state.copyWith(grOnly: grOnly, selected: const {});
-    await _reload();
   }
 
   void toggle(int id) {
@@ -156,7 +147,7 @@ class LibraryController extends Notifier<LibraryState> {
   }
 
   Future<void> _reload() async {
-    final allItems = await _repository.list(grOnly: state.grOnly);
+    final allItems = await _repository.album();
     final allTags = await ref.read(recipeStoreProvider).tagsForBaseNames(
           allItems.map((item) => baseNameOf(item.displayName)),
         );

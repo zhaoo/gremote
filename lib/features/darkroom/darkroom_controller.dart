@@ -47,7 +47,11 @@ class SystemLutFilePicker implements LutFilePicker {
       mimeTypes: ['text/plain', 'application/octet-stream'],
     );
     final file = await openFile(acceptedTypeGroups: const [types]);
-    return file == null ? null : (file.name, await file.readAsBytes());
+    if (file == null) return null;
+    if (await file.length() > 16 * 1024 * 1024) {
+      throw const FormatException('LUT 不能超过 16 MiB');
+    }
+    return (file.name, await file.readAsBytes());
   }
 }
 

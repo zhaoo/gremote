@@ -15,6 +15,7 @@ class LocalMediaEntry {
     this.dateTaken,
     this.width = 0,
     this.height = 0,
+    this.appAlbum = false,
   });
 
   final int id;
@@ -28,6 +29,7 @@ class LocalMediaEntry {
   final int? dateTaken;
   final int width;
   final int height;
+  final bool appAlbum;
 }
 
 enum MediaAccess { granted, partial, denied }
@@ -83,6 +85,8 @@ abstract interface class MediaGateway {
       required String displayName,
       required int width,
       required int height});
+
+  Future<String> importPhoto(String tempPath, String displayName);
 
   Future<void> shareRecipe(Uint8List card);
 

@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'package:gremote/camera/companion/camera_film_catalog.dart';
+import 'package:gremote/features/film_workbench/companion_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,8 +17,14 @@ Future<void> pumpApp(WidgetTester tester, {FakeMediaGateway? gateway}) async {
   final env = await TestDarkroom.create(
       gateway: gateway ?? FakeMediaGateway(mediaAccess: MediaAccess.denied));
   addTearDown(env.close);
-  await tester.pumpWidget(
-      ProviderScope(overrides: env.overrides, child: const GRemoteApp()));
+  final catalog = await tester.runAsync(() async => CameraFilmCatalog.fromJson(
+      jsonDecode(
+              await rootBundle.loadString('assets/films/camera-catalog.json'))
+          as Map<String, dynamic>));
+  await tester.pumpWidget(ProviderScope(overrides: [
+    ...env.overrides,
+    cameraFilmCatalogProvider.overrideWith((ref) async => catalog!)
+  ], child: const GRemoteApp()));
 }
 
 void main() {
@@ -29,15 +38,16 @@ void main() {
 
     expect(find.text('首页'), findsOneWidget);
     expect(find.text('拍摄'), findsOneWidget);
-    expect(find.text('图库'), findsOneWidget);
-    expect(find.text('暗房'), findsOneWidget);
-    expect(find.text('走上街头'), findsOneWidget);
+    expect(find.text('相册').last, findsOneWidget);
+    expect(find.text('相机'), findsOneWidget);
+    expect(find.text('GOOD PHOTOS  A KINDER WORLD'), findsNothing);
+    expect(find.text('GRemote'), findsOneWidget);
     await tester.tap(find.text('拍摄'));
     await tester.pumpAndSettle();
     expect(find.text('连接相机后显示取景画面'), findsOneWidget);
     await tester.tap(find.text('前往连接'));
     await tester.pumpAndSettle();
-    expect(find.text('走上街头'), findsOneWidget);
+    expect(find.text('GRemote'), findsOneWidget);
   });
 
   testWidgets('unfinished sections explain their availability', (tester) async {
@@ -48,14 +58,14 @@ void main() {
     await pumpApp(tester);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('图库'));
+    await tester.tap(find.text('相册').last);
     await tester.pumpAndSettle();
     expect(find.text('允许访问照片'), findsOneWidget);
 
-    await tester.tap(find.text('暗房'));
+    await tester.tap(find.text('相机').last);
     await tester.pumpAndSettle();
-    expect(find.text('LUT 库'), findsOneWidget);
-    expect(find.text('出图方案'), findsOneWidget);
+    expect(find.text('胶卷库'), findsOneWidget);
+    expect(find.text('扩展'), findsOneWidget);
   });
 
   testWidgets('shoot controls fit a compact portrait display', (tester) async {
@@ -115,7 +125,7 @@ void main() {
         gateway:
             FakeMediaGateway(entries: [mediaEntry(3)], exif: {3: grMeta()}));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('图库'));
+    await tester.tap(find.text('相册').last);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('media-3')));
     await tester.pumpAndSettle();

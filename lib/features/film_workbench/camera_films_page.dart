@@ -20,8 +20,9 @@ import 'workbench_providers.dart';
 import 'widgets/workbench_style.dart';
 
 class CameraFilmsPage extends ConsumerStatefulWidget {
-  const CameraFilmsPage({super.key, this.active = true});
+  const CameraFilmsPage({super.key, this.active = true, this.initialFilmId});
   final bool active;
+  final int? initialFilmId;
   @override
   ConsumerState<CameraFilmsPage> createState() => _CameraFilmsPageState();
 }
@@ -285,10 +286,12 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
         ref.watch(appForegroundProvider));
     final selected = _imported != null && catalog != null
         ? _imported!.recipe(catalog.hash)
-        : _saved ?? ref.watch(selectedFilmRecipeProvider);
+        : _saved ??
+            (widget.initialFilmId != null && catalog != null
+                ? catalog.recipe(widget.initialFilmId!)
+                : ref.watch(selectedFilmRecipeProvider));
     Widget content() =>
         ListView(padding: const EdgeInsets.only(bottom: 28), children: [
-          const WorkbenchHeading('相机胶卷', '手机选好，相机带走。', 'POCKET TO CAMERA.'),
           _panel(
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -399,7 +402,7 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
                     selected?.name.isNotEmpty == true
                         ? selected!.name
                         : selected == null
-                            ? '先在试卷台选择一款胶卷'
+                            ? '选择胶卷'
                             : '配方 ${selected.filmId}',
                     style: const TextStyle(
                         color: workbenchCream,
@@ -455,7 +458,7 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
                               _imported = null;
                               _saved = null;
                             }),
-                        child: const Text('使用试卷台配方'))
+                        child: const Text('恢复所选胶卷'))
                 ]),
                 SwitchListTile.adaptive(
                     contentPadding: EdgeInsets.zero,
@@ -481,11 +484,6 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
                         label: Text(
                             '装入槽位 ${(_slot + 1).toString().padLeft(2, '0')}'))),
               ])),
-          const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: Text('离线时仍可试色、开卷和整理照片。无线装卷需要匹配的相机伴侣组件；未完成真机验证的构建不会开放写入。',
-                  style: TextStyle(
-                      color: workbenchMuted, fontSize: 12, height: 1.7))),
         ]);
     return controller == null
         ? content()

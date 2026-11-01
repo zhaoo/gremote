@@ -1,3 +1,4 @@
+import '../../darkroom/darkroom_providers.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -185,7 +186,13 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
             _expected = -1;
           });
           try {
-            await service.download(file);
+            final uri = await service.download(file);
+            if (file.file.toLowerCase().endsWith('.jpg') ||
+                file.file.toLowerCase().endsWith('.jpeg')) {
+              await ref
+                  .read(localMediaRepositoryProvider)
+                  .addUriToAlbum(uri, source: 'camera');
+            }
             if (!mounted || session != _session) break;
             successes++;
             ref.invalidate(importHistoryProvider);

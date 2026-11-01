@@ -117,7 +117,7 @@ void main() {
   testWidgets('digital roll empty state has no fictional photos or count',
       (tester) async {
     await show(tester, section: 1);
-    expect(find.text('把一天，拍成一卷。'), findsOneWidget);
+    expect(find.text('把一天，拍成一卷。'), findsNothing);
     expect(find.text('新建胶卷'), findsOneWidget);
     expect(find.text('18 / 36 张'), findsNothing);
     expect(find.text('雨后散步'), findsNothing);

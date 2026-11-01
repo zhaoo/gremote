@@ -44,17 +44,16 @@ class _Overview extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(20, 22, 20, 10),
           sliver: SliverToBoxAdapter(
             child: Row(children: [
-              Text('暗房', style: Theme.of(context).textTheme.headlineSmall),
-              const Spacer(),
-              const Text('DEVELOP YOUR LOOK',
-                  style: TextStyle(
-                      color: GRemoteColors.gold, fontSize: 9, letterSpacing: 1.6)),
+              const BackButton(),
+              Expanded(
+                  child: Text('LUT 与出图方案',
+                      style: Theme.of(context).textTheme.titleLarge)),
             ]),
           ),
         ),
         _header(context, '最近编辑', 'RECENT EDITS'),
         if (data.edits.isEmpty)
-          _empty('还没有编辑记录；从图库打开一张照片开始。')
+          _empty('还没有编辑记录；从相册打开照片。')
         else
           SliverList.builder(
             itemCount: data.edits.length,
@@ -66,8 +65,8 @@ class _Overview extends ConsumerWidget {
                     edit.title.isEmpty ? '照片 #${edit.mediaId}' : edit.title),
                 subtitle: Text(
                     '${edit.recipe.frame.label} · ${edit.recipe.ratio.label} · ${edit.recipe.size.label}',
-                    style:
-                        const TextStyle(color: GRemoteColors.muted, fontSize: 12)),
+                    style: const TextStyle(
+                        color: GRemoteColors.muted, fontSize: 12)),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/edit/${edit.mediaId}'),
               );
@@ -130,9 +129,6 @@ class _Overview extends ConsumerWidget {
           child: Row(children: [
             Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(title, style: Theme.of(context).textTheme.titleLarge),
-              Text(kicker,
-                  style: const TextStyle(
-                      color: GRemoteColors.gold, fontSize: 8, letterSpacing: 1.5)),
             ]),
             const Spacer(),
             if (action != null) action,
@@ -144,7 +140,8 @@ class _Overview extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         sliver: SliverToBoxAdapter(
             child: Text(text,
-                style: const TextStyle(color: GRemoteColors.muted, fontSize: 13))),
+                style:
+                    const TextStyle(color: GRemoteColors.muted, fontSize: 13))),
       );
 
   Future<void> _import(BuildContext context, DarkroomActions actions) async {

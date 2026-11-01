@@ -120,7 +120,7 @@ class ConnectionCard extends StatelessWidget {
         ConnectionIdle() => const _ConnectionPresentation(
             status: '未连接',
             title: '连接相机',
-            detail: '连接你的 RICOH GR III，开始街头拍摄。',
+            detail: '通过蓝牙或相机 Wi-Fi 连接。',
           ),
         ConnectionPermissions() => const _ConnectionPresentation(
             status: '权限',

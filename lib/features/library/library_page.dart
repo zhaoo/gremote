@@ -1,4 +1,10 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:crypto/crypto.dart';
+import 'package:file_selector/file_selector.dart';
+import 'package:path_provider/path_provider.dart';
+import '../../darkroom/darkroom_providers.dart';
+import '../../darkroom/model/edit_document.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +20,16 @@ import 'camera_gallery.dart';
 import 'widgets/media_grid.dart';
 import 'widgets/recipe_sheet.dart';
 
+final albumPhotoPickerProvider = Provider<Future<List<XFile>> Function()>(
+    (ref) => () => openFiles(acceptedTypeGroups: const [
+          XTypeGroup(
+              label: 'JPEG',
+              extensions: ['jpg', 'jpeg'],
+              mimeTypes: ['image/jpeg'])
+        ]));
+final albumTemporaryDirectoryProvider =
+    Provider<Future<Directory> Function()>((ref) => getTemporaryDirectory);
+
 enum _Source { local, camera }
 
 class LibraryPage extends ConsumerStatefulWidget {
@@ -25,6 +41,7 @@ class LibraryPage extends ConsumerStatefulWidget {
 
 class _LibraryPageState extends ConsumerState<LibraryPage> {
   var _source = _Source.local;
+  bool _busy = false, _selectMode = false, _cameraVisited = false;
   late final AppLifecycleListener _lifecycle;
 
   LibraryController get _controller =>
@@ -62,18 +79,32 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                   runSpacing: 8,
                   children: [
                     Row(mainAxisSize: MainAxisSize.min, children: [
-                      Text('图库',
-                          style: Theme.of(context).textTheme.headlineSmall),
+                      Text('相册',
+                          style: Theme.of(context).textTheme.headlineMedium),
                       IconButton(
-                          tooltip: '数字胶卷',
-                          onPressed: () =>
-                              context.push('/film-workbench?section=1'),
-                          icon: const Icon(Icons.local_movies_outlined)),
+                          tooltip: '导入照片',
+                          onPressed: _busy ? null : _importPhotos,
+                          icon: const Icon(Icons.add)),
+                      PopupMenuButton<String>(
+                        tooltip: '更多',
+                        onSelected: (value) {
+                          if (value == 'select') {
+                            setState(() => _selectMode = true);
+                          } else {
+                            context.push('/darkroom');
+                          }
+                        },
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(value: 'select', child: Text('选择照片')),
+                          PopupMenuItem(
+                              value: 'resources', child: Text('LUT 与出图方案'))
+                        ],
+                      ),
                     ]),
                     SegmentedButton<_Source>(
                       showSelectedIcon: false,
                       segments: const [
-                        ButtonSegment(value: _Source.local, label: Text('本机')),
+                        ButtonSegment(value: _Source.local, label: Text('相册')),
                         ButtonSegment(value: _Source.camera, label: Text('相机')),
                       ],
                       selected: {_source},
@@ -82,30 +113,131 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                         if (_source != _Source.local && next == _Source.local) {
                           unawaited(_controller.refresh());
                         }
-                        setState(() => _source = next);
+                        setState(() {
+                          _source = next;
+                          if (next == _Source.camera) _cameraVisited = true;
+                        });
                       },
                     ),
                   ]),
             ),
+            if (_busy) const LinearProgressIndicator(minHeight: 2),
             Expanded(
-              child: _source == _Source.camera
-                  ? const CameraGallery()
-                  : _LocalLibrary(state: state, controller: _controller),
+              child: IndexedStack(index: _source.index, children: [
+                _LocalLibrary(
+                    state: state,
+                    controller: _controller,
+                    selecting: _selectMode || state.selecting,
+                    onLongPress: _photoActions),
+                if (_cameraVisited)
+                  const CameraGallery()
+                else
+                  const SizedBox.shrink(),
+              ]),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: state.selecting && _source == _Source.local
-          ? _SelectionBar(
-              count: state.selected.length,
-              showConfirm: state.selectedHasUnconfirmedWeak,
-              onCancel: _controller.clearSelection,
-              onExport: _startBatch,
-              onRecipeExport: _startRecipeBatch,
-              onConfirm: _controller.confirmSelectedTags,
-            )
-          : null,
+      bottomNavigationBar:
+          (_selectMode || state.selecting) && _source == _Source.local
+              ? _SelectionBar(
+                  count: state.selected.length,
+                  showConfirm: state.selectedHasUnconfirmedWeak,
+                  onCancel: () {
+                    _controller.clearSelection();
+                    setState(() => _selectMode = false);
+                  },
+                  onExport: _startBatch,
+                  onRecipeExport: _startRecipeBatch,
+                  onConfirm: _controller.confirmSelectedTags,
+                )
+              : null,
     );
+  }
+
+  Future<void> _importPhotos() async {
+    setState(() => _busy = true);
+    Directory? temp;
+    try {
+      final files = await ref.read(albumPhotoPickerProvider)();
+      if (files.isEmpty) return;
+      temp = await (await ref.read(albumTemporaryDirectoryProvider)())
+          .createTemp('album-import-');
+      final gateway = ref.read(mediaGatewayProvider);
+      final repo = ref.read(localMediaRepositoryProvider);
+      var done = 0;
+      final knownIds = (await gateway.queryImages()).map((e) => e.id).toSet();
+      for (final file in files) {
+        if (await file.length() > 100000000) {
+          throw const MediaException('tooLarge', '单张照片不能超过 100 MB');
+        }
+        final hash = (await sha256.bind(file.openRead()).first).toString();
+        final existing = await repo.importedId(hash);
+        if (existing != null && knownIds.contains(existing)) continue;
+        final path = '${temp.path}/input.jpg';
+        await file.saveTo(path);
+        final uri = await gateway.importPhoto(path, file.name);
+        await repo.addUriToAlbum(uri, source: 'import', sourceHash: hash);
+        final id = int.tryParse(Uri.parse(uri).pathSegments.lastOrNull ?? '');
+        if (id != null) knownIds.add(id);
+        done++;
+      }
+      if (mounted) _message('已导入 $done 张');
+    } catch (error) {
+      if (mounted) _message('导入失败：$error');
+    } finally {
+      if (temp != null) await temp.delete(recursive: true);
+      if (mounted) {
+        setState(() => _busy = false);
+        await _controller.refresh();
+      }
+    }
+  }
+
+  void _message(String text) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+
+  Future<void> _photoActions(LocalMediaItem item) async {
+    if (_busy) return;
+    final action = await showModalBottomSheet<String>(
+        context: context,
+        showDragHandle: true,
+        builder: (context) => SafeArea(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+              ListTile(
+                  leading: const Icon(Icons.download_outlined),
+                  title: const Text('保存'),
+                  onTap: () => Navigator.pop(context, 'save')),
+              ListTile(
+                  leading: const Icon(Icons.ios_share),
+                  title: const Text('分享'),
+                  onTap: () => Navigator.pop(context, 'share')),
+              ListTile(
+                  leading: const Icon(Icons.check_circle_outline),
+                  title: const Text('选择照片'),
+                  onTap: () => Navigator.pop(context, 'select')),
+            ])));
+    if (!mounted || action == null) return;
+    if (action == 'select') {
+      _controller.toggle(item.id);
+      setState(() => _selectMode = true);
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      final doc = await ref.read(darkroomStoreProvider).loadEdit(item.id) ??
+          EditDocument(mediaId: item.id, updatedAt: DateTime.now());
+      final outcome = await ref.read(exportServiceProvider).export(item, doc);
+      if (action == 'share') {
+        await ref.read(mediaGatewayProvider).share(outcome.uri);
+      } else if (mounted) {
+        _message('已保存');
+      }
+    } catch (error) {
+      if (mounted) _message('操作失败：$error');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _startRecipeBatch() async {
@@ -169,7 +301,13 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
 }
 
 class _LocalLibrary extends StatelessWidget {
-  const _LocalLibrary({required this.state, required this.controller});
+  const _LocalLibrary(
+      {required this.state,
+      required this.controller,
+      required this.selecting,
+      required this.onLongPress});
+  final bool selecting;
+  final ValueChanged<LocalMediaItem> onLongPress;
 
   final LibraryState state;
   final LibraryController controller;
@@ -196,27 +334,6 @@ class _LocalLibrary extends StatelessWidget {
                       TextStyle(color: GRemoteColors.goldSoft, fontSize: 13)),
             ),
           ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 20, 8),
-          child: Row(children: [
-            ChoiceChip(
-              label: const Text('GR III'),
-              selected: state.grOnly,
-              onSelected: (_) => controller.setGrOnly(true),
-            ),
-            const SizedBox(width: 8),
-            ChoiceChip(
-              label: const Text('全部'),
-              selected: !state.grOnly,
-              onSelected: (_) => controller.setGrOnly(false),
-            ),
-            const SizedBox(width: 8),
-            const Spacer(),
-            Text('${state.items.length} 张',
-                style:
-                    const TextStyle(color: GRemoteColors.muted, fontSize: 12)),
-          ]),
-        ),
         if (scan != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
@@ -246,11 +363,7 @@ class _LocalLibrary extends StatelessWidget {
           child: state.items.isEmpty
               ? Center(
                   child: Text(
-                    scan != null
-                        ? '正在整理相册…'
-                        : state.grOnly
-                            ? '没有找到 GR III 拍摄的 JPEG'
-                            : '相册里没有 JPEG',
+                    scan != null ? '正在整理相册…' : '导入照片，或从相机下载',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 )
@@ -258,11 +371,10 @@ class _LocalLibrary extends StatelessWidget {
                   items: state.items,
                   selected: state.selected,
                   tags: state.tags,
-                  onTap: (item) => state.selecting
+                  onTap: (item) => selecting
                       ? controller.toggle(item.id)
                       : context.push('/edit/${item.id}'),
-                  onLongPress: (LocalMediaItem item) =>
-                      controller.toggle(item.id),
+                  onLongPress: onLongPress,
                 ),
         ),
       ],
@@ -285,7 +397,7 @@ class _AccessCard extends StatelessWidget {
             const SizedBox(height: 18),
             Text('访问本机照片', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
-            Text('用于调色、加边框并导出副本；原图永远不会被修改。',
+            Text('用于读取和编辑导入的照片。',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium),
             const SizedBox(height: 22),

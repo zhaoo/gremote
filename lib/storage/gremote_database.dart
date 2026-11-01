@@ -5,7 +5,7 @@ import 'package:sqflite/sqflite.dart';
 
 /// Opens the single app database and owns its schema.
 abstract final class GRemoteDatabase {
-  static const version = 5;
+  static const version = 6;
 
   static Future<Database> open({
     DatabaseFactory? factory,
@@ -42,6 +42,7 @@ abstract final class GRemoteDatabase {
     await _createV3(db);
     await _createV4(db);
     await _createV5(db);
+    await _createV6(db);
   }
 
   static Future<void> _upgrade(Database db, int from, int to) async {
@@ -49,7 +50,11 @@ abstract final class GRemoteDatabase {
     if (from < 3) await _createV3(db);
     if (from < 4) await _createV4(db);
     if (from < 5) await _createV5(db);
+    if (from < 6) await _createV6(db);
   }
+
+  static Future<void> _createV6(Database db) => db.execute(
+      "CREATE TABLE album_collection (media_id INTEGER PRIMARY KEY, source TEXT NOT NULL, added_at INTEGER NOT NULL, source_hash TEXT UNIQUE)");
 
   static Future<void> _createV5(Database db) => db.execute(
       'CREATE TABLE camera_film_recipes (fingerprint TEXT PRIMARY KEY, recipe_json TEXT NOT NULL, created_at INTEGER NOT NULL)');

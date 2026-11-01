@@ -26,61 +26,11 @@ class HomePage extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.only(top: 16, bottom: 28),
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                      const Text('GRemote',
-                          style: TextStyle(
-                              fontFamily: 'Georgia',
-                              fontSize: 34,
-                              height: 1,
-                              color: GRemoteColors.text)),
-                      const SizedBox(height: 4),
-                      Text('STREET CAMERA COMPANION',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelSmall
-                              ?.copyWith(
-                                  color: GRemoteColors.gold,
-                                  fontSize: 9,
-                                  letterSpacing: 2.1)),
-                    ])),
-                if (MediaQuery.sizeOf(context).width >= 380) ...[
-                  const SizedBox(width: 8),
-                  const Text('记 录 日 常\n成 为 特 别',
-                      textAlign: TextAlign.right,
-                      style: TextStyle(
-                          fontSize: 9,
-                          height: 1.7,
-                          letterSpacing: 1,
-                          color: GRemoteColors.muted)),
-                ],
-              ],
-            ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 8, 20, 24),
+            child: Text('GRemote',
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.w700)),
           ),
-          const SizedBox(height: 14),
-          const _EditorialHero(),
-          Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-              child: Card(
-                  child: ListTile(
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                leading: const Icon(Icons.local_movies_outlined,
-                    color: GRemoteColors.gold),
-                title: const Text('试卷台 · 数字胶卷'),
-                subtitle: const Text('选好感觉，把一天拍成一卷'),
-                trailing: const Icon(Icons.arrow_forward_rounded, size: 20),
-                onTap: () => context.push('/film-workbench'),
-              ))),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: ConnectionCard(
@@ -184,67 +134,6 @@ class HomePage extends ConsumerWidget {
       ),
     );
   }
-}
-
-class _EditorialHero extends StatelessWidget {
-  const _EditorialHero();
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-        height: 238,
-        child: Stack(fit: StackFit.expand, children: [
-          Image.asset('assets/images/street_moment.jpg', fit: BoxFit.cover),
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [Color(0x77111411), Color(0x00111411)],
-              ),
-            ),
-          ),
-          Positioned(
-            top: 17,
-            left: 20,
-            right: 20,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('走上街头', style: Theme.of(context).textTheme.displaySmall),
-                const SizedBox(height: 6),
-                const Text('让平凡的日子，留下不平凡的眼光。',
-                    style: TextStyle(
-                        color: GRemoteColors.text,
-                        fontSize: 11,
-                        letterSpacing: 0.6,
-                        shadows: [Shadow(blurRadius: 6, color: Colors.black)])),
-              ],
-            ),
-          ),
-          const Positioned(
-            left: 20,
-            bottom: 20,
-            child: Text('A QUIETER\nBRIGHTER\nYOU  ─',
-                style: TextStyle(
-                    color: GRemoteColors.text,
-                    fontSize: 8,
-                    height: 1.5,
-                    letterSpacing: 1.6)),
-          ),
-          if (MediaQuery.sizeOf(context).width >= 360)
-            const Positioned(
-              right: 21,
-              top: 82,
-              child: Text('GOOD\nPHOTOS\nBETTER\nDAYS  ─',
-                  style: TextStyle(
-                      color: GRemoteColors.night,
-                      fontSize: 9,
-                      height: 1.45,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1)),
-            ),
-        ]),
-      );
 }
 
 class _QuickStatus extends ConsumerWidget {
