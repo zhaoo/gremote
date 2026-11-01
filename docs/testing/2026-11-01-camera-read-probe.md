@@ -25,3 +25,13 @@ PYTHONDONTWRITEBYTECODE=1 /Users/zhaoo/Desktop/code/zhaoo/m10v/.venv/bin/python 
 公司电脑只能读取 SD 卡，不尝试更改该限制。先只读检查原卡 SCRIPT/STARTUP.TTL、驻留脚本与启用状态；确认独立启动方案后，用手机手动复制工具自有文件。手机只有一个 USB 口时，先传入手机内部存储，再断开电脑接读卡器，复制后重新接电脑采集。
 
 当前包不含 STARTUP.TTL 或脚本启用工具，不可直接插入原有驻留脚本：探针的 end 会终止解释器，数组布局也不能与其他 intdim 使用者混用。尚未读取原卡或准备启动改动，未写卡、启用脚本或开始设备测试。
+
+## 原卡只读检查与普通开机包
+
+SD卡已挂载并只读检查：没有SCRIPT目录、STARTUP.TTL或ModeSet启用文件。根目录固件大小与SHA256匹配上述e78dd1d7候选；这只证明卡文件身份，运行中固件仍以先前回传构建证据为依据。卡上原有M10V配置和照片未读取内容或修改。
+
+新增交付m10v-read-probe-startup-20261101-v2.zip，在已审查的v2探针之外仅加SCRIPT/STARTUP.TTL，通过与固定GRKit startup一致的filesearch/include模式运行独立探针。包仅包含四个SD文件，探针三个文件逐字节匹配v2；已核对完整文件清单与SHA256。ZIP SHA256：144749cfc7e034fde1bb2d1b10643ac724dcf2788c6f2bb62998e331cea32c84。
+
+该包不含ModeSet、DEVELOP.MOD、固件升级文件或脚本开关命令。先由手机手动复制，然后等待采集器启动，正常开机测试；未证明机身脚本已启用。根目录存在升级BIN，本轮不得按MENU开机，不进行升级或模式设置。若发现新出现的启动脚本，不覆盖，重新检查。
+
+撤除时相机关机，只删本次四个自有文件；不触及M10V/RICOH/DCIM及原有根文件。当前没有任何相机配置写入或启用持久脚本的操作。
