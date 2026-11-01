@@ -1,4 +1,9 @@
 import 'dart:async';
+import '../../camera/companion/camera_film_catalog.dart';
+import '../../film/store/sync_repository.dart';
+import '../../darkroom/darkroom_providers.dart';
+import 'widgets/film_picker.dart';
+import 'widgets/texture_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/app_presence.dart';
@@ -154,7 +159,10 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
 
   Future<void> _chooseSaved() async {
     try {
-      final recipes = await ref.read(filmRepositoryProvider).savedRecipes();
+      final recipes = <FilmRecipe>[
+        ...await SyncRepository(ref.read(databaseProvider)).cameraRecipes(),
+        ...await ref.read(filmRepositoryProvider).savedRecipes()
+      ];
       if (!mounted) return;
       final selected = await showModalBottomSheet<FilmRecipe>(
           context: context,
@@ -191,6 +199,42 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
     }
   }
 
+  void _useCameraRecipe(
+      CompanionSnapshot snapshot, CameraFilmCatalog? catalog) {
+    try {
+      final id = snapshot.slots[_slot]['filmId'] as int;
+      final name = catalog?.film(id).name ?? '相机胶卷';
+      final recipe = snapshot.recipeAt(_slot, name: name);
+      setState(() {
+        _saved = recipe;
+        _imported = null;
+      });
+    } catch (error) {
+      _error(error);
+    }
+  }
+
+  Future<void> _adjustCamera(
+      CameraFilmCatalog catalog, CameraFilmRecipe recipe) async {
+    await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: true,
+        sheetAnimationStyle: workbenchSheetAnimation(context),
+        builder: (_) => TextureSheet(
+            film: catalog.film(recipe.filmId),
+            recipe: recipe,
+            readOnlyParameters: (cameraContract['readOnlyParameters'] as List)
+                .cast<String>()
+                .toSet(),
+            onChanged: (parameters) {
+              if (mounted) {
+                setState(() => _saved = catalog.recipe(recipe.filmId,
+                    name: recipe.name, parameters: parameters));
+              }
+            }));
+  }
+
   Future<void> _removePairing() async {
     final identity = ref.read(companionPairingIdentityProvider);
     if (identity == null) return;
@@ -210,6 +254,7 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
       await controller.prepareLoad(
           slot: _slot, recipe: recipe, activate: _activate, film: _imported);
       if (!mounted) return;
+      setState(() => _slot = controller.preparedSlot ?? _slot);
       await showModalBottomSheet<void>(
           context: context,
           isScrollControlled: true,
@@ -220,7 +265,7 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
                   duration: const Duration(milliseconds: 280),
                   reverseDuration: const Duration(milliseconds: 200)),
           builder: (context) => _LoadSheet(
-              catalog: ref.read(filmCatalogProvider).valueOrNull,
+              catalog: ref.read(cameraFilmCatalogProvider).valueOrNull,
               controller: controller,
               slot: _slot,
               recipe: recipe,
@@ -234,7 +279,7 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
   Widget build(BuildContext context) {
     ref.watch(companionIdentityHydrationProvider);
     final controller = ref.watch(companionSyncControllerProvider),
-        catalog = ref.watch(filmCatalogProvider).valueOrNull,
+        catalog = ref.watch(cameraFilmCatalogProvider).valueOrNull,
         identity = ref.watch(companionPairingIdentityProvider);
     _configure(controller, ref.watch(companionNetworkReadyProvider),
         ref.watch(appForegroundProvider));
@@ -258,7 +303,7 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
                               ? '尚未连接 M10V 胶卷桥'
                               : controller!.state.readOnly
                                   ? '机身配置 · 只读'
-                                  : '机身五槽',
+                                  : '机身 ${controller.state.snapshot!.slots.length} 槽',
                           style: const TextStyle(
                               color: workbenchCream,
                               fontSize: 18,
@@ -340,8 +385,8 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
                         color: workbenchCream,
                         fontSize: 14,
                         fontWeight: FontWeight.w600))),
-            for (var i = 0; i < 5; i++)
-              _slotCard(i, controller!.state.snapshot!, catalog),
+            for (var i = 0; i < controller!.state.snapshot!.slots.length; i++)
+              _slotCard(i, controller.state.snapshot!, catalog),
           ],
           _panel(
               child: Column(
@@ -368,8 +413,36 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
                               color: workbenchMuted, height: 1.6))),
                 const SizedBox(height: 12),
                 Wrap(spacing: 8, children: [
+                  TextButton(
+                      onPressed: catalog == null
+                          ? null
+                          : () async {
+                              final film =
+                                  await showFilmPicker(context, catalog);
+                              if (film != null && mounted) {
+                                setState(() {
+                                  _saved = catalog.recipe(film.id);
+                                  _imported = null;
+                                });
+                              }
+                            },
+                      child: const Text('相机目录')),
+                  if (catalog != null && selected is CameraFilmRecipe)
+                    TextButton(
+                        onPressed: () => _adjustCamera(catalog, selected),
+                        child: const Text('调整相机参数')),
+                  if (controller?.state.snapshot != null &&
+                      controller!.state.snapshot!.slots[_slot]['filmId'] != 0)
+                    TextButton(
+                        onPressed: () => _useCameraRecipe(
+                            controller.state.snapshot!, catalog),
+                        child: const Text('使用机身配方')),
                   OutlinedButton.icon(
-                      onPressed: catalog == null || _picking
+                      onPressed: catalog == null ||
+                              _picking ||
+                              (controller?.state.capabilities
+                                      ?.supports('uploadFilm') !=
+                                  true)
                           ? null
                           : () => _import(catalog),
                       icon: const Icon(Icons.file_open_outlined, size: 18),
@@ -429,7 +502,12 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
         break;
       }
     }
-    final name = film?.name ?? (id >= 79 && id <= 288 ? '自定义胶卷 $id' : '配方 $id');
+    final name = film?.name ??
+        (id == 0
+            ? '空槽'
+            : id >= 79 && id <= 288
+                ? '自定义胶卷 $id'
+                : '配方 $id');
     return Padding(
         padding: const EdgeInsets.fromLTRB(22, 0, 22, 10),
         child: Material(
@@ -690,7 +768,7 @@ List<String> _changes(Map<String, Object?>? before, Map<String, Object?> after,
   if (before == null) return [];
   final rows = <String>[];
   final a = before['slots'] as List, b = after['slots'] as List;
-  for (var i = 0; i < 5; i++) {
+  for (var i = 0; i < b.length; i++) {
     final old = wireMap(a[i]), next = wireMap(b[i]);
     if (old['filmId'] != next['filmId']) {
       String name(Object? id) {

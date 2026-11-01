@@ -1,5 +1,7 @@
 import 'dart:async';
-import 'dart:typed_data';
+import 'dart:convert';
+import 'package:flutter/services.dart';
+import '../../camera/companion/camera_film_catalog.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/app_presence.dart';
 import '../../camera/companion/companion_client.dart';
@@ -16,6 +18,11 @@ import '../../darkroom/darkroom_providers.dart';
 import '../../platform/device_api.g.dart';
 import '../library/camera_gallery.dart';
 import 'workbench_providers.dart';
+
+final cameraFilmCatalogProvider = FutureProvider<CameraFilmCatalog>(
+    (ref) async => CameraFilmCatalog.fromJson(jsonDecode(
+            await rootBundle.loadString('assets/films/camera-catalog.json'))
+        as Map<String, dynamic>));
 
 final companionPairingStoreProvider =
     Provider<PairingStore>((ref) => NativePairingStore());
@@ -40,7 +47,8 @@ final companionApiFactoryProvider =
   return (identity) => CompanionClient(
       transport: NativeCompanionTransport(),
       pairingStore: keys,
-      identity: identity);
+      identity: identity,
+      contract: cameraContract);
 });
 final companionNetworkReadyProvider = Provider<bool>((ref) {
   if (ref.watch(companionPairingIdentityProvider) == null) return false;
@@ -49,7 +57,7 @@ final companionNetworkReadyProvider = Provider<bool>((ref) {
 final companionSyncControllerProvider =
     Provider.autoDispose<CompanionSyncController?>((ref) {
   final identity = ref.watch(companionPairingIdentityProvider),
-      catalog = ref.watch(filmCatalogProvider).valueOrNull;
+      catalog = ref.watch(cameraFilmCatalogProvider).valueOrNull;
   if (identity == null || catalog == null) return null;
   final api = ref.watch(companionApiFactoryProvider)(identity);
   final controller = CompanionSyncController(
@@ -57,6 +65,7 @@ final companionSyncControllerProvider =
       repository: SyncRepository(ref.watch(databaseProvider)),
       catalogHash: catalog.hash,
       rendererHash: catalog.rendererHash,
+      cameraCatalog: catalog,
       isWriteBlocked: () =>
           !ref.read(appForegroundProvider) ||
           !ref.read(companionNetworkReadyProvider) ||
@@ -65,8 +74,9 @@ final companionSyncControllerProvider =
           {RunPhase.preparing, RunPhase.running}
               .contains(ref.read(programControllerProvider).phase) ||
           ref.read(cameraGalleryServiceProvider).transferGate.savingOriginals,
-      keepLocalRecipe: (recipe) =>
-          ref.read(filmRepositoryProvider).saveRecipe(recipe));
+      keepLocalRecipe: (recipe) => recipe is CameraFilmRecipe
+          ? SyncRepository(ref.read(databaseProvider)).saveCameraRecipe(recipe)
+          : ref.read(filmRepositoryProvider).saveRecipe(recipe));
   ref.listen(companionNetworkReadyProvider, (_, ready) {
     if (!ready) controller.disconnected();
   });

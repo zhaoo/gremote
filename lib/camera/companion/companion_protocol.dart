@@ -2,6 +2,7 @@
 import 'dart:convert';
 import '../../film/model/film_recipe.dart';
 import 'generated_contract.dart';
+import 'camera_film_catalog.dart';
 
 final Map<String, dynamic> companionContract =
     jsonDecode(companionContractJson) as Map<String, dynamic>;
@@ -30,8 +31,10 @@ bool _unknown(Map<String, Object?> value, Set<String> keys) =>
     value.keys.any((key) => !keys.contains(key));
 
 class CompanionCapabilities {
-  CompanionCapabilities.fromJson(Map<String, dynamic> value)
-      : wire = wireMap(value) {
+  CompanionCapabilities.fromJson(Map<String, dynamic> value,
+      {Map<String, dynamic>? contract})
+      : contract = contract ?? companionContract,
+        wire = wireMap(value) {
     for (final key in ['bootId', 'sessionId', 'instanceId']) {
       wireHex(wire, key, 16);
     }
@@ -52,6 +55,7 @@ class CompanionCapabilities {
       }
     }
   }
+  final Map<String, dynamic> contract;
   final Map<String, Object?> wire;
   String get bootId => wire['bootId'] as String;
   String get sessionId => wire['sessionId'] as String;
@@ -64,6 +68,8 @@ class CompanionCapabilities {
         'protocol',
         'model',
         'recipeSchema',
+        'stateSchema',
+        'readOnlyParameters',
         'slotCount',
         'firmwareIdentity',
         'bootId',
@@ -76,26 +82,32 @@ class CompanionCapabilities {
         'parameters',
         'limits'
       }) ||
-      (wire['parameters'] as Map).keys.any(
-          (k) => !(companionContract['parameters'] as Map).containsKey(k)) ||
+      (wire['parameters'] as Map)
+          .keys
+          .any((k) => !(contract['parameters'] as Map).containsKey(k)) ||
       _unknown(wireMap(wire['capabilities']),
           {'readState', 'writeState', 'uploadFilm', 'captureEvidence'});
   bool compatibleWith(String catalog, String renderer) =>
-      wire['protocol'] == companionContract['protocol'] &&
+      wire['protocol'] == contract['protocol'] &&
       wire['model'] == 'GR III' &&
-      wire['recipeSchema'] == companionContract['recipeSchema'] &&
-      wire['slotCount'] == companionContract['slotCount'] &&
-      wire['firmwareIdentity'] == companionContract['officialFirmwareSha256'] &&
+      wire['recipeSchema'] == contract['recipeSchema'] &&
+      wire['slotCount'] == contract['slotCount'] &&
+      wire['firmwareIdentity'] == contract['officialFirmwareSha256'] &&
+      (wire['stateSchema'] ?? 1) == (contract['stateSchema'] ?? 1) &&
+      canonicalJson(wire['readOnlyParameters'] ?? []) ==
+          canonicalJson(contract['readOnlyParameters'] ?? []) &&
       catalogHash == catalog &&
       rendererHash == renderer &&
       !hasUnknownFields &&
       canonicalJson(wire['parameters']) ==
-          canonicalJson(companionContract['parameters']);
+          canonicalJson(contract['parameters']);
 }
 
 class CompanionSnapshot {
-  CompanionSnapshot.fromJson(Map<String, dynamic> value)
-      : wire = wireMap(value) {
+  CompanionSnapshot.fromJson(Map<String, dynamic> value,
+      {Map<String, dynamic>? contract})
+      : contract = contract ?? companionContract,
+        wire = wireMap(value) {
     wireHex(wire, 'bootId', 16);
     wireHex(wire, 'instanceId', 16);
     for (final key in [
@@ -108,18 +120,23 @@ class CompanionSnapshot {
     }
     final active = wire['activeSlot'];
     if (wire['protocol'] != 1 ||
-        wire['schemaVersion'] != 1 ||
+        wire['schemaVersion'] != (this.contract['stateSchema'] ?? 1) ||
         wire['fresh'] is! bool ||
         wire['busy'] is! bool ||
         wire['journalSequence'] is! int ||
         (wire['journalSequence'] as int) < 0 ||
         (wire['journalSequence'] as int) > 0xffffffff ||
-        (active != null && (active is! int || active < 0 || active > 4))) {
+        (active != null &&
+            (active is! int ||
+                active < 0 ||
+                active >= (this.contract['slotCount'] as int)))) {
       throw const FormatException('相机状态格式无效');
     }
     final config = wireMap(wire['config']);
     final slots = config['slots'];
-    if (slots is! List || slots.length != 5 || config['globals'] is! Map) {
+    if (slots is! List ||
+        slots.length != this.contract['slotCount'] ||
+        config['globals'] is! Map) {
       throw const FormatException('相机槽位格式无效');
     }
     for (final slot in slots) {
@@ -134,6 +151,7 @@ class CompanionSnapshot {
       }
     }
   }
+  final Map<String, dynamic> contract;
   final Map<String, Object?> wire;
   String get bootId => wire['bootId'] as String;
   String get instanceId => wire['instanceId'] as String;
@@ -172,7 +190,7 @@ class CompanionSnapshot {
     for (final slot in slots) {
       if (_unknown(slot, {'filmId', 'parameters', 'customHash'})) return true;
       try {
-        FilmRecipe.fromJson({
+        _recipe({
           'schemaVersion': 1,
           'filmId': slot['filmId'],
           'catalogHash': wire['catalogHash'],
@@ -187,7 +205,11 @@ class CompanionSnapshot {
     return false;
   }
 
-  FilmRecipe recipeAt(int slot, {String name = ''}) => FilmRecipe.fromJson({
+  FilmRecipe _recipe(Map<String, dynamic> value) =>
+      (contract['stateSchema'] ?? 1) == 2
+          ? CameraFilmRecipe.fromJson(value)
+          : FilmRecipe.fromJson(value);
+  FilmRecipe recipeAt(int slot, {String name = ''}) => _recipe({
         'schemaVersion': 1,
         ...slots[slot],
         'catalogHash': wire['catalogHash'],
@@ -199,8 +221,10 @@ class CompanionSnapshot {
 enum CompanionOperationStatus { queued, applying, committed, rejected, unknown }
 
 class CompanionOperationReceipt {
-  CompanionOperationReceipt.fromJson(Map<String, dynamic> value)
-      : wire = wireMap(value) {
+  CompanionOperationReceipt.fromJson(Map<String, dynamic> value,
+      {Map<String, dynamic>? contract})
+      : contract = contract ?? companionContract,
+        wire = wireMap(value) {
     wireHex(wire, 'requestId', 16);
     wireHex(wire, 'bootId', 16);
     if (!CompanionOperationStatus.values.any((v) => v.name == wire['status'])) {
@@ -208,11 +232,13 @@ class CompanionOperationReceipt {
     }
     if (wire['snapshot'] != null) {
       CompanionSnapshot.fromJson(
-          Map<String, dynamic>.from(wire['snapshot'] as Map));
+          Map<String, dynamic>.from(wire['snapshot'] as Map),
+          contract: this.contract);
     }
     if (status == CompanionOperationStatus.committed &&
         wire['snapshot'] == null) throw const FormatException('已提交操作缺少验证快照');
   }
+  final Map<String, dynamic> contract;
   final Map<String, Object?> wire;
   String get requestId => wire['requestId'] as String;
   String get bootId => wire['bootId'] as String;
@@ -221,7 +247,8 @@ class CompanionOperationReceipt {
   CompanionSnapshot? get snapshot => wire['snapshot'] == null
       ? null
       : CompanionSnapshot.fromJson(
-          Map<String, dynamic>.from(wire['snapshot'] as Map));
+          Map<String, dynamic>.from(wire['snapshot'] as Map),
+          contract: contract);
   String? get errorCode => (wire['error'] as Map?)?['code'] as String?;
 }
 

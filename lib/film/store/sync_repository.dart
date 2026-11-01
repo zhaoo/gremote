@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../../camera/companion/camera_film_catalog.dart';
 import 'package:sqflite/sqflite.dart';
 import '../model/film_recipe.dart' show canonicalJson;
 
@@ -6,6 +7,29 @@ import '../model/film_recipe.dart' show canonicalJson;
 class SyncRepository {
   SyncRepository(this.db);
   final Database db;
+  Future<void> saveCameraRecipe(CameraFilmRecipe recipe) async {
+    await db.insert(
+        'camera_film_recipes',
+        {
+          'fingerprint': recipe.fingerprint,
+          'recipe_json': jsonEncode(recipe.toJson()),
+          'created_at': DateTime.now().millisecondsSinceEpoch
+        },
+        conflictAlgorithm: ConflictAlgorithm.ignore);
+  }
+
+  Future<List<CameraFilmRecipe>> cameraRecipes() async =>
+      (await db.query('camera_film_recipes',
+              orderBy: 'created_at DESC', limit: 100))
+          .map((row) {
+        final recipe = CameraFilmRecipe.fromJson(
+            jsonDecode(row['recipe_json'] as String) as Map<String, dynamic>);
+        if (recipe.fingerprint != row['fingerprint']) {
+          throw const FormatException('相机配方校验失败');
+        }
+        return recipe;
+      }).toList();
+
   Future<void> saveBaseline(
       String instanceId, Map<String, Object?> snapshot) async {
     if (instanceId.isEmpty ||

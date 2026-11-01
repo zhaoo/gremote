@@ -47,7 +47,9 @@ export async function syncContract({sourceDir,outputDir,check=false,publishFile=
  const {native,rendererHash}=generated;
  const entries=[];
  for(const f of native.films){
-  const icon='assets/films/icons/'+f.id+'.png';outputs.set(icon,await source('web'+f.icon_url));
+  const iconUrl=new URL(f.icon_url,'https://snapshot.invalid');
+  if(iconUrl.origin!=='https://snapshot.invalid'||!/^\/gr3\/film-icons\/[A-Za-z0-9_-]+\.png$/.test(iconUrl.pathname))throw Error('invalid catalogue icon path');
+  const icon='assets/films/icons/'+f.id+'.png';outputs.set(icon,await source('web'+iconUrl.pathname));
   const parameters=Object.fromEntries(Object.entries(contract.parameters).filter(([,p])=>(!p.filmIds||p.filmIds.includes(f.id))&&!p.excludeFilmIds?.includes(f.id)).map(([k,p])=>[k,{min:p.min,max:p.overrides?.[f.id]??p.max,default:p.default,label:p.label}]));
   entries.push({id:f.id,name:f.name,group:f.group,icon,parameters,approximation:f.approximation??false});
  }

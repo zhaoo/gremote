@@ -7,7 +7,9 @@ class TextureSheet extends StatefulWidget {
       {super.key,
       required this.film,
       required this.recipe,
-      required this.onChanged});
+      required this.onChanged,
+      this.readOnlyParameters = const {}});
+  final Set<String> readOnlyParameters;
   final FilmDefinition film;
   final FilmRecipe recipe;
   final ValueChanged<Map<String, int>> onChanged;
@@ -38,7 +40,8 @@ class _TextureSheetState extends State<TextureSheet> {
                     children: [
                   const Text('效果仅用于近似预览，开卷或装入相机后才保存配方。'),
                   const SizedBox(height: 20),
-                  for (final entry in widget.film.parameters.entries)
+                  for (final entry in widget.film.parameters.entries
+                      .where((e) => !widget.readOnlyParameters.contains(e.key)))
                     Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: Column(

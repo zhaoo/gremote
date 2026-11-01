@@ -33,7 +33,13 @@ test('repeat generation observes changed renderer and failed publication rolls b
    await cp(path.join(sourceDir,name),path.join(source,name),{recursive:true});
   execFileSync('git',['init','-q',source]);
   execFileSync('git',['-C',source,'-c','user.name=Test','-c','user.email=test@invalid','commit','--allow-empty','-qm','fixture']);
+  const iconCatalog=path.join(source,'web/gr3/film-icons/catalog.json');
+  const icons=JSON.parse(await readFile(iconCatalog));
+  const iconPath=icons.find(f=>f.id===33).icon_url;
+  icons.forEach(f=>f.icon_url+='?v=fixture-version');
+  await writeFile(iconCatalog,JSON.stringify(icons));
   const first=await syncContract({sourceDir:source,outputDir});
+  assert.deepEqual(await readFile(path.join(outputDir,'assets/films/icons/33.png')),await readFile(path.join(source,'web'+iconPath)));
   const changed=path.join(source,'native/gr3/m10v_library.c');
   await writeFile(changed,(await readFile(changed))+'\n/* generation change */\n');
   const second=await syncContract({sourceDir:source,outputDir});

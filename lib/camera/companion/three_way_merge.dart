@@ -1,5 +1,7 @@
 import '../../film/model/film_recipe.dart';
 import 'companion_protocol.dart';
+import 'camera_film_catalog.dart';
+import 'generated_camera_contract.dart';
 
 enum ConflictChoice { local, remote, keepBoth }
 
@@ -47,10 +49,15 @@ bool _same(Object? a, Object? b) =>
     identical(a, _missing) || identical(b, _missing)
         ? identical(a, b)
         : canonicalJson(a) == canonicalJson(b);
-bool knownCompanionConfig(Map<String, Object?> config) {
+bool knownCompanionConfig(Map<String, Object?> config,
+    {Map<String, dynamic>? contract}) {
+  contract ??= companionContract;
+  final modern = (contract['stateSchema'] ?? 1) == 2;
+  final seen = <int>{};
+  var emptySeen = false;
   if (config.keys.any((k) => !{'slots', 'globals'}.contains(k)) ||
       config['slots'] is! List ||
-      (config['slots'] as List).length != 5 ||
+      (config['slots'] as List).length != contract['slotCount'] ||
       config['globals'] is! Map) return false;
   final globals = wireMap(config['globals']);
   const ranges = {
@@ -73,12 +80,25 @@ bool knownCompanionConfig(Map<String, Object?> config) {
       return false;
     }
     try {
-      FilmRecipe.fromJson({
+      final id = slot['filmId'];
+      if (modern && id is int) {
+        if (id == 0) {
+          emptySeen = true;
+        } else if (emptySeen || !seen.add(id)) {
+          return false;
+        }
+      }
+      final value = <String, dynamic>{
         'schemaVersion': 1,
         ...slot,
-        'catalogHash': '0' * 64,
-        'rendererHash': '0' * 64
-      });
+        'catalogHash': modern ? cameraCatalogHash : '0' * 64,
+        'rendererHash': modern ? cameraRendererHash : '0' * 64
+      };
+      if (modern) {
+        CameraFilmRecipe.fromJson(value);
+      } else {
+        FilmRecipe.fromJson(value);
+      }
     } on FormatException {
       return false;
     }
@@ -154,10 +174,10 @@ MergeResult _merge(
       merged: merged,
       conflicts: List.unmodifiable(conflicts),
       readOnly: capabilities.hasUnknownFields ||
-          !knownCompanionConfig(base) ||
-          !knownCompanionConfig(local) ||
-          !knownCompanionConfig(remote) ||
-          !knownCompanionConfig(merged),
+          !knownCompanionConfig(base, contract: capabilities.contract) ||
+          !knownCompanionConfig(local, contract: capabilities.contract) ||
+          !knownCompanionConfig(remote, contract: capabilities.contract) ||
+          !knownCompanionConfig(merged, contract: capabilities.contract),
       keepLocalSlots: Set.unmodifiable(keepSlots),
       base: base,
       local: local,

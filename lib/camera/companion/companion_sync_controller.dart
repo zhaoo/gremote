@@ -10,6 +10,7 @@ import 'companion_protocol.dart';
 import 'sync_state.dart';
 import 'three_way_merge.dart';
 import 'film_transfer.dart';
+import 'camera_film_catalog.dart';
 
 String companionErrorMessage(Object error) {
   final code = error is CompanionException
@@ -49,6 +50,7 @@ class CompanionSyncController extends ChangeNotifier {
       required this.repository,
       required this.catalogHash,
       required this.rendererHash,
+      this.cameraCatalog,
       bool Function()? isWriteBlocked,
       Future<void> Function()? wait,
       Future<void> Function(FilmRecipe)? keepLocalRecipe})
@@ -59,6 +61,11 @@ class CompanionSyncController extends ChangeNotifier {
   final CompanionApi api;
   final SyncRepository repository;
   final String catalogHash, rendererHash;
+  final CameraFilmCatalog? cameraCatalog;
+  Map<String, dynamic> get contract =>
+      cameraCatalog == null ? companionContract : cameraContract;
+  int get slotCount => contract['slotCount'] as int;
+  int? get preparedSlot => _slot;
   final bool Function() isWriteBlocked;
   final Future<void> Function() _wait;
   final Future<void> Function(FilmRecipe)? _keepLocalRecipe;
@@ -164,13 +171,21 @@ class CompanionSyncController extends ChangeNotifier {
       if (_base == null) {
         final saved = await repository.baseline(caps.instanceId);
         if (!_current(epoch)) return;
-        _base = saved == null ? snapshot : CompanionSnapshot.fromJson(saved);
+        try {
+          _base = saved == null
+              ? snapshot
+              : CompanionSnapshot.fromJson(saved, contract: contract);
+          if (_base!.wire['catalogHash'] != catalogHash ||
+              _base!.wire['rendererHash'] != rendererHash) _base = snapshot;
+        } on FormatException {
+          _base = snapshot;
+        }
       }
       final compatible = caps.compatibleWith(catalogHash, rendererHash) &&
           snapshot.wire['catalogHash'] == catalogHash &&
           snapshot.wire['rendererHash'] == rendererHash &&
           !snapshot.hasUnknownFields &&
-          knownCompanionConfig(snapshot.config) &&
+          knownCompanionConfig(snapshot.config, contract: contract) &&
           snapshot.fresh &&
           caps.supports('writeState');
       final reboot = _hasPending && _pendingBoot != snapshot.bootId;
@@ -207,7 +222,8 @@ class CompanionSyncController extends ChangeNotifier {
         await repository.saveBaseline(caps.instanceId, snapshot.wire);
         if (!_current(epoch)) return;
         next = next.copyWith(
-            message: compatible ? '已读取机身五槽配置' : '配置仅供查看，当前组件或配方版本不支持写入',
+            message:
+                compatible ? '已读取机身 $slotCount 槽配置' : '配置仅供查看，当前组件或配方版本不支持写入',
             operationStatus:
                 state.operationStatus == SyncOperationStatus.synced &&
                         state.snapshot?.revision == snapshot.revision
@@ -242,7 +258,7 @@ class CompanionSyncController extends ChangeNotifier {
     if (!_alive || _working || _preparing || _hasPending) {
       throw const CompanionException('busy');
     }
-    if (slot < 0 || slot > 4) throw const FormatException('槽位无效');
+    if (slot < 0 || slot >= slotCount) throw const FormatException('槽位无效');
     _preparing = true;
     try {
       await refresh();
@@ -250,9 +266,23 @@ class CompanionSyncController extends ChangeNotifier {
       if (state.readOnly ||
           state.snapshot == null ||
           state.capabilities == null ||
-          recipe.catalogHash != catalogHash ||
-          recipe.rendererHash != rendererHash) {
+          (cameraCatalog == null &&
+              (recipe.catalogHash != catalogHash ||
+                  recipe.rendererHash != rendererHash))) {
         throw const CompanionException('incompatibleRenderer');
+      }
+      if (cameraCatalog != null) {
+        final existing = state.snapshot!.slots
+            .indexWhere((s) => s['filmId'] == recipe.filmId);
+        if (existing >= 0) {
+          slot = existing;
+        } else {
+          // Current schema2 native state requires occupied slots before empties.
+          final firstEmpty =
+              state.snapshot!.slots.indexWhere((s) => s['filmId'] == 0);
+          if (firstEmpty >= 0 && slot > firstEmpty) slot = firstEmpty;
+        }
+        recipe = cameraCatalog!.forTarget(recipe, state.snapshot!.slots[slot]);
       }
       _slot = slot;
       _recipe = recipe;
@@ -294,13 +324,16 @@ class CompanionSyncController extends ChangeNotifier {
         }
         for (final slot in resolved.keepLocalSlots) {
           final raw = (_local!['slots'] as List)[slot] as Map;
-          await _keepLocalRecipe(FilmRecipe.fromJson({
+          final kept = <String, dynamic>{
             'schemaVersion': 1,
             ...Map<String, dynamic>.from(raw),
             'catalogHash': catalogHash,
             'rendererHash': rendererHash,
             'name': _recipe?.name ?? '保留的手机配方'
-          }));
+          };
+          await _keepLocalRecipe(cameraCatalog == null
+              ? FilmRecipe.fromJson(kept)
+              : CameraFilmRecipe.fromJson(kept));
           if (!_current(epoch)) return;
         }
         if (resolved.keepLocalSlots.contains(_slot)) _activate = false;
@@ -327,13 +360,15 @@ class CompanionSyncController extends ChangeNotifier {
     final changes = <Map<String, Object?>>[],
         before = remote['slots'] as List,
         after = desired['slots'] as List;
-    for (var slot = 0; slot < 5; slot++) {
+    for (var slot = 0; slot < slotCount; slot++) {
       if (canonicalJson(before[slot]) == canonicalJson(after[slot])) continue;
       final value = wireMap(after[slot]);
       changes.add({
         'slot': slot,
         'filmId': value['filmId'],
-        ...wireMap(value['parameters']),
+        for (final e in wireMap(value['parameters']).entries)
+          if (!(contract['readOnlyParameters'] as List? ?? []).contains(e.key))
+            e.key: e.value,
         if (value['customHash'] != null) 'customHash': value['customHash']
       });
     }
@@ -366,6 +401,19 @@ class CompanionSyncController extends ChangeNotifier {
     try {
       final fresh = await api.state();
       if (!_current(epoch)) return;
+      if (!fresh.fresh ||
+          fresh.instanceId != state.snapshot!.instanceId ||
+          fresh.wire['catalogHash'] != catalogHash ||
+          fresh.wire['rendererHash'] != rendererHash ||
+          fresh.hasUnknownFields ||
+          !knownCompanionConfig(fresh.config, contract: contract)) {
+        _set(state.copyWith(
+            snapshot: fresh,
+            stale: !fresh.fresh,
+            readOnly: true,
+            message: '机身状态暂不可写，请重新读取'));
+        return;
+      }
       if (fresh.bootId != state.snapshot!.bootId ||
           fresh.revision != state.snapshot!.revision) {
         _set(state.copyWith(
@@ -745,12 +793,14 @@ class CompanionSyncController extends ChangeNotifier {
         fresh.instanceId == caps.instanceId &&
         fresh.bootId == pending.boot &&
         fresh.revision == pending.wire['baseRevision'] &&
+        pending.wire['catalogHash'] == catalogHash &&
+        pending.wire['rendererHash'] == rendererHash &&
         fresh.fresh &&
         !fresh.busy &&
         fresh.wire['catalogHash'] == catalogHash &&
         fresh.wire['rendererHash'] == rendererHash &&
         !fresh.hasUnknownFields &&
-        knownCompanionConfig(fresh.config);
+        knownCompanionConfig(fresh.config, contract: contract);
   }
 
   /// Explicit user confirmation only. Never invent a replacement request ID.

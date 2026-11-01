@@ -32,7 +32,14 @@ class CompanionClient implements CompanionApi {
   CompanionClient(
       {required this.transport,
       required this.pairingStore,
-      required this.identity});
+      required this.identity,
+      Map<String, dynamic>? contract,
+      Future<void> Function()? busyWait})
+      : contract = contract ?? companionContract,
+        _busyWait = busyWait ??
+            (() => Future<void>.delayed(const Duration(milliseconds: 250)));
+  final Map<String, dynamic> contract;
+  final Future<void> Function() _busyWait;
   final CompanionTransport transport;
   final PairingStore pairingStore;
   final PairingIdentity identity;
@@ -161,7 +168,7 @@ class CompanionClient implements CompanionApi {
           : 'companionUnavailable');
     }
     if (bootstrap) {
-      final caps = CompanionCapabilities.fromJson(raw);
+      final caps = CompanionCapabilities.fromJson(raw, contract: contract);
       if (caps.bootId != boot ||
           caps.sessionId != session ||
           caps.instanceId != identity.instanceId) {
@@ -183,19 +190,33 @@ class CompanionClient implements CompanionApi {
   @override
   Future<CompanionCapabilities> capabilities() =>
       _serial(() async => CompanionCapabilities.fromJson(
-          await _request('GET', '/m10v/v1/capabilities', bootstrap: true)));
+          await _request('GET', '/m10v/v1/capabilities', bootstrap: true),
+          contract: contract));
   @override
   Future<CompanionSnapshot> state() => _serial(() async {
-        final value =
-            CompanionSnapshot.fromJson(await _request('GET', '/m10v/v1/state'));
-        _snapshotIdentity(value);
-        return value;
+        final epoch = _epoch;
+        for (var attempt = 0;; attempt++) {
+          try {
+            final value = CompanionSnapshot.fromJson(
+                await _request('GET', '/m10v/v1/state'),
+                contract: contract);
+            _snapshotIdentity(value);
+            return value;
+          } on CompanionException catch (error) {
+            if (error.code != 'busy' || attempt >= 3) rethrow;
+            await _busyWait();
+            if (epoch != _epoch) {
+              throw const CompanionException('sessionChanged');
+            }
+          }
+        }
       });
   Future<CompanionOperationReceipt> _receipt(
       String method, String path, String id,
       {Object? payload}) async {
     final value = CompanionOperationReceipt.fromJson(
-        await _request(method, path, payload: payload));
+        await _request(method, path, payload: payload),
+        contract: contract);
     if (value.requestId != id || value.bootId != _boot) {
       throw const CompanionException('identityMismatch');
     }

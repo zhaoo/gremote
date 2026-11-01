@@ -64,6 +64,7 @@ flutter:
     - assets/images/film_workbench_sample.jpg
     - assets/films/
     - assets/films/icons/
+    - assets/films/camera-icons/
     - assets/luts/
   fonts:
     - family: GRemoteEditorial

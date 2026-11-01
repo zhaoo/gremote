@@ -1,5 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:gremote/camera/companion/camera_film_catalog.dart';
+import 'package:gremote/camera/companion/generated_camera_contract.dart';
+import '../camera/camera_sync_current_test.dart' show CurrentCamera;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -47,6 +50,51 @@ class _MemoryRepository extends SyncRepository {
 
 void main() {
   sqfliteFfiInit();
+  testWidgets(
+      'current ten slots and camera-only newest selection stay read only before confirmation',
+      (tester) async {
+    final api = CurrentCamera();
+    final catalog = CameraFilmCatalog.fromJson(jsonDecode(
+        File('assets/films/camera-catalog.json').readAsStringSync()));
+    final controller = CompanionSyncController(
+        api: api,
+        repository: _MemoryRepository(),
+        catalogHash: cameraCatalogHash,
+        rendererHash: cameraRendererHash,
+        cameraCatalog: catalog);
+    await controller.refresh();
+    await tester.pumpWidget(ProviderScope(
+        overrides: [
+          companionSyncControllerProvider.overrideWithValue(controller),
+          companionIdentityStorageProvider
+              .overrideWithValue(_IdentityStorage()),
+          companionNetworkReadyProvider.overrideWithValue(false),
+          cameraFilmCatalogProvider.overrideWith((ref) async => catalog)
+        ],
+        child: const MaterialApp(
+            home: Scaffold(body: CameraFilmsPage(active: false)))));
+    await tester.pump();
+    await tester.pump();
+    await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('camera-film-slot-9')), 250,
+        scrollable: find.byType(Scrollable).first);
+    expect(find.text('机内使用中'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('相机目录'), 250,
+        scrollable: find.byType(Scrollable).first);
+    await tester.ensureVisible(find.text('相机目录'));
+    await tester.pump();
+    await tester.tap(find.text('相机目录'));
+    await tester.pumpAndSettle();
+    expect(find.text('搜索胶卷'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), catalog.film(321).name);
+    await tester.pump();
+    await tester.tap(find.widgetWithText(ListTile, catalog.film(321).name));
+    await tester.pumpAndSettle();
+    expect(find.text('调整相机参数'), findsOneWidget);
+    expect(api.operations, isEmpty);
+    await tester.pumpWidget(const SizedBox());
+    controller.dispose();
+  });
   testWidgets(
       'real five slots browse without writes; offline empty state has import action',
       (tester) async {

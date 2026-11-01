@@ -13,12 +13,12 @@ Future<Set<String>> _tables(Database db) async => {
 void main() {
   setUpAll(sqfliteFfiInit);
 
-  test('a new database is created at version 4 with every table', () async {
+  test('a new database is created at version 5 with every table', () async {
     final db = await GRemoteDatabase.open(
         factory: databaseFactoryFfiNoIsolate, path: inMemoryDatabasePath);
     addTearDown(db.close);
 
-    expect(await db.getVersion(), 4);
+    expect(await db.getVersion(), 5);
     expect(
       await _tables(db),
       containsAll([
@@ -32,6 +32,7 @@ void main() {
         'program_runs',
         'shot_locations',
         'film_recipes',
+        'camera_film_recipes',
         'film_rolls',
         'film_roll_items',
         'camera_sync_baselines',
@@ -74,7 +75,7 @@ void main() {
     final db = await GRemoteDatabase.open(
         factory: databaseFactoryFfiNoIsolate, path: path);
     addTearDown(db.close);
-    expect(await db.getVersion(), 4);
+    expect(await db.getVersion(), 5);
     expect((await db.query('app_kv')).single['value'], 'yes');
     expect(await db.query('shot_locations'), isEmpty);
   });
@@ -110,7 +111,7 @@ void main() {
         factory: databaseFactoryFfiNoIsolate, path: path);
     addTearDown(db.close);
 
-    expect(await db.getVersion(), 4);
+    expect(await db.getVersion(), 5);
     expect(
         await _tables(db),
         containsAll(
@@ -146,6 +147,7 @@ void main() {
         {'id': 'old-recipe', 'name': '保留配方', 'sort': 1, 'created_at': 1});
     for (final table in [
       'film_recipes',
+      'camera_film_recipes',
       'film_rolls',
       'film_roll_items',
       'camera_sync_baselines',
@@ -158,11 +160,34 @@ void main() {
     final db = await GRemoteDatabase.open(
         factory: databaseFactoryFfiNoIsolate, path: path);
     addTearDown(db.close);
-    expect(await db.getVersion(), 4);
+    expect(await db.getVersion(), 5);
     expect((await db.query('app_kv')).single['value'], 'yes');
     expect((await db.query('local_media')).single['media_id'], 8);
     expect((await db.query('edit_documents')).single['title'], '保留编辑');
     expect((await db.query('combo_recipes')).single['id'], 'old-recipe');
     expect(await db.query('film_rolls'), isEmpty);
+  });
+  test('version 4 preserves historical recipes while adding camera recipes',
+      () async {
+    final dir = Directory.systemTemp.createTempSync('gremote-v4-db');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final path = '${dir.path}/gremote.db';
+    final previous = await GRemoteDatabase.open(
+        factory: databaseFactoryFfiNoIsolate, path: path);
+    await previous.insert('film_recipes', {
+      'fingerprint': 'legacy',
+      'recipe_json': '{"legacy":true}',
+      'created_at': 7
+    });
+    await previous.execute('DROP TABLE camera_film_recipes');
+    await previous.setVersion(4);
+    await previous.close();
+    final db = await GRemoteDatabase.open(
+        factory: databaseFactoryFfiNoIsolate, path: path);
+    addTearDown(db.close);
+    expect(await db.getVersion(), 5);
+    expect((await db.query('film_recipes')).single['recipe_json'],
+        '{"legacy":true}');
+    expect(await db.query('camera_film_recipes'), isEmpty);
   });
 }
