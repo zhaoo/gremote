@@ -41,3 +41,11 @@ SD卡已挂载并只读检查：没有SCRIPT目录、STARTUP.TTL或ModeSet启用
 用户反馈复制完成、手机重新USB连接并正常开机连相机Wi-Fi后，手机侧GET /v1/ping返回errCode=200。采集器未收到任何匹配探针帧；独立HEAD /m10v/probe/v1/read（不消费有效GET轮次）连接18743端口被拒绝。为转入SD启动日志检查，手动SIGINT结束本次采集并保留JSON：frames为空、result=null、error=interrupted。这不是600秒自然超时结果，也不是探针不兼容结论。
 
 当前只能确认普通相机网络可达、观察时探针端口未监听。脚本是否启用、文件复制布局、TTL是否执行、Linux启动及无线接口核验均待卡上TRACE.TXT/RESULT.TXT证据；未启用脚本开关、发配置写入或执行拍摄。
+
+## 第一次启动后的卡检查及待确认步骤
+
+用户关机接卡后，只读核对SCRIPT/STARTUP.TTL及MCP1101内三个文件，均逐字节匹配交付包；TTL均是真实CRLF，SH为LF。PROBE.BIN SHA256为fb03247569f19741d2adb786872324590e805fa494a2cff85a71c87391dd41b0。TRACE.TXT与RESULT.TXT均不存在。由此排除已检查文件的复制错误，但不能区分脚本未启用、TTL早期失败或相机侧文件创建失败，不能直接确认开关关闭。
+
+已本地准备m10v-probe-script-switch-20261101-v1.zip，SHA256为9fcba9fe9791185b9a12c797539a721b770c10668ee89f34858f8c603782df5e。01_ENTRY仅在STARTUP入口通过RTOS文件API写START.TXT后include既有探针；02_ENABLE与03_DISABLE分别包含GR III的00078350.588和DEVELOP.MOD，不能混合复制。模式命令及10字节钥匙逐字节核对固定GRKit源码，包不含固件或runtime。SD卡未被电脑修改，模式命令未执行；持久开关原值未知。
+
+原卡根目录当前仅见fwdc239b.bin这一BIN。MENU模式步骤前须由用户手机备份并移出根目录，避免进入固件升级；不删除原件，不移动SCRIPT中的探针BIN。正常启动采集前移除本轮两个ModeSet文件，不把固件升级文件放回根目录。关闭包是独立可选全局操作，不承诺恢复未知原值；启用需用户明确确认持久设置变更。
