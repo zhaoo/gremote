@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. User has already authorized execution; proceed inline with one final fresh review.
 
+**执行结果：** App 重构与电脑侧验收已交付，记录见 docs/testing/2026-11-01-gr-platform-refactor.md。当前无 ADB 设备，安装与新版真机验收待连接；初始步骤保留作为实施依据。
+
 **Goal:** 实现确认后的四栏直达工作区及“点击编辑、长按保存分享”，复用真实照片/相机链路并保留兼容门禁。
 **Architecture:** 现有Flutter服务分层保持；路由重排、新相机工作区、应用相册成员集合与资源管理在独立组件落地。用provider注入HTTP/文件/平台行为，所有可写功能依赖真实capability。
 **Tech Stack:** Flutter/Dart、Riverpod、GoRouter、SQLite、既有Pigeon Android/iOS边界与native imaging。
