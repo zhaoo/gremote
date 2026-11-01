@@ -14,3 +14,11 @@ class Result(unittest.TestCase):
  def test_partial_oversized_wrong_schema_and_forged_success_rejected(self):
   for bad in [b'',b'x'*1025,b'WRONG\n1\n17\n0',b'MCP_READ_PROBE_V1\n0\n17\n0',b'MCP_READ_PROBE_V1\n1\n16\n0',b'MCP_READ_PROBE_V1\n1\n17\n2',b'MCP_READ_PROBE_V1\n1\n17\n0\nextra',b'MCP_READ_PROBE_V1\n1\n17.0\n0']:
    with self.subTest(bad=bad[:50]),self.assertRaises(ValueError):READER.parse_result(bad)
+
+ def test_replay_report_counts_dispatches_without_claiming_transfers(self):
+  r=READER.parse_result(b'MCP_READ_PROBE_V2\n123\n17\n0\n48\n')
+  self.assertEqual(r['requestsPublished'],48)
+  self.assertFalse(r['readDirectionValidated'])
+  self.assertEqual(READER.parse_result(b'MCP_READ_PROBE_V2\n123\n8\n10\n24\n')['status'],'PROBE_FAILED')
+  for count in [b'16',b'47',b'49']:
+   with self.assertRaises(ValueError):READER.parse_result(b'MCP_READ_PROBE_V2\n123\n17\n0\n'+count+b'\n')

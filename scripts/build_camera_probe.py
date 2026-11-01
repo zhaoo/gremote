@@ -15,16 +15,16 @@ def ttl_script(tag):
   f"mcprobe[0] = {0x4d435031}","mcprobe[1] = 1","mcprobe[2] = mcp_runid",f"mcprobe[5] = {tag}","mcprobe[6] = 0"]
  for i in range(7,16):lines.append(f'mcprobe[{i}] = {0x11ae00+i}')
  lines += ["filecreate mcp_trace 'C:\\SCRIPT\\MCP1101\\TRACE.TXT'","if mcp_trace < 0 goto mcp_end",
-  "mpause 2000","sendln 'lcmd_resp on'","mcp_sequence = 1","mcp_failure = 10",":mcp_round",
-  "if mcp_sequence > 16 goto mcp_success","mcprobe[3] = mcp_sequence","mcprobe[4] = 12345 + mcp_sequence * 17",
+  "mpause 2000","sendln 'lcmd_resp on'","mcp_failure = 10","mcp_dispatches = 0","mcp_pass = 1",":mcp_pass_start","mcp_sequence = 1",":mcp_round",
+  "if mcp_sequence > 16 goto mcp_pass_done","mcprobe[3] = mcp_sequence","mcprobe[4] = 12345 + mcp_sequence * 17",
   "inputstr = ''","sendln 'lcmd sh /media/storage1/SCRIPT/MCP1101/PROBE.SH'",
-  "mcp_command_result = result","strcopy inputstr 1 200 mcp_command_text",
+  "mcp_dispatches = mcp_dispatches + 1","mcp_command_result = result","strcopy inputstr 1 200 mcp_command_text",
   "int2str mcp_line mcp_sequence","filewriteln mcp_trace mcp_line","filewriteln mcp_trace mcp_command_text",
   "int2str mcp_line mcp_command_result","filewriteln mcp_trace mcp_line"]
  for i in range(7,16):lines += [f'if mcprobe[{i}] <> {0x11ae00+i} goto mcp_report']
- lines += ["mcp_sequence = mcp_sequence + 1","mpause 250","goto mcp_round",":mcp_success","mcp_failure = 0",":mcp_report",
+ lines += ["mcp_sequence = mcp_sequence + 1","mpause 500","goto mcp_round",":mcp_pass_done","if mcp_pass >= 3 goto mcp_success","mcp_pass = mcp_pass + 1","goto mcp_pass_start",":mcp_success","mcp_failure = 0",":mcp_report",
   "fileclose mcp_trace","filecreate mcp_report 'C:\\SCRIPT\\MCP1101\\RESULT.TXT'","if mcp_report < 0 goto mcp_end",
-  "filewriteln mcp_report 'MCP_READ_PROBE_V1'","int2str mcp_line mcp_runid","filewriteln mcp_report mcp_line","int2str mcp_line mcp_sequence","filewriteln mcp_report mcp_line","int2str mcp_line mcp_failure","filewriteln mcp_report mcp_line","fileclose mcp_report",":mcp_end","end",":mcp_already_run","dispstr 'MCP_PROBE_ALREADY_RUN'","end"]
+  "filewriteln mcp_report 'MCP_READ_PROBE_V2'","int2str mcp_line mcp_runid","filewriteln mcp_report mcp_line","int2str mcp_line mcp_sequence","filewriteln mcp_report mcp_line","int2str mcp_line mcp_failure","filewriteln mcp_report mcp_line","int2str mcp_line mcp_dispatches","filewriteln mcp_report mcp_line","fileclose mcp_report",":mcp_end","end",":mcp_already_run","dispstr 'MCP_PROBE_ALREADY_RUN'","end"]
  return '\r\n'.join(lines)+'\r\n'
 SH='''#!/bin/sh
 # No Linux SD writes, no background process. Only stdout diagnostics.
@@ -40,7 +40,7 @@ README = r"""M10V 跨域只读网络探针 · MCP1
 Linux仅以O_RDONLY/PROT_READ读取脚本临时数组，关闭/dev/mem后只在经核实的相机Wi-Fi接口192.168.0.1:18743短时响应GET /m10v/probe/v1/read。
 它通过SIOCGIFCONF/IFF_UP/SIOCGIWNAME核对接口，再SO_BINDTODEVICE并绑定指定IP；无法核实就不监听。
 无配对密钥；只返回脚本自己的run_id、轮次及固定校验数据，不读取用户相机设置或照片。此诊断接口不是经过认证的生产API。
-Linux不写RAM或SD文件，没有后台驻留进程。第一轮最多等待45秒，其余每轮8秒；正确GET一次后退出。其他App的请求返回404且不会占用本轮有效响应。
+Linux不写RAM或SD文件，没有后台驻留进程。每遍第一轮最多等待45秒，其余每轮8秒；正确GET一次后退出。相同run_id整组发布3遍，最多48次调用，以便早期Linux尚未挂载时后续遍补回缺轮；仍不保证启动成功。无采集器时整组最多约9分钟，不留后台进程。其他App的请求返回404且不会占用本轮有效响应。
 
 请先不要自行启用
 本包不包含 STARTUP.TTL、ModeSet 或 DEVELOP.MOD。不要覆盖现有 STARTUP.TTL。
@@ -52,14 +52,14 @@ Linux不写RAM或SD文件，没有后台驻留进程。第一轮最多等待45�
 手机通过USB连接电脑并允许调试，保持/重新连接相机Wi-Fi。
 电脑先启动采集器，再按核对后的单独探针启动方案开机；采集器需赶上第一轮，漏轮不会被补算通过。
 python3 tools/collect_camera_probe.py --adb /opt/homebrew/share/android-commandlinetools/platform-tools/adb --serial 手机USB序列号 --manifest manifest.json --out 新的手机采集.json
-采集器最多等待180秒，响应体上限2048字节，按run_id、probeBuildId、序号、输入校验全部16个独立响应；同一轮不会重复计数。
+采集器最多等待600秒，响应体上限2048字节，按run_id、probeBuildId、序号、输入校验全部16个独立响应；同一轮不会重复计数，证据可跨同一run_id的多个遍历。采集完成后探针仍会完成剩余有界遍历，可待脚本结束或相机关机后撤除；关机后没有驻留代码。
 不自动修改App或机身配置。使用的是固定诊断路径，原App的装卷按钮仍不可用。
 
 结果与回传
 回传电脑采集JSON，以及卡上SCRIPT/MCP1101/RESULT.TXT、TRACE.TXT（如有）。不需要照片、存档、Wi-Fi密码或配对文件。
 TRACE仅由RTOS文件API写入每轮lcmd的有限返回信息，不是Linux文件写入。
 python3 tools/read_camera_probe_result.py /实际路径/RESULT.TXT
-RESULT中sequence=17且failure=0只表示脚本发布了16轮请求（REQUESTS_PUBLISHED），不证明Linux或网络成功。
+RESULT V2中sequence=17、failure=0且dispatches=48只表示脚本发布了3遍共48次请求（16个不同轮次）（REQUESTS_PUBLISHED），不证明Linux或网络成功。
 只有手机采集器收到同一run_id的全部16轮匹配响应才记录READ_TRANSFER_OBSERVED；这仍不证明双向RAM写入、持续缓存一致性、最新相机状态、设置所有者、文件系统提交或性能。
 缺失/截断日志不能当通过。有RESULT或TRACE时脚本不自动重跑；重测前先备份本探针整个目录，再按新的测试安排处理自有输出。
 
@@ -109,7 +109,7 @@ def build_probe(firmware,receipt,m10v_source,out):
  out.mkdir(parents=True,mode=0o700);folder=out/'SD/SCRIPT/MCP1101';folder.mkdir(parents=True)
  (folder/'PROBE.BIN').write_bytes(binary);os.chmod(folder/'PROBE.BIN',0o700)
  (folder/'PROBE.TTL').write_bytes(ttl_script(bound['packetTag']).encode('ascii'));(folder/'PROBE.SH').write_text(SH)
- manifest={'schema':'m10v-lcmd-read-probe/v1','targetBuildId':target['buildId'],'targetFirmwareSha256':target['firmwareSha256'],'target':bound,'elfSha256':sha(binary),'memoryWriteEnabled':False,'networkListenerEnabled':True,'configurationWriteEnabled':False,'cameraPassed':False,'validation':'HOST_AND_ARM_ONLY','runtimeIdentityEvidence':'threePinnedCodeWindowsOnly','rounds':16,'sourceFiles':source_hashes}
+ manifest={'schema':'m10v-lcmd-read-probe/v1','targetBuildId':target['buildId'],'targetFirmwareSha256':target['firmwareSha256'],'target':bound,'elfSha256':sha(binary),'memoryWriteEnabled':False,'networkListenerEnabled':True,'configurationWriteEnabled':False,'cameraPassed':False,'validation':'HOST_AND_ARM_ONLY','runtimeIdentityEvidence':'threePinnedCodeWindowsOnly','rounds':16,'publicationPasses':3,'sourceFiles':source_hashes}
  manifest['probeBuildId']=probe_id
  (out/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')
  (out/'README.zh-CN.txt').write_text(README)

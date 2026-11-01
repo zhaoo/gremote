@@ -38,7 +38,7 @@ def request(adb,serial):
   selector.close();process.stdout.close()
   if process.poll()is None:process.kill();process.wait(timeout=2)
 
-def collect(adb,serial,manifest,out,timeout=180):
+def collect(adb,serial,manifest,out,timeout=600):
  if not re.fullmatch('[A-Za-z0-9_.:-]{1,128}',serial):raise ValueError('invalid Android serial')
  if out.exists():raise FileExistsError(out)
  frames={};failure=None;result=None;end=time.monotonic()+timeout

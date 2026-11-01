@@ -4,7 +4,7 @@
 
 **Goal:** 交付在GR III2.10/e78dd1d7上验证TTL所有缓冲经Linux读取并向手机连续传输的SD探针，作为原B1/B2缺少的设备证据；不开放设置写入。
 
-**Architecture:** 独立TTL脚本分配唯一16-word数组并在同步lcmd调用期间持有；Linux freestanding ARM ELF只读验证已安装候选的ROM指纹/数组表/边界，再输出带run_id/序号/输入值的回执，退出前解除映射。Linux以O_RDONLY/PROT_READ映射，完全不写相机RAM。TTL连续16轮发布临时数组；每轮Linux只绑定核实的相机Wi-Fi接口，短时提供固定只读探针路径，手机采集器验证全部16个响应。TTL只通过RTOS API记录发布报告；没有后台驻留监听或固件Hook。
+**Architecture:** 独立TTL脚本分配唯一16-word数组并在同步lcmd调用期间持有；Linux freestanding ARM ELF只读验证已安装候选的ROM指纹/数组表/边界，再输出带run_id/序号/输入值的回执，退出前解除映射。Linux以O_RDONLY/PROT_READ映射，完全不写相机RAM。TTL连续16轮发布临时数组，共3遍且沿用同一run_id，最多48次调用；每轮Linux只绑定核实的相机Wi-Fi接口，短时提供固定只读探针路径，手机采集器验证全部16个不同轮次响应（可跨遍历，重复去重）。TTL只通过RTOS API记录发布报告；没有后台驻留监听或固件Hook。
 
 **Tech Stack:** C11、Python3、Clang/LLD、相机TTL、现有Node固件解码器。
 

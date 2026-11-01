@@ -23,13 +23,37 @@ class Package(unittest.TestCase):
   self.assertFalse(any(Path(p).name.upper() in ['STARTUP.TTL','DEVELOP.MOD'] for p in files))
   ttl=(self.out/'SD/SCRIPT/MCP1101/PROBE.TTL').read_text()
   self.assertIn('intdim mcprobe 16',ttl);self.assertIn('random mcp_runid 1073741822',ttl)
-  self.assertIn('if mcp_sequence > 16 goto mcp_success',ttl)
+  self.assertIn('if mcp_sequence > 16 goto mcp_pass_done',ttl)
   self.assertIn('lcmd sh /media/storage1/SCRIPT/MCP1101/PROBE.SH',ttl)
   self.assertNotIn('setdebug',ttl.lower());self.assertNotIn('SCRIPT_EN_MODE',ttl)
   sh=(self.out/'SD/SCRIPT/MCP1101/PROBE.SH').read_text()
   self.assertNotIn('nohup',sh);self.assertNotIn(' &',sh);self.assertNotIn('>',sh)
   self.assertTrue((self.out/'tools/collect_camera_probe.py').is_file())
   self.assertFalse(self.manifest['memoryWriteEnabled']);self.assertFalse(self.manifest['cameraPassed'])
+ def test_late_linux_start_recovers_early_rounds_with_bounded_replay(self):
+  # Execute the generated scalar control flow. Linux rejects the entire
+  # first traversal; subsequent dispatches really become observations.
+  lines=BUILDER.ttl_script(1).splitlines()
+  labels={line[1:]:i for i,line in enumerate(lines) if line.startswith(':')}
+  pc=lines.index('mcp_sequence = 1')
+  values={'mcp_sequence':1,'mcp_pass':1,'mcp_failure':10}
+  dispatches=[];observed=set()
+  for step in range(3000):
+   line=lines[pc];pc+=1
+   if line==':mcp_success':break
+   if line.startswith('mcp_') and ' = ' in line:
+    key,expr=line.split(' = ',1)
+    if key in values:values[key]=eval(expr,{'__builtins__':{}},values)
+   elif line.startswith('if mcp_sequence ') or line.startswith('if mcp_pass '):
+    condition,label=line[3:].split(' goto ')
+    if eval(condition,{'__builtins__':{}},values):pc=labels[label]
+   elif line.startswith('goto '):pc=labels[line[5:]]
+   elif line.startswith("sendln 'lcmd sh "):
+    dispatches.append(values['mcp_sequence'])
+    if len(dispatches)>16:observed.add(values['mcp_sequence'])
+  else:self.fail('unbounded publication loop')
+  self.assertEqual(observed,set(range(1,17)))
+  self.assertEqual(dispatches,list(range(1,17))*3)
  def test_package_has_complete_checksums_and_manual_activation_documentation(self):
   sums=(self.out/'SHA256SUMS').read_text().splitlines()
   actual={p.relative_to(self.out).as_posix() for p in self.out.rglob('*') if p.is_file()}-{'SHA256SUMS'}
