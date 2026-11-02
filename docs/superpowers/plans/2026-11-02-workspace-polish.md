@@ -1,6 +1,6 @@
 # GRemote Workspace Polish Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 将已确认的全工作区视觉稿落地到 Flutter，保留现有功能并增加克制动效。
 
@@ -36,9 +36,9 @@
 
 **Interfaces:** 产生 `WorkspaceMotion.duration(BuildContext, int)`、`WorkspaceReveal(visible, child)`、`WorkspaceTabs<T>(items, value, onChanged)`；组件不得执行网络动作。
 
-- [ ] 补 reduced-motion 下展开/切换仍可操作且不重复回调的行为测试，运行看到 RED。
-- [ ] 实现公共组件和中性色主题；保留首页布局和无下划线底栏。
-- [ ] 运行组件测试与现有首页/导航测试，GREEN；提交。
+- [x] 补 reduced-motion 下展开/切换仍可操作且不重复回调的行为测试，运行看到 RED。
+- [x] 实现公共组件和中性色主题；保留首页布局和无下划线底栏。
+- [x] 运行组件测试与现有首页/导航测试，GREEN；提交。
 
 ### Task 2: 相机能力与胶卷库
 
@@ -46,10 +46,10 @@
 
 **Interfaces:** 产生只读 `CameraAvailability`、`cameraAvailabilityProvider`；消费当前连接、CompanionSyncState 和配对控制器。暴露 `canReadFilms`, `canInstallFilms`, `hint`，通过监听原控制器刷新，不自行发明固件状态。
 
-- [ ] 补断连/过期/部分能力/超时不解锁的门禁测试，以及紧凑搜索、来源和置灰预览测试，RED。
-- [ ] 保留配对和诊断入口，使用当前连接与能力的组合；按需执行原有只读刷新。
-- [ ] 胶卷表格换成带真实封面的三列网格，来源工具栏与展开搜索；详情和十槽入口按当前能力禁用。
-- [ ] 检查 320dp、大文字和长名称；运行相关能力/胶卷测试，GREEN；提交。
+- [x] 补断连/过期/部分能力/超时不解锁的门禁测试，以及紧凑搜索、来源和置灰预览测试，RED。
+- [x] 保留配对和诊断入口，使用当前连接与能力的组合；按需执行原有只读刷新。
+- [x] 胶卷表格换成带真实封面的三列网格，来源工具栏与展开搜索；详情和十槽入口按当前能力禁用。
+- [x] 检查 320dp、大文字和长名称；运行相关能力/胶卷测试，GREEN；提交。
 
 ### Task 3: 扩展设置
 
@@ -57,10 +57,10 @@
 
 **Interfaces:** 消费原 `CameraExtensionsController` 的 capabilities/snapshot/canWrite，保留 `_confirm`、revision 和 acknowledge 路径。
 
-- [ ] 补未连接和部分能力的禁用行为测试，RED。
-- [ ] 将整页阻断替换为可见的灰色分组设置；删去重复卡片说明，保留必要状态、配对和 pending 核对入口。
-- [ ] 支持字段继续确认/保存/读回；已不可用的设置不得被过渡动画保留为可点击。
-- [ ] 运行扩展 UI 和控制器测试，GREEN；提交。
+- [x] 补未连接和部分能力的禁用行为测试，RED。
+- [x] 将整页阻断替换为可见的灰色分组设置；删去重复卡片说明，保留必要状态、配对和 pending 核对入口。
+- [x] 支持字段继续确认/保存/读回；已不可用的设置不得被过渡动画保留为可点击。
+- [x] 运行扩展 UI 和控制器测试，GREEN；提交。
 
 ### Task 4: 相册与编辑器
 
@@ -68,10 +68,10 @@
 
 **Interfaces:** 消费公共 tabs/motion；保留 IndexedStack、LibraryController、媒体网关和 EditorController。
 
-- [ ] 补切源期间选择/传输保留、按住对比释放后恢复及小屏导出入口的交互测试，RED。
-- [ ] 相册顶部改为标题与右侧操作、下面简洁切源；日期和三列图库保留，点击/长按行为保持。
-- [ ] 编辑器预览居中、顶部导出和方案操作、紧凑工具区；所有现有工具可达，面板切换加入轻过渡。
-- [ ] 运行相册、传输、编辑器回归和小屏检查，GREEN；提交。
+- [x] 补切源期间选择/传输保留、按住对比释放后恢复及小屏导出入口的交互测试，RED。
+- [x] 相册顶部改为标题与右侧操作、下面简洁切源；日期和三列图库保留，点击/长按行为保持。
+- [x] 编辑器预览居中、顶部导出和方案操作、紧凑工具区；所有现有工具可达，面板切换加入轻过渡。
+- [x] 运行相册、传输、编辑器回归和小屏检查，GREEN；提交。
 
 ### Task 5: 拍摄与交付验证
 
@@ -79,8 +79,8 @@
 
 **Interfaces:** 底栏新增独立 `onFocus` 回调，直接调用既有 `_tapAf`；保留原按压/释放快门、程序执行与恢复。取景继续消费原隔离解码面，不每帧重建控制区。
 
-- [ ] 补独立 AF 不拍摄、小屏/横屏底部布局、完整图像点映射及 reduce-motion 行为测试，RED。
-- [ ] 大取景区域、简化顶部、默认曝光参数、底部模式和快门/相册/AF；其他已有功能从设置和模式入口保留。
-- [ ] 参数面板/组合方案展开和 AF 状态使用轻动效；无持续装饰动效。
-- [ ] 运行针对性测试、完整 `flutter test`、`flutter analyze`、arm64 debug APK 构建；记录实际结果和未执行的设备检查。
-- [ ] 按 executing-plans 进行一次独立全量代码审查，修复重要问题并完成回归，提交和交付可识别 APK；不 push 或发布。
+- [x] 补独立 AF 不拍摄、小屏/横屏底部布局、完整图像点映射及 reduce-motion 行为测试，RED。
+- [x] 大取景区域、简化顶部、默认曝光参数、底部模式和快门/相册/AF；其他已有功能从设置和模式入口保留。
+- [x] 参数面板/组合方案展开和 AF 状态使用轻动效；无持续装饰动效。
+- [x] 运行针对性测试、完整 `flutter test`、`flutter analyze`、arm64 debug APK 构建；记录实际结果和未执行的设备检查。
+- [x] 按 executing-plans 进行一次独立全量代码审查，修复重要问题并完成回归，提交和交付可识别 APK；不 push 或发布。

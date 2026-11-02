@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui' show SemanticsFlag;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -62,6 +63,66 @@ Future<({TestDarkroom env, FakeCameraGateways gateways})> pumpShoot(
 }
 
 void main() {
+  testWidgets('held shutter releases once after rotating the workspace',
+      (tester) async {
+    final harness = await pumpShoot(tester, connect: true);
+    final gesture = await tester.startGesture(
+        tester.getCenter(find.byKey(const Key('shutter-button'))));
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pumpAndSettle();
+    expect(harness.gateways.trace, contains('operation:1,1'));
+    tester.view.physicalSize = const Size(844, 390);
+    await tester.pumpAndSettle();
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(harness.gateways.trace.where((s) => s == 'operation:2,1'),
+        hasLength(1));
+    expect(harness.gateways.camera.files, hasLength(1));
+    expect(
+        tester
+            .widget<OutlinedButton>(find.byKey(const Key('af-button')))
+            .onPressed,
+        isNotNull);
+  });
+
+  testWidgets('aspect selection stays current while settings remain open',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    try {
+      final harness = await pumpShoot(tester, connect: true);
+      await tester.tap(find.byTooltip('设置'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('aspect-1:1')));
+      await tester.pumpAndSettle();
+      expect(harness.gateways.camera.props['aspectRatio'], '1:1');
+      expect(
+          tester
+              .getSemantics(find.byKey(const Key('aspect-1:1')))
+              .hasFlag(SemanticsFlag.isSelected),
+          isTrue);
+      final container = ProviderScope.containerOf(
+          tester.element(find.byKey(const Key('aspect-1:1'))));
+      harness.gateways.camera.props['aspectRatio'] = '3:2';
+      final refresh =
+          container.read(cameraStateControllerProvider.notifier).refresh();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+      await refresh;
+      await tester.pumpAndSettle();
+      expect(
+          tester
+              .getSemantics(find.byKey(const Key('aspect-3:2')))
+              .hasFlag(SemanticsFlag.isSelected),
+          isTrue);
+      expect(
+          tester
+              .getSemantics(find.byKey(const Key('aspect-1:1')))
+              .hasFlag(SemanticsFlag.isSelected),
+          isFalse);
+    } finally {
+      semantics.dispose();
+    }
+  });
   testWidgets('landscape keeps full preview beside reachable capture controls',
       (tester) async {
     tester.binding.platformDispatcher.textScaleFactorTestValue = 1.4;
@@ -210,6 +271,9 @@ void main() {
     final harness = await pumpShoot(tester, connect: true);
     await tester.tap(find.byTooltip('设置'));
     await tester.pumpAndSettle();
+    final timer =
+        tester.widget<ListTile>(find.widgetWithText(ListTile, '定时拍摄'));
+    expect((timer.trailing as Text).data, '关闭');
     expect(find.text('对焦模式'), findsOneWidget);
     expect(find.text('focusSetting'), findsNothing);
     await tester.tap(find.text('对焦模式'));

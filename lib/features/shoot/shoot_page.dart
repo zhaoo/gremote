@@ -72,6 +72,8 @@ class _ShootPageState extends ConsumerState<ShootPage> {
   Future<SettingsRestoreReport>? _finishing;
   late final StateController<Future<bool> Function()?> _exitHandler;
   bool _restoreDialogVisible = false;
+  // Retain the active shutter gesture when controls move into the landscape rail.
+  final _captureControlsKey = GlobalKey(debugLabel: 'shoot-capture-controls');
 
   @override
   void initState() {
@@ -269,6 +271,7 @@ class _ShootPageState extends ConsumerState<ShootPage> {
                     }),
                   ),
                   ShootBottomBar(
+                    key: _captureControlsKey,
                     connected: connected,
                     focusing: _focusing,
                     shutterHeld: _shutterHeld,
@@ -627,13 +630,16 @@ class _ShootPageState extends ConsumerState<ShootPage> {
                 }),
             ListTile(
                 title: const Text('定时拍摄'),
-                trailing: Text(
-                    shootValueLabel('driveMode', camera.value(ParamKey.drive))),
+                trailing: Text(switch (camera.value(ParamKey.drive)) {
+                  'self2s' => '2 秒',
+                  'self10s' => '10 秒',
+                  _ => '关闭',
+                }),
                 onTap: () {
                   Navigator.pop(context);
                   _cycleTimer(camera);
                 }),
-            _AspectDots(camera: camera),
+            const _AspectChoices(),
             ListTile(
                 leading: const Icon(Icons.local_movies_outlined),
                 title: const Text('胶卷库'),
@@ -674,41 +680,38 @@ class _ShootPageState extends ConsumerState<ShootPage> {
   }
 }
 
-class _AspectDots extends StatelessWidget {
-  const _AspectDots({required this.camera});
-
-  final CameraState camera;
+class _AspectChoices extends ConsumerWidget {
+  const _AspectChoices();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final camera = ref.watch(cameraStateControllerProvider);
     final aspect = camera.param(ParamKey.aspectRatio);
-    if (aspect == null) return const SizedBox(height: 26);
-    return SizedBox(
-      height: 26,
-      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        for (final value in aspect.options)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 5),
-            child: GestureDetector(
-              key: Key('aspect-$value'),
-              onTap: aspect.writable
-                  ? () => unawaited(ProviderScope.containerOf(context)
-                      .read(cameraStateControllerProvider.notifier)
-                      .setParam(aspect.wireKey, value))
-                  : null,
-              child: Container(
-                width: value == aspect.current ? 8 : 5,
-                height: value == aspect.current ? 8 : 5,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: value == aspect.current
-                      ? GRemoteColors.gold
-                      : GRemoteColors.muted,
-                ),
-              ),
-            ),
-          ),
-      ]),
-    );
+    if (aspect == null) return const SizedBox.shrink();
+    return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('画幅',
+              style: TextStyle(fontSize: 12, color: GRemoteColors.muted)),
+          const SizedBox(height: 6),
+          Wrap(spacing: 8, runSpacing: 6, children: [
+            for (final value in aspect.options)
+              ChoiceChip(
+                  key: Key('aspect-$value'),
+                  label: Text(shootValueLabel(aspect.wireKey, value)),
+                  showCheckmark: false,
+                  selected: value == aspect.current,
+                  onSelected: aspect.writable &&
+                          !camera.pending.containsKey(aspect.wireKey)
+                      ? (_) {
+                          if (value != aspect.current) {
+                            unawaited(ref
+                                .read(cameraStateControllerProvider.notifier)
+                                .setParam(aspect.wireKey, value));
+                          }
+                        }
+                      : null),
+          ]),
+        ]));
   }
 }
