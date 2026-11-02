@@ -17,7 +17,7 @@ void main() {
   testWidgets('connection card renders idle and scanning states',
       (tester) async {
     await _pumpCard(tester, const ConnectionIdle());
-    expect(find.text('连接 GR III'), findsOneWidget);
+    expect(find.text('连接相机'), findsOneWidget);
 
     await _pumpCard(tester, const ConnectionScanning());
     expect(find.text('正在扫描附近相机'), findsOneWidget);
@@ -27,8 +27,8 @@ void main() {
   testWidgets('pending app permissions disables the connect action',
       (tester) async {
     await _pumpCard(tester, const ConnectionPermissions());
-    expect(find.text('连接 GR III'), findsNothing);
-    expect(find.text('选择 Wi-Fi 连接'), findsNothing);
+    expect(find.text('连接相机'), findsNothing);
+    expect(find.text('手动连接 Wi-Fi'), findsNothing);
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
     expect(find.text('正在确认连接权限'), findsOneWidget);
   });
@@ -45,7 +45,7 @@ void main() {
     var opened = 0;
     await _pumpCard(tester, const ConnectionIdle(),
         onManualWifi: () => opened++);
-    await tester.tap(find.text('选择 Wi-Fi 连接'));
+    await tester.tap(find.text('手动连接 Wi-Fi'));
     expect(opened, 1);
 
     await _pumpCard(
@@ -60,7 +60,7 @@ void main() {
       onManualWifi: () => opened++,
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('选择 Wi-Fi 连接'));
+    await tester.tap(find.text('手动连接 Wi-Fi'));
     expect(opened, 2);
   });
 
@@ -79,11 +79,11 @@ void main() {
       const ConnectionReady(snapshot: _snapshot, firmwareWarning: true),
     );
 
-    expect(find.text('RICOH GR III'), findsOneWidget);
-    expect(find.text('2.00'), findsOneWidget);
-    expect(find.text('80%'), findsOneWidget);
+    expect(find.text('GR III'), findsOneWidget);
+    expect(find.text('固件 2.00'), findsOneWidget);
+    expect(find.text('电量 80%'), findsOneWidget);
     expect(find.text('固件未经真机验证'), findsOneWidget);
-    expect(find.text('进入实景遥控'), findsOneWidget);
+    expect(find.text('进入拍摄'), findsOneWidget);
   });
 
   testWidgets('Wi-Fi-only connection does not invent firmware or battery',
@@ -100,7 +100,7 @@ void main() {
       ),
     );
 
-    expect(find.text('未读取'), findsOneWidget);
+    expect(find.text('固件 未读取'), findsOneWidget);
     expect(find.text('0%'), findsNothing);
     expect(find.text('固件未经真机验证'), findsNothing);
   });

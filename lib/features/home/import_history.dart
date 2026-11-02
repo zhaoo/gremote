@@ -137,19 +137,17 @@ class _ImportStatusTileState extends ConsumerState<ImportStatusTile>
   Widget build(BuildContext context) {
     final count = ref.watch(todayImportCountProvider);
     return Material(
-      color: GRemoteColors.navy,
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(9),
-          side: const BorderSide(color: GRemoteColors.divider)),
+      color: Colors.transparent,
+      shape: const Border(bottom: BorderSide(color: GRemoteColors.divider)),
       child: InkWell(
         borderRadius: BorderRadius.circular(9),
         onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(builder: (_) => const ImportHistoryPage())),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 19),
           child: Row(children: [
             const Icon(Icons.download_done_rounded,
-                size: 19, color: GRemoteColors.goldSoft),
+                size: 19, color: GRemoteColors.muted),
             const SizedBox(width: 12),
             const Expanded(
                 child:
@@ -159,8 +157,8 @@ class _ImportStatusTileState extends ConsumerState<ImportStatusTile>
                     data: (value) => '$value 张',
                     loading: () => '…',
                     error: (_, __) => '读取失败'),
-                style: GRemoteType.numeric
-                    .copyWith(color: GRemoteColors.goldSoft)),
+                style:
+                    GRemoteType.numeric.copyWith(color: GRemoteColors.muted)),
             const SizedBox(width: 5),
             const Icon(Icons.chevron_right_rounded,
                 size: 16, color: GRemoteColors.muted),

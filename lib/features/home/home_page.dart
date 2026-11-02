@@ -10,6 +10,8 @@ import '../../camera/connection/connection_controller.dart';
 import '../../camera/connection/connection_state.dart';
 import '../../diagnostics/diagnostic_store.dart';
 import 'widgets/connection_card.dart';
+import 'widgets/home_brand.dart';
+import 'widgets/home_cover.dart';
 import 'widgets/manual_wifi_dialog.dart';
 import 'import_history.dart';
 import '../../location/location_recording.dart';
@@ -22,70 +24,62 @@ class HomePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(connectionControllerProvider);
     final controller = ref.read(connectionControllerProvider.notifier);
-    return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.only(top: 16, bottom: 28),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 12, 20),
-            child: Row(children: [
-              const Expanded(
-                  child: Text('GRemote',
-                      style: TextStyle(
-                          fontSize: 28,
-                          color: GRemoteColors.text,
-                          fontWeight: FontWeight.w500,
-                          letterSpacing: -.8))),
-              PopupMenuButton<String>(
-                tooltip: '更多连接选项',
-                icon: const Icon(Icons.more_horiz),
-                onSelected: (value) {
-                  if (value == 'wifi') {
-                    _showManualWifi(context, controller);
-                  } else {
-                    _showDiagnostics(
-                        context, state, ref.read(diagnosticStoreProvider));
-                  }
-                },
-                itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'wifi', child: Text('手动连接 Wi-Fi')),
-                  PopupMenuItem(value: 'diagnostics', child: Text('诊断信息')),
-                ],
+    return ColoredBox(
+        color: const Color(0xFF171A1D),
+        child: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.only(top: 8, bottom: 23),
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 12, 20),
+                child: Row(children: [
+                  const Expanded(
+                      child: Align(
+                          alignment: Alignment.centerLeft, child: HomeBrand())),
+                  PopupMenuButton<String>(
+                    tooltip: '更多连接选项',
+                    icon: const Icon(Icons.more_horiz),
+                    onSelected: (value) {
+                      if (value == 'wifi') {
+                        _showManualWifi(context, controller);
+                      } else {
+                        _showDiagnostics(
+                            context, state, ref.read(diagnosticStoreProvider));
+                      }
+                    },
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(value: 'wifi', child: Text('手动连接 Wi-Fi')),
+                      PopupMenuItem(value: 'diagnostics', child: Text('诊断信息')),
+                    ],
+                  ),
+                ]),
               ),
-            ]),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.asset('assets/images/home_header.jpg',
-                  height: 205, width: double.infinity, fit: BoxFit.cover),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: ConnectionCard(
-              state: state,
-              onConnect: controller.connect,
-              onRetry: () => _repair(context, controller, state),
-              onSelectDevice: controller.selectDevice,
-              onEnterShoot: () => context.go('/shoot'),
-              onOpenDiagnostics: () => _showDiagnostics(
-                context,
-                state,
-                ref.read(diagnosticStoreProvider),
+              const DefaultHomeCover(),
+              const SizedBox(height: 22),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 23),
+                child: ConnectionCard(
+                  state: state,
+                  onConnect: controller.connect,
+                  onRetry: () => _repair(context, controller, state),
+                  onSelectDevice: controller.selectDevice,
+                  onEnterShoot: () => context.go('/shoot'),
+                  onOpenDiagnostics: () => _showDiagnostics(
+                    context,
+                    state,
+                    ref.read(diagnosticStoreProvider),
+                  ),
+                  onManualWifi: () => _showManualWifi(context, controller),
+                  onCancel: controller.cancel,
+                ),
               ),
-              onManualWifi: () => _showManualWifi(context, controller),
-              onCancel: controller.cancel,
-            ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(23, 0, 23, 0),
+                child: _QuickStatus(),
+              ),
+            ],
           ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 10, 16, 0),
-            child: _QuickStatus(),
-          ),
-        ],
-      ),
-    );
+        ));
   }
 
   Future<void> _repair(
@@ -175,7 +169,7 @@ class _QuickStatus extends ConsumerWidget {
     final location = ref.watch(locationRecordingProvider);
     return Column(children: [
       const ImportStatusTile(),
-      const SizedBox(height: 6),
+      const SizedBox(height: 0),
       _StatusCell(
           icon: Icons.location_on_outlined,
           label: '位置记录',
@@ -213,15 +207,14 @@ class _StatusCell extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(9),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 19),
           decoration: BoxDecoration(
-            color: GRemoteColors.navy,
-            borderRadius: BorderRadius.circular(9),
-            border: Border.all(color: GRemoteColors.divider),
+            border:
+                const Border(bottom: BorderSide(color: GRemoteColors.divider)),
           ),
           child: Row(
             children: [
-              Icon(icon, size: 19, color: GRemoteColors.goldSoft),
+              Icon(icon, size: 19, color: GRemoteColors.muted),
               const SizedBox(width: 12),
               Text(label,
                   style: Theme.of(context)
@@ -230,8 +223,8 @@ class _StatusCell extends StatelessWidget {
                       ?.copyWith(color: GRemoteColors.text)),
               const Spacer(),
               Text(value,
-                  style: GRemoteType.numeric
-                      .copyWith(color: GRemoteColors.goldSoft)),
+                  style:
+                      GRemoteType.numeric.copyWith(color: GRemoteColors.muted)),
             ],
           ),
         ));

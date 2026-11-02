@@ -32,9 +32,21 @@ class ConnectionCard extends StatelessWidget {
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     return GestureDetector(
       onLongPress: onOpenDiagnostics,
-      child: Card(
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          filledButtonTheme: FilledButtonThemeData(
+              style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFE1E5E3),
+                  foregroundColor: const Color(0xFF181C1D),
+                  minimumSize: const Size(0, 48),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4)))),
+          textButtonTheme: TextButtonThemeData(
+              style:
+                  TextButton.styleFrom(foregroundColor: GRemoteColors.muted)),
+        ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 15, 14, 10),
+          padding: const EdgeInsets.fromLTRB(0, 0, 0, 20),
           child: AnimatedSwitcher(
             duration: reduceMotion
                 ? Duration.zero
@@ -89,13 +101,13 @@ class ConnectionCard extends StatelessWidget {
               child: FilledButton.icon(
                 onPressed: onConnect,
                 icon: const Icon(Icons.bluetooth_searching, size: 18),
-                label: const Text('连接 GR III'),
+                label: const Text('连接相机'),
               ),
             ),
             if (onManualWifi != null)
               TextButton(
                 onPressed: onManualWifi,
-                child: const Text('选择 Wi-Fi 连接'),
+                child: const Text('手动连接 Wi-Fi'),
               ),
           ])
         else ...[
@@ -183,128 +195,79 @@ class _Header extends StatelessWidget {
   final String status;
 
   @override
-  Widget build(BuildContext context) => Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
+  Widget build(BuildContext context) => Row(children: [
+        const Expanded(
+            child: Text('相机连接',
+                style: TextStyle(fontSize: 12, color: GRemoteColors.muted))),
+        Container(
+            width: 5,
+            height: 5,
             decoration: BoxDecoration(
-              color: GRemoteColors.raised,
-              borderRadius: BorderRadius.circular(7),
-              border: Border.all(color: GRemoteColors.divider),
-            ),
-            child: const Icon(Icons.camera_alt_outlined,
-                color: GRemoteColors.goldSoft, size: 18),
-          ),
-          const SizedBox(width: 11),
-          Text('相机连接', style: Theme.of(context).textTheme.titleMedium),
-          const Spacer(),
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-                color: status == '已连接'
-                    ? GRemoteColors.gold
-                    : status == '连接中断'
-                        ? GRemoteColors.danger
-                        : GRemoteColors.muted,
-                shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            status,
-            style: Theme.of(context)
-                .textTheme
-                .labelMedium
-                ?.copyWith(color: GRemoteColors.muted, fontSize: 11),
-          ),
-        ],
-      );
+                shape: BoxShape.circle,
+                color: status == '连接中断'
+                    ? GRemoteColors.danger
+                    : status == '已连接'
+                        ? GRemoteColors.text
+                        : GRemoteColors.muted)),
+        const SizedBox(width: 6),
+        Flexible(
+            child: Text(status,
+                style:
+                    const TextStyle(fontSize: 12, color: GRemoteColors.muted))),
+      ]);
+}
+
+class _CameraIdentity extends StatelessWidget {
+  const _CameraIdentity({this.model = 'RICOH GR III'});
+  final String model;
+  @override
+  Widget build(BuildContext context) => Row(children: [
+        Expanded(
+            child: Semantics(
+                label: model,
+                child: ExcludeSemantics(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      if (model.startsWith('RICOH '))
+                        const Text('RICOH',
+                            style: TextStyle(
+                                fontSize: 11,
+                                letterSpacing: 1.9,
+                                color: GRemoteColors.muted)),
+                      const SizedBox(height: 5),
+                      Text(model.replaceFirst(RegExp(r'^RICOH '), ''),
+                          style: GRemoteType.display
+                              .copyWith(fontSize: 33, letterSpacing: -.8)),
+                    ])))),
+        const SizedBox(width: 8),
+        if (model == 'RICOH GR III')
+          Flexible(
+              child: Image.asset('assets/images/gr_compact_camera.png',
+                  width: 150,
+                  height: 112,
+                  fit: BoxFit.contain,
+                  excludeFromSemantics: true)),
+      ]);
 }
 
 class _CameraSummary extends StatelessWidget {
-  const _CameraSummary({
-    required this.status,
-    required this.title,
-    required this.detail,
-  });
-
-  final String status;
-  final String title;
-  final String detail;
-
+  const _CameraSummary(
+      {required this.status, required this.title, required this.detail});
+  final String status, title, detail;
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-        builder: (context, constraints) {
-          final compact = constraints.maxWidth < 300;
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: compact ? 96 : 128,
-                height: 104,
-                child: Image.asset(
-                  'assets/images/gr_compact_camera.png',
-                  fit: BoxFit.cover,
-                  excludeFromSemantics: true,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('RICOH GR III',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GRemoteType.display.copyWith(
-                            color: GRemoteColors.text,
-                            fontSize: 12,
-                            letterSpacing: 1.1)),
-                    const SizedBox(height: 4),
-                    Row(children: [
-                      Container(
-                        width: 5,
-                        height: 5,
-                        decoration: BoxDecoration(
-                            color: status == '连接中断'
-                                ? GRemoteColors.danger
-                                : status == '已连接'
-                                    ? GRemoteColors.gold
-                                    : GRemoteColors.muted,
-                            shape: BoxShape.circle),
-                      ),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: Text(status,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: GRemoteColors.muted, fontSize: 10)),
-                      ),
-                    ]),
-                    const SizedBox(height: 10),
-                    Text(title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontSize: 15)),
-                    const SizedBox(height: 4),
-                    Text(detail,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: GRemoteColors.muted, fontSize: 10)),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
-      );
+  Widget build(BuildContext context) =>
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _Header(status: status),
+        const SizedBox(height: 8),
+        const _CameraIdentity(),
+        if (title != '连接相机') ...[
+          Text(title, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 5),
+          Text(detail,
+              style: const TextStyle(fontSize: 12, color: GRemoteColors.muted)),
+        ],
+      ]);
 }
 
 class _ReadyContent extends StatelessWidget {
@@ -325,11 +288,14 @@ class _ReadyContent extends StatelessWidget {
       children: [
         const _Header(status: '已连接'),
         const SizedBox(height: 18),
-        Text(snapshot.identity.model,
-            style: Theme.of(context).textTheme.headlineSmall),
+        _CameraIdentity(model: snapshot.identity.model),
         const SizedBox(height: 12),
-        Row(
+        Wrap(
+          spacing: 18,
+          runSpacing: 8,
           children: [
+            const Text('Wi-Fi',
+                style: TextStyle(fontSize: 12, color: GRemoteColors.muted)),
             _Fact(
               label: '固件',
               value: snapshot.identity.firmware.isEmpty
@@ -337,7 +303,6 @@ class _ReadyContent extends StatelessWidget {
                   : snapshot.identity.firmware,
             ),
             if (!state.wifiOnly || snapshot.battery.level >= 0) ...[
-              const SizedBox(width: 24),
               _Fact(label: '电量', value: '${snapshot.battery.level}%'),
             ],
           ],
@@ -359,7 +324,7 @@ class _ReadyContent extends StatelessWidget {
           child: FilledButton.icon(
             onPressed: onEnterShoot,
             icon: const Icon(Icons.center_focus_strong),
-            label: const Text('进入实景遥控'),
+            label: const Text('进入拍摄'),
           ),
         ),
       ],
@@ -444,7 +409,7 @@ class _FailureContent extends StatelessWidget {
             Center(
               child: TextButton(
                 onPressed: onManualWifi,
-                child: const Text('选择 Wi-Fi 连接'),
+                child: const Text('手动连接 Wi-Fi'),
               ),
             ),
           const SizedBox(height: 4),
@@ -479,13 +444,13 @@ class _FailureContent extends StatelessWidget {
       failure.code == 'wifiTimeout'
           ? '请在相机中开启“无线 LAN”；蓝牙开启不代表 Wi-Fi 已开启。开启后重新连接，并允许系统连接提示。'
           : failure.code == 'cameraNotFound'
-          ? '请确认相机已开启并靠近手机。'
-          : switch (failure.userAction) {
-              ConnectionUserAction.openSettings => '打开系统设置授予权限，然后返回重试。',
-              ConnectionUserAction.confirmWifi => '重试后请在系统弹窗中选择“允许”。',
-              ConnectionUserAction.retry => '确认相机已开启，然后从失败步骤重试。',
-              _ => '请查看支持范围或稍后重试。',
-            };
+              ? '请确认相机已开启并靠近手机。'
+              : switch (failure.userAction) {
+                  ConnectionUserAction.openSettings => '打开系统设置授予权限，然后返回重试。',
+                  ConnectionUserAction.confirmWifi => '重试后请在系统弹窗中选择“允许”。',
+                  ConnectionUserAction.retry => '确认相机已开启，然后从失败步骤重试。',
+                  _ => '请查看支持范围或稍后重试。',
+                };
 }
 
 class _Fact extends StatelessWidget {
@@ -495,16 +460,8 @@ class _Fact extends StatelessWidget {
   final String value;
 
   @override
-  Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(height: 4),
-          Text(value,
-              style:
-                  GRemoteType.numeric.copyWith(color: GRemoteColors.goldSoft)),
-        ],
-      );
+  Widget build(BuildContext context) => Text('$label $value',
+      style: const TextStyle(fontSize: 12, color: GRemoteColors.muted));
 }
 
 class _ConnectionPresentation {

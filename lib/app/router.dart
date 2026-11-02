@@ -99,8 +99,7 @@ class GRemoteShell extends StatelessWidget {
               child: Container(
                 height: 76,
                 decoration: const BoxDecoration(
-                  color: GRemoteColors.night,
-                  border: Border(top: BorderSide(color: GRemoteColors.divider)),
+                  color: Color(0xFF171A1D),
                 ),
                 child: Column(
                   children: [
@@ -150,7 +149,7 @@ class GRemoteShell extends StatelessWidget {
                 duration: motionDuration,
                 child: Icon(selected ? activeIcon : icon,
                     size: 23,
-                    color: selected ? GRemoteColors.gold : GRemoteColors.muted),
+                    color: selected ? GRemoteColors.text : GRemoteColors.muted),
               ),
               const SizedBox(height: 5),
               Text(label,
@@ -158,7 +157,7 @@ class GRemoteShell extends StatelessWidget {
                     fontSize: 11,
                     letterSpacing: 1,
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-                    color: selected ? GRemoteColors.gold : GRemoteColors.muted,
+                    color: selected ? GRemoteColors.text : GRemoteColors.muted,
                   )),
             ],
           ),
