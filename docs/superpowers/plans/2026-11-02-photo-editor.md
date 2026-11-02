@@ -1,6 +1,6 @@
 # Photo Editor Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 完整实现已批准视觉稿与首批修图工具，预览和导出使用相同原生算法。
 
@@ -30,43 +30,43 @@
 
 **Files:** Create lib/darkroom/model/photo_edits.dart; modify export_recipe.dart; test/darkroom/photo_edits_test.dart.
 **Interfaces:** PhotoEdits const默认、fromJson/toJson/copyWith/withValue、nativeParameters；CropEdit.outputSize(width,height)；ToneCurve.samples()；ExportRecipe.edits。
-- [ ] RED: JSON旧数据恒等、曲线排序去重/有限值、裁切旋转换轴/至少1像素、参数1062且曲线端点恒等、所有新参数roundtrip测试。
-- [ ] Run flutter test test/darkroom/photo_edits_test.dart; expected missing behavior.
-- [ ] Implement model/serialization/validation, then rerun targeted tests green.
-- [ ] Commit model and tests.
+- [x] RED: JSON旧数据恒等、曲线排序去重/有限值、裁切旋转换轴/至少1像素、参数1062且曲线端点恒等、所有新参数roundtrip测试。
+- [x] Run flutter test test/darkroom/photo_edits_test.dart; expected missing behavior.
+- [x] Implement model/serialization/validation, then rerun targeted tests green.
+- [x] Commit model and tests.
 
 ### Task 2: 统一原生修图处理
 
 **Files:** native/imaging/{include/gremote_imaging.h,src/photo_edits.h,src/photo_edits.cpp,src/api.cpp,CMakeLists.txt,tests/photo_edits_test.cpp}.
 **Interfaces:** Spec C ABI gremote_render_edit_rgba and appended export request fields; same core RenderPhoto for export and preview.
-- [ ] RED: neutral unchanged, adjustments/LUT/curves/effects behavior, seed stability, rotate/crop including EXIF, invalid params and cancellation, preview against exported JPEG tests.
-- [ ] Run scripts/build_native_host.sh and native tests; expected missing ABI/behavior.
-- [ ] Implement validated bounded processing, release buffers and descriptor ownership, preserve legacy null params path.
-- [ ] Build host and ctest --test-dir native/imaging/build/host --output-on-failure green; commit native files/tests.
+- [x] RED: neutral unchanged, adjustments/LUT/curves/effects behavior, seed stability, rotate/crop including EXIF, invalid params and cancellation, preview against exported JPEG tests.
+- [x] Run scripts/build_native_host.sh and native tests; expected missing ABI/behavior.
+- [x] Implement validated bounded processing, release buffers and descriptor ownership, preserve legacy null params path.
+- [x] Build host and ctest --test-dir native/imaging/build/host --output-on-failure green; commit native files/tests.
 
 ### Task 3: FFI 与导出接线
 
 **Files:** lib/imaging/{imaging_engine.dart,imaging_bindings.dart,ffi_imaging_engine.dart}; test/support/fake_imaging_engine.dart; test/imaging/photo_edits_ffi_test.dart; lib/darkroom/export/export_service.dart; frame/frame_layout.dart; model/export_recipe.dart.
 **Interfaces:** renderPhoto signature from spec; ExportJob.adjustments; frame width/style/date options shared by EditorState.layout and ExportService.
-- [ ] RED: same-size native rendered vs JPEG result, input unmodified, geometry dims, all options passed through service and frames pixel geometry tests.
-- [ ] Implement FFI copy/release in isolate and native params export; crop-aware photo sizing and additional border/date layout.
-- [ ] Run flutter test test/imaging test/darkroom; expected green. Commit only owned files.
+- [x] RED: same-size native rendered vs JPEG result, input unmodified, geometry dims, all options passed through service and frames pixel geometry tests.
+- [x] Implement FFI copy/release in isolate and native params export; crop-aware photo sizing and additional border/date layout.
+- [x] Run flutter test test/imaging test/darkroom; expected green. Commit only owned files.
 
 ### Task 4: 编辑状态与交互调度
 
 **Files:** editor_controller.dart; test/features/editor_workflow_test.dart.
 **Interfaces:** beginTool/commitTool/cancelTool, beginGesture/endGesture, setEdits, undo/redo, flushPreview and existing metadata/export/preset methods.
-- [ ] RED: tool draft cancel, one drag one undo, redo/reset, roundtrip persisted params, max one render active/stale discard, error recovery/disposal and export captures same recipe.
-- [ ] Implement bounded history, serial latest-only preview loop, commit autosave queue and error status. Disable editing while export pending.
-- [ ] Run workflow/controller/export tests green; commit.
+- [x] RED: tool draft cancel, one drag one undo, redo/reset, roundtrip persisted params, max one render active/stale discard, error recovery/disposal and export captures same recipe.
+- [x] Implement bounded history, serial latest-only preview loop, commit autosave queue and error status. Disable editing while export pending.
+- [x] Run workflow/controller/export tests green; commit.
 
 ### Task 5: 已确认视觉稿 UI
 
 **Files:** editor_page.dart; new widgets/editor_tools.dart,adjustment_panel.dart,curve_panel.dart,crop_panel.dart; existing editor_panels.dart/frame_preview.dart; test/features/editor_page_test.dart.
 **Interfaces:** Controller methods from Task4; PhotoEdits from Task1; existing FramePreview and metadata/export panels preserved.
-- [ ] RED: tools grid navigation, slider immediate value + final render, press cancel comparison, curve point operation, crop presets/free handles, finish/cancel, LUT import/selection, presets/history/export and narrow/landscape large text.
-- [ ] Implement responsive grid and scrollable tools; animated panel transitions respect reduced motion; zoom and direct drag scopes do not conflict; full original comparison layout.
-- [ ] Run flutter test test/features/editor_page_test.dart test/features/editor_workflow_test.dart green. Commit.
+- [x] RED: tools grid navigation, slider immediate value + final render, press cancel comparison, curve point operation, crop presets/free handles, finish/cancel, LUT import/selection, presets/history/export and narrow/landscape large text.
+- [x] Implement responsive grid and scrollable tools; animated panel transitions respect reduced motion; zoom and direct drag scopes do not conflict; full original comparison layout.
+- [x] Run flutter test test/features/editor_page_test.dart test/features/editor_workflow_test.dart green. Commit.
 
 ### Task 6: 整体验证与独立审查
 

@@ -20,6 +20,9 @@ class FrameStylePanel extends StatelessWidget {
 
   static String _description(FrameStyle style) => switch (style) {
         FrameStyle.none => '不添加边框和文字',
+        FrameStyle.white => '等宽白边',
+        FrameStyle.black => '等宽黑边',
+        FrameStyle.polaroid => '拍立得',
         FrameStyle.classic => '留白与拍摄信息',
         FrameStyle.street => '深色边框',
         FrameStyle.contact => '胶片边框',
