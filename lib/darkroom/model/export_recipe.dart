@@ -1,4 +1,5 @@
 import 'package:meta/meta.dart';
+import 'photo_edits.dart';
 
 enum FrameStyle {
   classic('经典白边'),
@@ -48,6 +49,7 @@ class ExportRecipe {
     this.size = ExportSize.original,
     this.quality = 95,
     this.keepGps = false,
+    this.edits = const PhotoEdits(),
   });
 
   factory ExportRecipe.fromJson(Map<String, Object?> json) {
@@ -64,6 +66,7 @@ class ExportRecipe {
       size: _enumByName(ExportSize.values, json['size'], ExportSize.original),
       quality: exportQualities.contains(quality) ? quality! as int : 95,
       keepGps: json['keepGps'] == true,
+      edits: PhotoEdits.fromJson(json['edits']),
     );
   }
 
@@ -74,6 +77,7 @@ class ExportRecipe {
   final ExportSize size;
   final int quality;
   final bool keepGps;
+  final PhotoEdits edits;
 
   Map<String, Object?> toJson() => {
         'lutId': lutId,
@@ -83,6 +87,7 @@ class ExportRecipe {
         'size': size.name,
         'quality': quality,
         'keepGps': keepGps,
+        'edits': edits.toJson(),
       };
 
   ExportRecipe copyWith({
@@ -93,6 +98,7 @@ class ExportRecipe {
     ExportSize? size,
     int? quality,
     bool? keepGps,
+    PhotoEdits? edits,
   }) =>
       ExportRecipe(
         lutId: lutId == null ? this.lutId : lutId(),
@@ -102,6 +108,7 @@ class ExportRecipe {
         size: size ?? this.size,
         quality: quality ?? this.quality,
         keepGps: keepGps ?? this.keepGps,
+        edits: edits ?? this.edits,
       );
 
   @override
@@ -113,9 +120,10 @@ class ExportRecipe {
       other.ratio == ratio &&
       other.size == size &&
       other.quality == quality &&
-      other.keepGps == keepGps;
+      other.keepGps == keepGps &&
+      other.edits == edits;
 
   @override
   int get hashCode =>
-      Object.hash(lutId, strength, frame, ratio, size, quality, keepGps);
+      Object.hash(lutId, strength, frame, ratio, size, quality, keepGps, edits);
 }
