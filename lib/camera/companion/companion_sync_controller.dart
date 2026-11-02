@@ -44,6 +44,9 @@ class _Pending {
   int? get active => payload['expectedActiveSlot'] as int?;
 }
 
+/// The current prepared intent, after controller target normalization.
+typedef PreparedCompanionLoad = ({int slot, FilmRecipe recipe, bool activate});
+
 class CompanionSyncController extends ChangeNotifier {
   CompanionSyncController(
       {required this.api,
@@ -65,7 +68,18 @@ class CompanionSyncController extends ChangeNotifier {
   Map<String, dynamic> get contract =>
       cameraCatalog == null ? companionContract : cameraContract;
   int get slotCount => contract['slotCount'] as int;
-  int? get preparedSlot => _slot;
+  PreparedCompanionLoad? get preparedLoad {
+    if (!_alive ||
+        _preparing ||
+        !state.hasPreparedLoad ||
+        _slot == null ||
+        _recipe == null) {
+      return null;
+    }
+    return (slot: _slot!, recipe: _recipe!, activate: _activate);
+  }
+
+  int? get preparedSlot => preparedLoad?.slot;
   final bool Function() isWriteBlocked;
   final Future<void> Function() _wait;
   final Future<void> Function(FilmRecipe)? _keepLocalRecipe;

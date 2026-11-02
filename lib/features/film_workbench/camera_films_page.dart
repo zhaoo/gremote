@@ -7,6 +7,7 @@ import 'widgets/texture_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/app_presence.dart';
+import '../../app/widgets/workspace_motion.dart';
 import '../../camera/companion/companion_protocol.dart';
 import '../../camera/companion/companion_sync_controller.dart';
 import '../../camera/companion/film_transfer.dart';
@@ -35,7 +36,8 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
       _picking = false,
       _activate = true,
       _polling = false,
-      _scheduled = false;
+      _scheduled = false,
+      _preparing = false;
   int _slot = 0;
   FilmTransfer? _imported;
   FilmRecipe? _saved;
@@ -167,7 +169,8 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
       if (!mounted) return;
       final selected = await showModalBottomSheet<FilmRecipe>(
           context: context,
-          backgroundColor: workbenchBackground,
+          backgroundColor: workbenchSurface,
+          sheetAnimationStyle: _filmSheetAnimation(context),
           builder: (context) => SafeArea(
               child: recipes.isEmpty
                   ? const Padding(
@@ -217,11 +220,12 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
 
   Future<void> _adjustCamera(
       CameraFilmCatalog catalog, CameraFilmRecipe recipe) async {
+    if (_preparing) return;
     await showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
         showDragHandle: true,
-        sheetAnimationStyle: workbenchSheetAnimation(context),
+        sheetAnimationStyle: _filmSheetAnimation(context),
         builder: (_) => TextureSheet(
             film: catalog.film(recipe.filmId),
             recipe: recipe,
@@ -251,37 +255,158 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
 
   Future<void> _prepare(
       CompanionSyncController controller, FilmRecipe recipe) async {
+    if (_preparing) return;
+    final requestedSlot = _slot, activate = _activate, film = _imported;
+    setState(() => _preparing = true);
     try {
       await controller.prepareLoad(
-          slot: _slot, recipe: recipe, activate: _activate, film: _imported);
+          slot: requestedSlot, recipe: recipe, activate: activate, film: film);
       if (!mounted) return;
-      setState(() => _slot = controller.preparedSlot ?? _slot);
+      final prepared = controller.preparedLoad;
+      if (prepared == null) throw const FormatException('装卷准备已失效，请重新选择并确认');
+      setState(() => _slot = prepared.slot);
       await showModalBottomSheet<void>(
           context: context,
           isScrollControlled: true,
-          backgroundColor: workbenchBackground,
-          sheetAnimationStyle: MediaQuery.of(context).disableAnimations
-              ? AnimationStyle.noAnimation
-              : AnimationStyle(
-                  duration: const Duration(milliseconds: 280),
-                  reverseDuration: const Duration(milliseconds: 200)),
+          backgroundColor: workbenchSurface,
+          showDragHandle: true,
+          sheetAnimationStyle: _filmSheetAnimation(context),
           builder: (context) => _LoadSheet(
-              catalog: ref.read(cameraFilmCatalogProvider).valueOrNull,
+              catalog: ref.read(cameraFilmCatalogProvider).valueOrNull ??
+                  ref.read(filmCatalogProvider).valueOrNull,
               controller: controller,
-              slot: _slot,
-              recipe: recipe,
-              activate: _activate));
+              preparedLoad: prepared));
     } catch (error) {
       _error(error);
+    } finally {
+      if (mounted) setState(() => _preparing = false);
     }
+  }
+
+  Future<void> _more(CompanionSyncController? controller, FilmCatalog? catalog,
+      PairingIdentity? identity) async {
+    final action = await showModalBottomSheet<String>(
+        context: context,
+        backgroundColor: workbenchSurface,
+        showDragHandle: true,
+        isScrollControlled: true,
+        constraints:
+            BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * .85),
+        sheetAnimationStyle: _filmSheetAnimation(context),
+        builder: (context) => SafeArea(
+                child: ListView(shrinkWrap: true, children: [
+              ListTile(
+                  title: const Text('胶卷与数据'),
+                  subtitle:
+                      Text(controller?.state.message ?? '请连接相机 Wi-Fi 并导入配对文件')),
+              ListTile(
+                  leading: const Icon(Icons.collections_bookmark_outlined),
+                  title: const Text('相机目录'),
+                  enabled: catalog != null,
+                  onTap: catalog == null
+                      ? null
+                      : () => Navigator.pop(context, 'catalog')),
+              ListTile(
+                  leading: const Icon(Icons.file_open_outlined),
+                  title: const Text('导入胶卷数据'),
+                  enabled: catalog != null &&
+                      !_picking &&
+                      controller?.state.capabilities?.supports('uploadFilm') ==
+                          true,
+                  onTap: catalog != null &&
+                          !_picking &&
+                          controller?.state.capabilities
+                                  ?.supports('uploadFilm') ==
+                              true
+                      ? () => Navigator.pop(context, 'import')
+                      : null),
+              ListTile(
+                  leading: const Icon(Icons.bookmark_outline),
+                  title: const Text('本地配方'),
+                  onTap: () => Navigator.pop(context, 'saved')),
+              if (controller?.state.snapshot != null &&
+                  controller!.state.snapshot!.slots[_slot]['filmId'] != 0)
+                ListTile(
+                    title: const Text('使用机身配方'),
+                    onTap: () => Navigator.pop(context, 'camera')),
+              if (_imported != null || _saved != null)
+                ListTile(
+                    title: const Text('恢复所选胶卷'),
+                    onTap: () => Navigator.pop(context, 'reset')),
+              const Divider(),
+              ListTile(
+                  leading: const Icon(Icons.link),
+                  title: const Text('导入配对文件'),
+                  enabled: !_picking,
+                  onTap:
+                      _picking ? null : () => Navigator.pop(context, 'pair')),
+              if (identity != null)
+                ListTile(
+                    leading: const Icon(Icons.link_off_outlined),
+                    title: const Text('移除当前配对'),
+                    enabled: !_picking,
+                    onTap: _picking
+                        ? null
+                        : () => Navigator.pop(context, 'unpair')),
+            ])));
+    if (!mounted) return;
+    switch (action) {
+      case 'catalog':
+        if (catalog == null) return;
+        final film = await showFilmPicker(context, catalog);
+        if (film != null && mounted) {
+          setState(() {
+            _saved = catalog.recipe(film.id);
+            _imported = null;
+          });
+        }
+      case 'import':
+        if (catalog != null) await _import(catalog);
+      case 'saved':
+        await _chooseSaved();
+      case 'camera':
+        if (controller?.state.snapshot != null) {
+          _useCameraRecipe(controller!.state.snapshot!,
+              catalog is CameraFilmCatalog ? catalog : null);
+        }
+      case 'reset':
+        setState(() {
+          _imported = null;
+          _saved = null;
+        });
+      case 'pair':
+        await _pair();
+      case 'unpair':
+        await _removePairing();
+    }
+  }
+
+  Future<void> _retry(CompanionSyncController controller) async {
+    final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+                title: const Text('重试原操作？'),
+                content: const Text(
+                    '将再次核对机身状态，并使用原操作编号和相同配置重试。不会重复创建装卷操作，也不会继续未确认的切换。'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('取消')),
+                  FilledButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('以原操作重试'))
+                ]));
+    if (confirmed == true && mounted) await controller.retryOriginalOperation();
   }
 
   @override
   Widget build(BuildContext context) {
     ref.watch(companionIdentityHydrationProvider);
     final controller = ref.watch(companionSyncControllerProvider),
-        catalog = ref.watch(cameraFilmCatalogProvider).valueOrNull,
+        cameraCatalog = ref.watch(cameraFilmCatalogProvider).valueOrNull,
         identity = ref.watch(companionPairingIdentityProvider);
+    final FilmCatalog? catalog =
+        cameraCatalog ?? ref.watch(filmCatalogProvider).valueOrNull;
     _configure(controller, ref.watch(companionNetworkReadyProvider),
         ref.watch(appForegroundProvider));
     final selected = _imported != null && catalog != null
@@ -290,201 +415,159 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
             (widget.initialFilmId != null && catalog != null
                 ? catalog.recipe(widget.initialFilmId!)
                 : ref.watch(selectedFilmRecipeProvider));
-    Widget content() =>
-        ListView(padding: const EdgeInsets.only(bottom: 28), children: [
-          _panel(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                Row(children: [
-                  const Icon(Icons.camera_alt_outlined,
-                      color: workbenchGold, size: 30),
-                  const SizedBox(width: 12),
-                  Expanded(
-                      child: Text(
-                          controller?.state.snapshot == null
-                              ? '尚未连接 M10V 胶卷桥'
-                              : controller!.state.readOnly
-                                  ? '机身配置 · 只读'
-                                  : '机身 ${controller.state.snapshot!.slots.length} 槽',
-                          style: const TextStyle(
-                              color: workbenchCream,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600))),
-                  if (identity != null)
-                    IconButton(
-                        tooltip: '移除当前配对',
-                        onPressed: _picking ? null : _removePairing,
-                        icon: const Icon(Icons.link_off_outlined,
-                            color: workbenchMuted))
-                ]),
-                const SizedBox(height: 12),
-                Text(
-                    controller?.state.message ??
-                        '请连接相机 Wi-Fi 并导入配对文件。机内配置读取与写入需要相机桥确认支持。',
-                    style: const TextStyle(color: workbenchMuted, height: 1.7)),
-                if (controller?.state.stale == true &&
-                    controller?.state.snapshot != null)
-                  const Padding(
-                      padding: EdgeInsets.only(top: 8),
-                      child: Text('上次读取的配置，当前状态待核对',
-                          style: TextStyle(color: workbenchGold))),
-                const SizedBox(height: 16),
-                Wrap(spacing: 10, runSpacing: 8, children: [
-                  OutlinedButton.icon(
-                      onPressed: _picking ? null : _pair,
-                      icon: const Icon(Icons.link, size: 18),
-                      label: const Text('导入配对文件')),
-                  OutlinedButton.icon(
-                      onPressed: controller == null || _picking
-                          ? null
-                          : () => unawaited(controller.refresh()),
-                      icon: const Icon(Icons.refresh, size: 18),
-                      label: const Text('读取机身配置'))
-                ]),
-                if (controller?.state.pending == true)
-                  Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: FilledButton.icon(
-                          onPressed: () =>
-                              unawaited(controller!.reconcileUnknown()),
-                          icon: const Icon(Icons.fact_check_outlined, size: 18),
-                          label: const Text('核对结果'))),
-                if (controller?.state.canRetryOriginal == true)
-                  TextButton(
-                      onPressed: () async {
-                        final confirmed = await showDialog<bool>(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                                    title: const Text('重试原操作？'),
-                                    content: const Text(
-                                        '将再次核对机身状态，并使用原操作编号和相同配置重试。不会重复创建装卷操作，也不会继续未确认的切换。'),
-                                    actions: [
-                                      TextButton(
-                                          onPressed: () =>
-                                              Navigator.pop(context, false),
-                                          child: const Text('取消')),
-                                      FilledButton(
-                                          onPressed: () =>
-                                              Navigator.pop(context, true),
-                                          child: const Text('以原操作重试'))
-                                    ]));
-                        if (confirmed == true && mounted) {
-                          await controller!.retryOriginalOperation();
-                        }
-                      },
-                      child: const Text('重试原操作')),
-                if (controller?.state.rebootNeedsConfirmation == true)
-                  TextButton(
-                      onPressed: () =>
-                          unawaited(controller!.acceptCurrentAfterReboot()),
-                      child: const Text('保留机身当前配置')),
-              ])),
-          if (controller?.state.snapshot != null) ...[
-            const Padding(
-                padding: EdgeInsets.fromLTRB(24, 24, 24, 10),
-                child: Text('选择目标槽位',
-                    style: TextStyle(
-                        color: workbenchCream,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600))),
-            for (var i = 0; i < controller!.state.snapshot!.slots.length; i++)
-              _slotCard(i, controller.state.snapshot!, catalog),
-          ],
-          _panel(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                const Text('准备带走的配方',
-                    style: TextStyle(color: workbenchMuted, fontSize: 12)),
-                const SizedBox(height: 8),
-                Text(
-                    selected?.name.isNotEmpty == true
-                        ? selected!.name
-                        : selected == null
-                            ? '选择胶卷'
-                            : '配方 ${selected.filmId}',
-                    style: const TextStyle(
-                        color: workbenchCream,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600)),
-                if (selected != null)
-                  Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(_parameters(selected.parameters),
-                          style: const TextStyle(
-                              color: workbenchMuted, height: 1.6))),
-                const SizedBox(height: 12),
-                Wrap(spacing: 8, children: [
-                  TextButton(
-                      onPressed: catalog == null
-                          ? null
-                          : () async {
-                              final film =
-                                  await showFilmPicker(context, catalog);
-                              if (film != null && mounted) {
-                                setState(() {
-                                  _saved = catalog.recipe(film.id);
-                                  _imported = null;
-                                });
-                              }
-                            },
-                      child: const Text('相机目录')),
-                  if (catalog != null && selected is CameraFilmRecipe)
-                    TextButton(
-                        onPressed: () => _adjustCamera(catalog, selected),
-                        child: const Text('调整相机参数')),
-                  if (controller?.state.snapshot != null &&
-                      controller!.state.snapshot!.slots[_slot]['filmId'] != 0)
-                    TextButton(
-                        onPressed: () => _useCameraRecipe(
-                            controller.state.snapshot!, catalog),
-                        child: const Text('使用机身配方')),
-                  OutlinedButton.icon(
-                      onPressed: catalog == null ||
-                              _picking ||
-                              (controller?.state.capabilities
-                                      ?.supports('uploadFilm') !=
-                                  true)
-                          ? null
-                          : () => _import(catalog),
-                      icon: const Icon(Icons.file_open_outlined, size: 18),
-                      label: const Text('导入胶卷数据')),
-                  TextButton(
-                      onPressed: _chooseSaved, child: const Text('本地配方')),
-                  if (_imported != null || _saved != null)
-                    TextButton(
-                        onPressed: () => setState(() {
-                              _imported = null;
-                              _saved = null;
-                            }),
-                        child: const Text('恢复所选胶卷'))
-                ]),
-                SwitchListTile.adaptive(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('装入后使用',
-                        style: TextStyle(color: workbenchCream, fontSize: 14)),
-                    subtitle: const Text('保存配置后，再切换机内当前胶卷',
-                        style: TextStyle(color: workbenchMuted, fontSize: 11)),
-                    value: _activate,
-                    onChanged: controller?.state.pending == true
-                        ? null
-                        : (value) => setState(() => _activate = value)),
-                SizedBox(
-                    width: double.infinity,
+    Widget content() {
+      final state = controller?.state, snapshot = state?.snapshot;
+      final canPrepare = controller != null &&
+          state != null &&
+          !state.readOnly &&
+          !state.pending &&
+          !state.stale &&
+          state.connectionStatus == SyncConnectionStatus.ready &&
+          snapshot != null &&
+          !snapshot.busy &&
+          selected != null &&
+          !_picking &&
+          !_preparing;
+      return Column(children: [
+        Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(children: [
+              Expanded(
+                  child: Text(
+                      snapshot == null
+                          ? '尚未连接 M10V 胶卷桥'
+                          : state!.readOnly
+                              ? '机身配置 · 只读'
+                              : '机身 · ${snapshot.slots.length} 槽',
+                      style: const TextStyle(
+                          color: workbenchMuted, fontSize: 12))),
+              IconButton(
+                  tooltip: '读取机身配置',
+                  onPressed: controller == null || _picking
+                      ? null
+                      : () => unawaited(controller.refresh()),
+                  icon: const Icon(Icons.refresh,
+                      color: workbenchMuted, size: 20)),
+              IconButton(
+                  tooltip: '更多胶卷操作',
+                  onPressed: _preparing
+                      ? null
+                      : () => _more(controller, catalog, identity),
+                  icon: const Icon(Icons.more_horiz, color: workbenchMuted)),
+            ])),
+        Expanded(
+            child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                children: [
+              if (snapshot == null ||
+                  state!.readOnly ||
+                  state.stale ||
+                  state.pending ||
+                  (state.operationStatus != SyncOperationStatus.draft &&
+                      state.operationStatus != SyncOperationStatus.synced) ||
+                  state.connectionStatus != SyncConnectionStatus.ready)
+                Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                        state?.connectionStatus == SyncConnectionStatus.busy
+                            ? '相机正忙，请稍后写入'
+                            : state?.connectionStatus ==
+                                    SyncConnectionStatus.connecting
+                                ? '正在读取机身配置'
+                                : state?.message ?? '请连接相机 Wi-Fi 并在更多中导入配对文件。',
+                        style: const TextStyle(
+                            color: workbenchMuted, height: 1.5))),
+              if (state?.stale == true && snapshot != null)
+                const Padding(
+                    padding: EdgeInsets.only(bottom: 12),
+                    child: Text('上次读取的配置，当前状态待核对',
+                        style: TextStyle(color: workbenchMuted))),
+              if (state?.pending == true)
+                Align(
+                    alignment: Alignment.centerLeft,
                     child: FilledButton.icon(
-                        onPressed: controller == null ||
-                                controller.state.readOnly ||
-                                controller.state.pending ||
-                                selected == null ||
-                                _picking
-                            ? null
-                            : () => _prepare(controller, selected),
-                        icon: const Icon(Icons.arrow_forward, size: 18),
-                        label: Text(
-                            '装入槽位 ${(_slot + 1).toString().padLeft(2, '0')}'))),
-              ])),
-        ]);
+                        onPressed: () =>
+                            unawaited(controller!.reconcileUnknown()),
+                        icon: const Icon(Icons.fact_check_outlined, size: 18),
+                        label: const Text('核对结果'))),
+              if (state?.canRetryOriginal == true)
+                Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                        onPressed: () => _retry(controller!),
+                        child: const Text('重试原操作'))),
+              if (state?.rebootNeedsConfirmation == true)
+                Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                        onPressed: () =>
+                            unawaited(controller!.acceptCurrentAfterReboot()),
+                        child: const Text('保留机身当前配置'))),
+              if (snapshot != null)
+                for (var i = 0; i < snapshot.slots.length; i++)
+                  _slotCard(i, snapshot, catalog),
+            ])),
+        Container(
+            padding: const EdgeInsets.fromLTRB(22, 12, 22, 12),
+            decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: Color(0xff343b3e)))),
+            child: SafeArea(
+                top: false,
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Row(children: [
+                    _filmIcon(_definition(catalog, selected?.filmId), size: 36),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child: Text(
+                            selected == null
+                                ? '选择胶卷'
+                                : selected.name.isEmpty
+                                    ? '配方 ${selected.filmId}'
+                                    : selected.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: workbenchCream,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600))),
+                    if (cameraCatalog != null && selected is CameraFilmRecipe)
+                      TextButton(
+                          onPressed: _preparing
+                              ? null
+                              : () => _adjustCamera(cameraCatalog, selected),
+                          child: const Text('调整参数',
+                              style: TextStyle(
+                                  color: workbenchMuted, fontSize: 12))),
+                  ]),
+                  SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('写入后使用',
+                          style:
+                              TextStyle(color: workbenchCream, fontSize: 14)),
+                      value: _activate,
+                      onChanged: state?.pending == true || _preparing
+                          ? null
+                          : (value) {
+                              if (_preparing) return;
+                              setState(() => _activate = value);
+                            }),
+                  SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                          style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xffe5e8e3),
+                              foregroundColor: workbenchBackground,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 14)),
+                          onPressed: canPrepare
+                              ? () => _prepare(controller, selected)
+                              : null,
+                          child: Text(
+                              '写入槽位 ${(_slot + 1).toString().padLeft(2, '0')}'))),
+                ]))),
+      ]);
+    }
+
     return controller == null
         ? content()
         : ListenableBuilder(
@@ -492,82 +575,79 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
   }
 
   Widget _slotCard(int slot, CompanionSnapshot snapshot, FilmCatalog? catalog) {
-    final value = snapshot.slots[slot], id = value['filmId'] as int;
-    FilmDefinition? film;
-    for (final entry in catalog?.entries ?? <FilmDefinition>[]) {
-      if (entry.id == id) {
-        film = entry;
-        break;
-      }
-    }
-    final name = film?.name ??
-        (id == 0
-            ? '空槽'
-            : id >= 79 && id <= 288
-                ? '自定义胶卷 $id'
-                : '配方 $id');
-    return Padding(
-        padding: const EdgeInsets.fromLTRB(22, 0, 22, 10),
-        child: Material(
-            color: slot == _slot ? workbenchSurface : workbenchBackground,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-                side: BorderSide(
-                    color: slot == _slot ? workbenchGold : workbenchSurface)),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-                key: ValueKey('camera-film-slot-$slot'),
-                onTap: () => setState(() => _slot = slot),
-                child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(children: [
-                      Text((slot + 1).toString().padLeft(2, '0'),
+    final id = snapshot.slots[slot]['filmId'] as int;
+    final film = _definition(catalog, id);
+    final name = _filmName(catalog, id);
+    return Material(
+        color: slot == _slot ? const Color(0xff2b3235) : Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+            key: ValueKey('camera-film-slot-$slot'),
+            onTap: _preparing ? null : () => setState(() => _slot = slot),
+            child: Container(
+                constraints: const BoxConstraints(minHeight: 48),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                decoration: const BoxDecoration(
+                    border: Border(
+                        bottom:
+                            BorderSide(color: Color(0xff343b3e), width: .5))),
+                child: Row(children: [
+                  SizedBox(
+                      width: 24,
+                      child: Text((slot + 1).toString().padLeft(2, '0'),
                           style: const TextStyle(
-                              color: workbenchGold, fontSize: 13)),
-                      const SizedBox(width: 14),
-                      if (film != null)
-                        Padding(
-                            padding: const EdgeInsets.only(right: 12),
-                            child:
-                                Image.asset(film.icon, width: 34, height: 34)),
-                      Expanded(
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                            Text(name,
-                                style: const TextStyle(
-                                    color: workbenchCream,
-                                    fontWeight: FontWeight.w600)),
-                            const SizedBox(height: 4),
-                            Text(
-                                _parameters(Map<String, Object?>.from(
-                                    value['parameters'] as Map)),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    color: workbenchMuted, fontSize: 11))
-                          ])),
-                      if (snapshot.activeSlot == slot)
-                        const Padding(
-                            padding: EdgeInsets.only(left: 8),
-                            child: Text('机内使用中',
-                                style: TextStyle(
-                                    color: workbenchGold, fontSize: 10))),
-                      if (_slot == slot)
-                        const Padding(
-                            padding: EdgeInsets.only(left: 8),
-                            child: Icon(Icons.check_circle_outline,
-                                size: 19, color: workbenchGold))
-                    ])))));
+                              color: workbenchMuted, fontSize: 11))),
+                  _filmIcon(film, size: 28),
+                  const SizedBox(width: 12),
+                  Expanded(
+                      child: Text(name,
+                          style: TextStyle(
+                              color: id == 0 ? workbenchMuted : workbenchCream,
+                              fontSize: 13))),
+                  if (snapshot.activeSlot == slot)
+                    const Padding(
+                        padding: EdgeInsets.only(left: 8),
+                        child: Text('机内使用中',
+                            style: TextStyle(
+                                color: workbenchMuted, fontSize: 10))),
+                  if (_slot == slot)
+                    const Padding(
+                        padding: EdgeInsets.only(left: 8),
+                        child:
+                            Icon(Icons.check, size: 17, color: workbenchCream)),
+                ]))));
   }
 }
 
-Widget _panel({required Widget child}) => Container(
-    margin: const EdgeInsets.fromLTRB(22, 16, 22, 0),
-    padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(
-        color: workbenchSurface, borderRadius: BorderRadius.circular(16)),
-    child: child);
+AnimationStyle _filmSheetAnimation(BuildContext context) {
+  final duration = WorkspaceMotion.duration(context, 280);
+  return duration == Duration.zero
+      ? AnimationStyle.noAnimation
+      : AnimationStyle(
+          duration: duration,
+          reverseDuration: WorkspaceMotion.duration(context, 200));
+}
+
+FilmDefinition? _definition(FilmCatalog? catalog, int? id) {
+  for (final entry in catalog?.entries ?? <FilmDefinition>[]) {
+    if (entry.id == id) return entry;
+  }
+  return null;
+}
+
+String _filmName(FilmCatalog? catalog, int id) => id == 0
+    ? '空槽'
+    : _definition(catalog, id)?.name ??
+        (id >= 79 && id <= 288 ? '自定义胶卷 $id' : '配方 $id');
+
+Widget _filmIcon(FilmDefinition? film, {required double size}) => film == null
+    ? SizedBox(
+        width: size,
+        height: size,
+        child: const Icon(Icons.crop_square, color: workbenchMuted, size: 18))
+    : Image.asset(film.icon, width: size, height: size, fit: BoxFit.contain);
+
 String _parameters(Map<String, Object?> parameters) {
   const names = {
     'grain': '颗粒',
@@ -590,25 +670,34 @@ String _parameters(Map<String, Object?> parameters) {
 
 class _LoadSheet extends StatefulWidget {
   const _LoadSheet(
-      {required this.controller,
-      this.catalog,
-      required this.slot,
-      required this.recipe,
-      required this.activate});
+      {required this.controller, this.catalog, required this.preparedLoad});
   final CompanionSyncController controller;
   final FilmCatalog? catalog;
-  final int slot;
-  final FilmRecipe recipe;
-  final bool activate;
+  final PreparedCompanionLoad preparedLoad;
   @override
   State<_LoadSheet> createState() => _LoadSheetState();
 }
 
 class _LoadSheetState extends State<_LoadSheet> {
   final choices = <String, ConflictChoice>{};
-  bool _resolving = false;
+  bool _resolving = false, _details = false;
+  bool _matchesPreparation(PreparedCompanionLoad? load) =>
+      load != null &&
+      load.slot == widget.preparedLoad.slot &&
+      identical(load.recipe, widget.preparedLoad.recipe) &&
+      (load.activate == widget.preparedLoad.activate ||
+          widget.controller.state.merge?.keepLocalSlots.contains(load.slot) ==
+              true);
+
+  void _confirm() {
+    if (!_matchesPreparation(widget.controller.preparedLoad)) return;
+    unawaited(widget.controller.confirm());
+  }
+
   Future<void> _resolve() async {
-    if (_resolving) return;
+    if (_resolving || !_matchesPreparation(widget.controller.preparedLoad)) {
+      return;
+    }
     setState(() => _resolving = true);
     try {
       await widget.controller.resolve(choices);
@@ -627,125 +716,261 @@ class _LoadSheetState extends State<_LoadSheet> {
       listenable: widget.controller,
       builder: (context, child) {
         final state = widget.controller.state;
+        final currentLoad = widget.controller.preparedLoad;
+        final samePreparation = _matchesPreparation(currentLoad);
+        // Keep the finished intent visible for its receipt, but never confirm a
+        // cached intent after the controller prepares a different operation.
+        final load = currentLoad ?? widget.preparedLoad;
+        final slot = load.slot, recipe = load.recipe;
+
+        final targetId = state.snapshot?.slots[slot]['filmId'] as int? ?? 0;
+        final keepLocal = state.merge?.keepLocalSlots.contains(slot) == true;
+        final canConfirm = samePreparation &&
+            !state.pending &&
+            !state.readOnly &&
+            !state.stale &&
+            state.snapshot?.busy == false &&
+            state.connectionStatus == SyncConnectionStatus.ready &&
+            state.hasPreparedLoad &&
+            state.merge?.readOnly == false &&
+            state.merge?.resolved == true &&
+            !_resolving &&
+            state.operationStatus != SyncOperationStatus.synced;
+        final parameters = state.merge == null
+            ? recipe.parameters
+            : wireMap(wireMap(
+                (state.merge!.merged['slots'] as List)[slot])['parameters']);
         return SafeArea(
-            child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
-                child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('确认装卷',
-                          style: TextStyle(
-                              color: workbenchCream,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 12),
-                      Text(
-                          '槽位 ${(widget.slot + 1).toString().padLeft(2, '0')} · ${widget.recipe.name}',
-                          style: const TextStyle(
-                              color: workbenchGold, fontSize: 16)),
-                      const SizedBox(height: 8),
-                      Text(
-                          state.merge?.keepLocalSlots.contains(widget.slot) ==
-                                  true
-                              ? '手机配方单独保留，机内槽位不变'
-                              : widget.activate
-                                  ? '先保存配置，再切换为当前使用的胶卷'
-                                  : '只保存配置，保留机内当前使用的胶卷',
-                          style: const TextStyle(
-                              color: workbenchMuted, height: 1.6)),
-                      Flexible(
-                          child: SingleChildScrollView(
-                              child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                            Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
-                                child: Text(state.message,
-                                    style: const TextStyle(
-                                        color: workbenchCream, height: 1.6))),
-                            if (state.merge != null)
-                              for (final change in _changes(
-                                  state.snapshot?.config, state.merge!.merged,
-                                  catalog: widget.catalog))
-                                Padding(
-                                    padding: const EdgeInsets.only(bottom: 8),
-                                    child: Text(change,
-                                        style: const TextStyle(
-                                            color: workbenchMuted,
-                                            fontSize: 12))),
-                            for (final conflict
-                                in state.merge?.conflicts ?? <SyncConflict>[])
-                              Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 8),
+            child: ConstrainedBox(
+                constraints: BoxConstraints(
+                    maxHeight: MediaQuery.sizeOf(context).height * .9),
+                child: Padding(
+                    padding: const EdgeInsets.fromLTRB(22, 20, 22, 12),
+                    child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('确认装卷',
+                              style: TextStyle(
+                                  color: workbenchCream,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 16),
+                          Flexible(
+                              child: SingleChildScrollView(
                                   child: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        Text(_fieldLabel(conflict.path),
+                                Row(children: [
+                                  _filmIcon(
+                                      _definition(
+                                          widget.catalog, recipe.filmId),
+                                      size: 52),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                      child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                        Text(
+                                            recipe.name.isEmpty
+                                                ? _filmName(widget.catalog,
+                                                    recipe.filmId)
+                                                : recipe.name,
                                             style: const TextStyle(
-                                                color: workbenchCream)),
-                                        const SizedBox(height: 8),
-                                        Wrap(
-                                            spacing: 6,
-                                            runSpacing: 6,
-                                            children: [
-                                              for (final option
-                                                  in ConflictChoice.values)
-                                                ChoiceChip(
-                                                    label:
-                                                        Text(switch (option) {
-                                                      ConflictChoice.local =>
-                                                        '手机 ${conflict.local}',
-                                                      ConflictChoice.remote =>
-                                                        '机身 ${conflict.remote}',
-                                                      ConflictChoice.keepBoth =>
-                                                        '保留两份'
-                                                    }),
-                                                    selected: choices[
-                                                            conflict.path] ==
-                                                        option,
-                                                    onSelected: state.pending
-                                                        ? null
-                                                        : (_) => setState(() =>
-                                                            choices[conflict
-                                                                    .path] =
-                                                                option))
-                                            ])
+                                                color: workbenchCream,
+                                                fontSize: 22,
+                                                fontWeight: FontWeight.w600)),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                            keepLocal
+                                                ? '手机配方单独保留，机内槽位不变'
+                                                : load.activate
+                                                    ? '写入后使用'
+                                                    : '写入后不切换当前胶卷',
+                                            style: const TextStyle(
+                                                color: workbenchMuted,
+                                                fontSize: 12)),
                                       ])),
-                            if ((state.merge?.conflicts.isNotEmpty ?? false) &&
-                                !(state.merge?.resolved ?? true))
-                              OutlinedButton(
-                                  onPressed: _resolving ? null : _resolve,
-                                  child: const Text('保存冲突选择')),
-                            if (state.pending)
-                              const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 12),
-                                  child: LinearProgressIndicator(
-                                      minHeight: 3, color: workbenchGold)),
-                          ]))),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                          width: double.infinity,
-                          child: FilledButton(
-                              onPressed: state.pending ||
-                                      state.readOnly ||
-                                      !(state.merge?.resolved ?? false) ||
-                                      state.operationStatus ==
+                                ]),
+                                const SizedBox(height: 20),
+                                Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(14),
+                                    decoration: BoxDecoration(
+                                        color: const Color(0xff2b3235),
+                                        borderRadius: BorderRadius.circular(8)),
+                                    child: Wrap(
+                                        alignment: WrapAlignment.spaceBetween,
+                                        spacing: 12,
+                                        runSpacing: 6,
+                                        children: [
+                                          const Text('目标槽位',
+                                              style: TextStyle(
+                                                  color: workbenchMuted,
+                                                  fontSize: 12)),
+                                          Text(
+                                              '${(slot + 1).toString().padLeft(2, '0')} · ${_filmName(widget.catalog, targetId)}',
+                                              style: const TextStyle(
+                                                  color: workbenchCream,
+                                                  fontSize: 12)),
+                                        ])),
+                                if (targetId != 0 &&
+                                    !keepLocal &&
+                                    state.operationStatus !=
+                                        SyncOperationStatus.synced)
+                                  Padding(
+                                      padding: const EdgeInsets.only(top: 12),
+                                      child: Text(
+                                          '将覆盖：${_filmName(widget.catalog, targetId)}',
+                                          style: const TextStyle(
+                                              color: workbenchCream,
+                                              fontSize: 13))),
+                                if (currentLoad != null && !samePreparation)
+                                  const Padding(
+                                      padding: EdgeInsets.only(top: 12),
+                                      child: Text('准备内容已变化，请返回后重新确认',
+                                          style: TextStyle(
+                                              color: workbenchCream))),
+                                if (state.operationStatus !=
+                                        SyncOperationStatus.draft ||
+                                    state.readOnly ||
+                                    state.stale)
+                                  Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 12),
+                                      child: Text(state.message,
+                                          style: const TextStyle(
+                                              color: workbenchCream,
+                                              height: 1.5))),
+                                // Conflicts remain visible even when optional parameter details are folded.
+                                for (final conflict in state.merge?.conflicts ??
+                                    <SyncConflict>[])
+                                  Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 8),
+                                      child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(_fieldLabel(conflict.path),
+                                                style: const TextStyle(
+                                                    color: workbenchCream)),
+                                            const SizedBox(height: 8),
+                                            Wrap(
+                                                spacing: 6,
+                                                runSpacing: 6,
+                                                children: [
+                                                  for (final option
+                                                      in ConflictChoice.values)
+                                                    ChoiceChip(
+                                                        label: Text(
+                                                            switch (option) {
+                                                          ConflictChoice
+                                                                .local =>
+                                                            '手机 ${conflict.local}',
+                                                          ConflictChoice
+                                                                .remote =>
+                                                            '机身 ${conflict.remote}',
+                                                          ConflictChoice
+                                                                .keepBoth =>
+                                                            '保留两份'
+                                                        }),
+                                                        selected: choices[
+                                                                conflict
+                                                                    .path] ==
+                                                            option,
+                                                        onSelected: state
+                                                                    .pending ||
+                                                                _resolving
+                                                            ? null
+                                                            : (_) => setState(() =>
+                                                                choices[conflict
+                                                                        .path] =
+                                                                    option)),
+                                                ]),
+                                          ])),
+                                if ((state.merge?.conflicts.isNotEmpty ??
+                                        false) &&
+                                    !(state.merge?.resolved ?? true))
+                                  OutlinedButton(
+                                      onPressed: _resolving || state.pending
+                                          ? null
+                                          : _resolve,
+                                      child: const Text('保存冲突选择')),
+                                TextButton.icon(
+                                    onPressed: () =>
+                                        setState(() => _details = !_details),
+                                    style: TextButton.styleFrom(
+                                        foregroundColor: workbenchMuted,
+                                        padding: EdgeInsets.zero),
+                                    iconAlignment: IconAlignment.end,
+                                    icon: Icon(
+                                        _details
+                                            ? Icons.expand_less
+                                            : Icons.expand_more,
+                                        size: 16),
+                                    label: const Text('参数明细',
+                                        style: TextStyle(fontSize: 12))),
+                                WorkspaceReveal(
+                                    visible: _details,
+                                    child: Padding(
+                                        padding:
+                                            const EdgeInsets.only(bottom: 12),
+                                        child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(_parameters(parameters),
+                                                  style: const TextStyle(
+                                                      color: workbenchMuted,
+                                                      fontSize: 12,
+                                                      height: 1.6)),
+                                              if (state.merge != null)
+                                                for (final change in _changes(
+                                                    state.snapshot?.config,
+                                                    state.merge!.merged,
+                                                    catalog: widget.catalog))
+                                                  Padding(
+                                                      padding:
+                                                          const EdgeInsets.only(
+                                                              top: 8),
+                                                      child: Text(change,
+                                                          style: const TextStyle(
+                                                              color:
+                                                                  workbenchMuted,
+                                                              fontSize: 12))),
+                                            ]))),
+                                if ({
+                                  SyncOperationStatus.queued,
+                                  SyncOperationStatus.applying,
+                                  SyncOperationStatus.verifying
+                                }.contains(state.operationStatus))
+                                  const Padding(
+                                      padding:
+                                          EdgeInsets.symmetric(vertical: 12),
+                                      child: LinearProgressIndicator(
+                                          minHeight: 3, color: workbenchMuted)),
+                              ]))),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                              width: double.infinity,
+                              child: FilledButton(
+                                  style: FilledButton.styleFrom(
+                                      backgroundColor: const Color(0xffe5e8e3),
+                                      foregroundColor: workbenchBackground,
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 14)),
+                                  onPressed: canConfirm ? _confirm : null,
+                                  child: Text(state.operationStatus ==
                                           SyncOperationStatus.synced
-                                  ? null
-                                  : () =>
-                                      unawaited(widget.controller.confirm()),
-                              child: Text(state.operationStatus ==
-                                      SyncOperationStatus.synced
-                                  ? '已核对完成'
-                                  : '确认装入'))),
-                      TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('返回')),
-                    ])));
+                                      ? '已核对完成'
+                                      : '确认写入'))),
+                          TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('返回')),
+                        ]))));
       });
 }
 
