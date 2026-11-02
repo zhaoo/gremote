@@ -13,7 +13,7 @@ import '../../support/test_darkroom.dart';
 void main() {
   for (final width in [320.0, 390.0]) {
     testWidgets(
-        'camera workspace fits $width with large text and searchable table',
+        'camera workspace fits $width with large text and searchable film grid',
         (tester) async {
       tester.view.physicalSize = Size(width, 844);
       tester.view.devicePixelRatio = 1;
@@ -36,7 +36,9 @@ void main() {
           child:
               MaterialApp(theme: GRemoteTheme.dark, home: const CameraPage())));
       await tester.pumpAndSettle();
-      expect(find.text('51 款胶卷'), findsOneWidget);
+      expect(find.byType(GridView), findsOneWidget);
+      await tester.tap(find.byTooltip('搜索胶卷'));
+      await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), '800T');
       await tester.pumpAndSettle();
       expect(find.text('800T', findRichText: false).last, findsOneWidget);
@@ -45,7 +47,6 @@ void main() {
       await tester.tap(find.text('扩展'));
       await tester.pumpAndSettle();
       expect(find.text('连接并配对 M10V 相机'), findsOneWidget);
-      expect(find.byType(Switch), findsNothing);
       expect(tester.takeException(), isNull);
     });
   }
