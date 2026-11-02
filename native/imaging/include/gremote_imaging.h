@@ -59,6 +59,9 @@ typedef struct {
   int32_t quality;
   /* NUL-terminated UTF-8 path; written atomically by the callee. */
   const char* output_path;
+  /* Optional v1 photo edits (1062 floats); NULL/count 0 is legacy identity. */
+  const float* edits;
+  int32_t edit_count;
 } gremote_export_request;
 
 /* Decodes an oriented RGBA8 preview whose long edge is at most max_edge.
@@ -75,6 +78,14 @@ GREMOTE_EXPORT int32_t gremote_lut_validate(const uint8_t* cube, int64_t length,
 GREMOTE_EXPORT int32_t gremote_apply_lut_rgba(uint8_t* rgba, int32_t width,
                                         int32_t height, const uint8_t* cube,
                                         int64_t length, float strength);
+
+/* Renders an already EXIF-oriented straight RGBA image without modifying input.
+ * target dimensions must not exceed the edited crop; out is freed with gremote_free.
+ * Parameters are the fixed 1062-float v1 photo-edit protocol. */
+GREMOTE_EXPORT int32_t gremote_render_edit_rgba(const uint8_t* rgba,
+    int32_t width, int32_t height, const float* edits, int32_t edit_count,
+    const uint8_t* cube, int64_t cube_length, float lut_strength,
+    int32_t target_width, int32_t target_height, uint8_t** out_rgba);
 
 GREMOTE_EXPORT int32_t gremote_export_jpeg(const gremote_export_request* request,
                                      const volatile int32_t* cancel);
