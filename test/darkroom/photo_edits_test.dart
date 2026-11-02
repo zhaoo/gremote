@@ -4,7 +4,7 @@ import 'package:gremote/darkroom/model/photo_edits.dart';
 
 void main() {
   test('old recipe restores a neutral editable original', () {
-    final recipe = ExportRecipe.fromJson({'frame': 'none'});
+    final recipe = ExportRecipe.fromJson(const {'frame': 'none'});
     expect(recipe.edits, const PhotoEdits());
     expect(recipe.edits.crop.outputSize(6000, 4000), (6000, 4000));
     final p = recipe.edits.nativeParameters;
@@ -35,11 +35,8 @@ void main() {
           angle: 8),
       seed: 741,
       curves: [
-        ToneCurve.fromPoints([
-          const CurvePoint(0, .1),
-          const CurvePoint(.5, .7),
-          const CurvePoint(1, .95)
-        ]),
+        ToneCurve.fromPoints(
+            const [CurvePoint(0, .1), CurvePoint(.5, .7), CurvePoint(1, .95)]),
         const ToneCurve(),
         const ToneCurve(),
         const ToneCurve()
@@ -57,7 +54,7 @@ void main() {
             .withValue(PhotoAdjustment.exposure, 99)
             .value(PhotoAdjustment.exposure),
         3);
-    final restored = PhotoEdits.fromJson({
+    final restored = PhotoEdits.fromJson(const {
       'values': {'grain': 'bad'},
       'seed': -200,
       'crop': {'left': 2, 'top': -1, 'width': 0, 'height': 9}
@@ -75,16 +72,26 @@ void main() {
     expect(const CropEdit(width: .000001, height: .000001).outputSize(2, 1),
         (1, 1));
     expect(
-        CropEdit.fromJson({'quarterTurns': 9, 'angle': 100}).quarterTurns, 1);
-    expect(CropEdit.fromJson({'angle': 100}).angle, 45);
+        CropEdit.fromJson(const {'quarterTurns': 9, 'angle': 100}).quarterTurns,
+        1);
+    expect(CropEdit.fromJson(const {'angle': 100}).angle, 45);
+  });
+
+  test('crop dimensions match native float32 rounding and ratio persists', () {
+    expect(const CropEdit(width: .525).outputSize(100, 80), (52, 80));
+    expect(const CropEdit(width: .265).outputSize(100, 80), (26, 80));
+    expect(
+        CropEdit.fromJson(const CropEdit(aspectRatio: 1.5).toJson())
+            .aspectRatio,
+        1.5);
   });
 
   test('curves sort merge duplicates and preserve smooth bounded tones', () {
-    final c = ToneCurve.fromPoints([
-      const CurvePoint(1, 1),
-      const CurvePoint(.5, .8),
-      const CurvePoint(.5, .6),
-      const CurvePoint(0, 0),
+    final c = ToneCurve.fromPoints(const [
+      CurvePoint(1, 1),
+      CurvePoint(.5, .8),
+      CurvePoint(.5, .6),
+      CurvePoint(0, 0),
       CurvePoint(double.nan, .9)
     ]);
     expect(c.points.length, 3);

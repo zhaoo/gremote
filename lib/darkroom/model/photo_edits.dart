@@ -61,7 +61,8 @@ class CropEdit {
       this.quarterTurns = 0,
       this.flipX = false,
       this.flipY = false,
-      this.angle = 0});
+      this.angle = 0,
+      this.aspectRatio = 0});
 
   factory CropEdit.fromJson(Object? json) {
     final m = json is Map ? json : const {};
@@ -76,10 +77,11 @@ class CropEdit {
             (_number(m['quarterTurns'], 0, -10000, 10000).round() % 4),
         flipX: m['flipX'] == true,
         flipY: m['flipY'] == true,
-        angle: _number(m['angle'], 0, -45, 45));
+        angle: _number(m['angle'], 0, -45, 45),
+        aspectRatio: _number(m['aspectRatio'], 0, 0, 100));
   }
 
-  final double left, top, width, height, angle;
+  final double left, top, width, height, angle, aspectRatio;
   final int quarterTurns;
   final bool flipX, flipY;
   Map<String, Object?> toJson() => {
@@ -90,7 +92,8 @@ class CropEdit {
         'quarterTurns': quarterTurns,
         'flipX': flipX,
         'flipY': flipY,
-        'angle': angle
+        'angle': angle,
+        'aspectRatio': aspectRatio
       };
   CropEdit copyWith(
           {double? left,
@@ -100,7 +103,8 @@ class CropEdit {
           int? quarterTurns,
           bool? flipX,
           bool? flipY,
-          double? angle}) =>
+          double? angle,
+          double? aspectRatio}) =>
       CropEdit.fromJson({
         ...toJson(),
         if (left != null) 'left': left,
@@ -110,7 +114,8 @@ class CropEdit {
         if (quarterTurns != null) 'quarterTurns': quarterTurns,
         if (flipX != null) 'flipX': flipX,
         if (flipY != null) 'flipY': flipY,
-        if (angle != null) 'angle': angle
+        if (angle != null) 'angle': angle,
+        if (aspectRatio != null) 'aspectRatio': aspectRatio
       });
 
   (int, int) outputSize(int sourceWidth, int sourceHeight) {
@@ -118,9 +123,15 @@ class CropEdit {
     final w = swap ? sourceHeight : sourceWidth;
     final h = swap ? sourceWidth : sourceHeight;
     return (
-      math.max(1, (w * width).round()),
-      math.max(1, (h * height).round())
+      math.max(1, _floatProduct(w, width).round()).clamp(1, w),
+      math.max(1, _floatProduct(h, height).round()).clamp(1, h)
     );
+  }
+
+  static double _floatProduct(int pixels, double fraction) {
+    final p = Float32List.fromList([pixels.toDouble(), fraction]);
+    p[0] = p[0] * p[1];
+    return p[0];
   }
 
   @override
@@ -128,8 +139,8 @@ class CropEdit {
       other is CropEdit &&
       const MapEquality<String, Object?>().equals(toJson(), other.toJson());
   @override
-  int get hashCode =>
-      Object.hash(left, top, width, height, quarterTurns, flipX, flipY, angle);
+  int get hashCode => Object.hash(
+      left, top, width, height, quarterTurns, flipX, flipY, angle, aspectRatio);
 }
 
 @immutable
@@ -137,7 +148,8 @@ class CurvePoint {
   const CurvePoint(this.x, this.y);
   final double x, y;
   @override
-  bool operator ==(Object o) => o is CurvePoint && o.x == x && o.y == y;
+  bool operator ==(Object other) =>
+      other is CurvePoint && other.x == x && other.y == y;
   @override
   int get hashCode => Object.hash(x, y);
 }
@@ -218,9 +230,9 @@ class ToneCurve {
   }
 
   @override
-  bool operator ==(Object o) =>
-      o is ToneCurve &&
-      const ListEquality<CurvePoint>().equals(points, o.points);
+  bool operator ==(Object other) =>
+      other is ToneCurve &&
+      const ListEquality<CurvePoint>().equals(points, other.points);
   @override
   int get hashCode => Object.hashAll(points);
 }
@@ -297,12 +309,12 @@ class PhotoEdits {
   }
 
   @override
-  bool operator ==(Object o) =>
-      o is PhotoEdits &&
-      crop == o.crop &&
-      seed == o.seed &&
-      const ListEquality<ToneCurve>().equals(curves, o.curves) &&
-      PhotoAdjustment.values.every((a) => value(a) == o.value(a));
+  bool operator ==(Object other) =>
+      other is PhotoEdits &&
+      crop == other.crop &&
+      seed == other.seed &&
+      const ListEquality<ToneCurve>().equals(curves, other.curves) &&
+      PhotoAdjustment.values.every((a) => value(a) == other.value(a));
   @override
   int get hashCode => Object.hash(crop, seed, Object.hashAll(curves),
       Object.hashAll(PhotoAdjustment.values.map(value)));
