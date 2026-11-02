@@ -116,13 +116,16 @@ class ExportService {
       throw fail(ExportStage.read, 'missingExif', '无法读取照片的 EXIF 尺寸与方向');
     }
     final recipe = doc.recipe;
-    final (pw, ph) =
-        scaledPhotoSize(meta.orientedWidth, meta.orientedHeight, recipe.size);
+    final (cropWidth, cropHeight) =
+        recipe.edits.crop.outputSize(meta.orientedWidth, meta.orientedHeight);
+    final (pw, ph) = scaledPhotoSize(cropWidth, cropHeight, recipe.size);
     final layout = computeFrameLayout(
       photoWidth: pw,
       photoHeight: ph,
       style: recipe.frame,
       ratio: recipe.ratio,
+      borderWidth: recipe.frameWidth,
+      dateStamp: recipe.dateStamp,
       content: FrameContent.from(meta,
           title: doc.title, location: doc.location, hidden: doc.hidden),
     );
@@ -161,6 +164,7 @@ class ExportService {
             orientation: meta.orientation,
             cube: cube,
             lutStrength: recipe.strength,
+            adjustments: recipe.edits.nativeParameters,
             photoWidth: layout.photo.width,
             photoHeight: layout.photo.height,
             photoX: layout.photo.x,

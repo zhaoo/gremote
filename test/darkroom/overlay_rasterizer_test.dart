@@ -35,6 +35,29 @@ void main() {
     expect(hasOpaquePixels(info), isTrue);
   });
 
+  testWidgets('date stamp rasterizes inside the photo without adding a frame',
+      (tester) async {
+    final layout = computeFrameLayout(
+        photoWidth: 600,
+        photoHeight: 400,
+        style: FrameStyle.none,
+        ratio: FrameRatio.original,
+        content: content,
+        dateStamp: true);
+    final overlays = await tester
+        .runAsync(() => const OverlayRasterizer().rasterize(layout));
+    final stamp = overlays!.single;
+    expect((layout.canvasWidth, layout.canvasHeight), (600, 400));
+    expect(stamp.x, greaterThan(0));
+    expect(stamp.y, greaterThan(0));
+    expect(stamp.x + stamp.width, lessThan(600));
+    expect(stamp.y + stamp.height, lessThan(400));
+    expect(stamp.rgba.length, stamp.width * stamp.height * 4);
+    expect(hasOpaquePixels(stamp), isTrue);
+    expect(stamp.rgba.where((value) => value == 0), isNotEmpty,
+        reason: 'only the date glyphs cover the photo');
+  });
+
   testWidgets('skips regions whose fields are all hidden', (tester) async {
     final layout = computeFrameLayout(
         photoWidth: 600,

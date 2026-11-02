@@ -39,6 +39,20 @@ class FfiImagingEngine implements ImagingEngine {
   }
 
   @override
+  Future<PreviewImage> renderPhoto(
+    PreviewImage source, {
+    required Float32List adjustments,
+    Uint8List? cube,
+    double strength = 1,
+    required int width,
+    required int height,
+  }) {
+    final path = _libraryPath;
+    return Isolate.run(() =>
+        _renderPhoto(path, source, adjustments, cube, strength, width, height));
+  }
+
+  @override
   Future<void> exportJpeg(ExportJob job, {ImagingCancelToken? cancel}) {
     final path = _libraryPath;
     final cancelAddress = cancel?.address ?? 0;
@@ -54,6 +68,74 @@ Pointer<Uint8> _copy(Arena arena, Uint8List bytes) {
   final pointer = arena<Uint8>(bytes.isEmpty ? 1 : bytes.length);
   pointer.asTypedList(bytes.length).setAll(0, bytes);
   return pointer;
+}
+
+Pointer<Float> _copyEdits(Arena arena, Float32List edits) {
+  final pointer = arena<Float>(edits.isEmpty ? 1 : edits.length);
+  pointer.asTypedList(edits.length).setAll(0, edits);
+  return pointer;
+}
+
+int _rgbaLength(int width, int height) {
+  // Check before passing dimensions through the signed int32 ABI or copying
+  // source bytes. The pixel cap matches the native image allocation limit.
+  if (width <= 0 || height <= 0 || width > 0x7fffffff || height > 0x7fffffff) {
+    throw const ImagingException(ImagingErrorCode.invalidArgument);
+  }
+  final pixels = width * height;
+  if (pixels > 100000000) {
+    throw const ImagingException(ImagingErrorCode.tooLarge);
+  }
+  return pixels * 4;
+}
+
+PreviewImage _renderPhoto(
+  String path,
+  PreviewImage source,
+  Float32List adjustments,
+  Uint8List? cube,
+  double strength,
+  int width,
+  int height,
+) {
+  final sourceLength = _rgbaLength(source.width, source.height);
+  final outputLength = _rgbaLength(width, height);
+  if (source.rgba.length != sourceLength ||
+      adjustments.length != 1062 ||
+      adjustments.any((value) => !value.isFinite) ||
+      !strength.isFinite) {
+    throw const ImagingException(ImagingErrorCode.invalidArgument);
+  }
+  final bindings = ImagingBindings.open(path);
+  return using((arena) {
+    final output = arena<Pointer<Uint8>>()..value = nullptr;
+    try {
+      _check(bindings.renderPhoto(
+        _copy(arena, source.rgba),
+        source.width,
+        source.height,
+        _copyEdits(arena, adjustments),
+        adjustments.length,
+        cube == null || cube.isEmpty ? nullptr : _copy(arena, cube),
+        cube?.length ?? 0,
+        strength,
+        width,
+        height,
+        output,
+      ));
+      if (output.value == nullptr) {
+        throw const ImagingException(ImagingErrorCode.outOfMemory);
+      }
+      return PreviewImage(
+        width: width,
+        height: height,
+        rgba: Uint8List.fromList(output.value.asTypedList(outputLength)),
+      );
+    } finally {
+      // Native owns this allocation, including any buffer returned on failure.
+      bindings.free(output.value.cast());
+    }
+  });
 }
 
 int _validateLut(String path, Uint8List cube) {
@@ -108,6 +190,7 @@ void _export(String path, ExportJob job, int cancelAddress) {
   using((arena) {
     final request = arena<NativeExportRequest>();
     final cube = job.cube;
+    final adjustments = job.adjustments;
     final overlays = job.overlays.isEmpty
         ? nullptr
         : arena<NativeOverlay>(job.overlays.length);
@@ -138,7 +221,11 @@ void _export(String path, ExportJob job, int cancelAddress) {
       ..overlays = overlays
       ..overlayCount = job.overlays.length
       ..quality = job.quality
-      ..outputPath = job.outputPath.toNativeUtf8(allocator: arena);
+      ..outputPath = job.outputPath.toNativeUtf8(allocator: arena)
+      ..edits = adjustments == null || adjustments.isEmpty
+          ? nullptr
+          : _copyEdits(arena, adjustments)
+      ..editCount = adjustments?.length ?? 0;
     final cancel = cancelAddress == 0
         ? nullptr
         : Pointer<Int32>.fromAddress(cancelAddress);

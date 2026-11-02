@@ -5,6 +5,9 @@ enum FrameStyle {
   classic('经典白边'),
   street('街拍暗金'),
   contact('胶片印样'),
+  white('等宽白边'),
+  black('等宽黑边'),
+  polaroid('拍立得'),
   none('无边框');
 
   const FrameStyle(this.label);
@@ -50,12 +53,15 @@ class ExportRecipe {
     this.quality = 95,
     this.keepGps = false,
     this.edits = const PhotoEdits(),
+    this.frameWidth = .035,
+    this.dateStamp = false,
   });
 
   factory ExportRecipe.fromJson(Map<String, Object?> json) {
     final strength = json['strength'];
     final quality = json['quality'];
     final lutId = json['lutId'];
+    final frameWidth = json['frameWidth'];
     return ExportRecipe(
       lutId: lutId is String && lutId.isNotEmpty ? lutId : null,
       strength: strength is num && strength >= 0 && strength <= 1
@@ -67,6 +73,10 @@ class ExportRecipe {
       quality: exportQualities.contains(quality) ? quality! as int : 95,
       keepGps: json['keepGps'] == true,
       edits: PhotoEdits.fromJson(json['edits']),
+      frameWidth: frameWidth is num && frameWidth.isFinite
+          ? frameWidth.toDouble().clamp(0, .2)
+          : .035,
+      dateStamp: json['dateStamp'] == true,
     );
   }
 
@@ -78,6 +88,8 @@ class ExportRecipe {
   final int quality;
   final bool keepGps;
   final PhotoEdits edits;
+  final double frameWidth;
+  final bool dateStamp;
 
   Map<String, Object?> toJson() => {
         'lutId': lutId,
@@ -88,6 +100,8 @@ class ExportRecipe {
         'quality': quality,
         'keepGps': keepGps,
         'edits': edits.toJson(),
+        'frameWidth': frameWidth,
+        'dateStamp': dateStamp,
       };
 
   ExportRecipe copyWith({
@@ -99,6 +113,8 @@ class ExportRecipe {
     int? quality,
     bool? keepGps,
     PhotoEdits? edits,
+    double? frameWidth,
+    bool? dateStamp,
   }) =>
       ExportRecipe(
         lutId: lutId == null ? this.lutId : lutId(),
@@ -109,6 +125,10 @@ class ExportRecipe {
         quality: quality ?? this.quality,
         keepGps: keepGps ?? this.keepGps,
         edits: edits ?? this.edits,
+        frameWidth: frameWidth == null || !frameWidth.isFinite
+            ? this.frameWidth
+            : frameWidth.clamp(0, .2),
+        dateStamp: dateStamp ?? this.dateStamp,
       );
 
   @override
@@ -124,6 +144,6 @@ class ExportRecipe {
       other.edits == edits;
 
   @override
-  int get hashCode =>
-      Object.hash(lutId, strength, frame, ratio, size, quality, keepGps, edits);
+  int get hashCode => Object.hash(lutId, strength, frame, ratio, size, quality,
+      keepGps, edits, frameWidth, dateStamp);
 }

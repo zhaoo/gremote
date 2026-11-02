@@ -58,6 +58,103 @@ void main() {
     });
   });
 
+  group('photo editor frame options', () {
+    test('width and date stamp migrate, persist, and participate in edits', () {
+      final old = ExportRecipe.fromJson(const {});
+      expect(old.frameWidth, .035);
+      expect(old.dateStamp, isFalse);
+      final recipe = old.copyWith(
+          frame: FrameStyle.polaroid, frameWidth: .08, dateStamp: true);
+      expect(ExportRecipe.fromJson(recipe.toJson()), recipe);
+      expect(recipe, isNot(old));
+      expect(ExportRecipe.fromJson(const {'frameWidth': -1}).frameWidth, 0);
+      expect(ExportRecipe.fromJson(const {'frameWidth': 9}).frameWidth, .2);
+      expect(ExportRecipe.fromJson(const {'frameWidth': double.nan}).frameWidth,
+          .035);
+    });
+
+    test('plain borders are equal and polaroid reserves its bottom margin', () {
+      for (final style in [FrameStyle.white, FrameStyle.black]) {
+        final layout = computeFrameLayout(
+            photoWidth: 600,
+            photoHeight: 400,
+            style: style,
+            ratio: FrameRatio.original,
+            content: content,
+            borderWidth: .05);
+        expect(layout.photo, const PixelRect(20, 20, 600, 400));
+        expect((layout.canvasWidth, layout.canvasHeight), (640, 440));
+        expect(layout.background,
+            style == FrameStyle.white ? 0xffffffff : 0xff000000);
+        expect(layout.overlays, isEmpty);
+      }
+      final polaroid = computeFrameLayout(
+          photoWidth: 400,
+          photoHeight: 600,
+          style: FrameStyle.polaroid,
+          ratio: FrameRatio.original,
+          content: content,
+          borderWidth: .05);
+      expect(polaroid.photo, const PixelRect(20, 20, 400, 600));
+      expect(polaroid.canvasHeight - polaroid.photo.bottom, 80);
+    });
+
+    test('changing width scales old margins while zero removes them', () {
+      final wide = computeFrameLayout(
+          photoWidth: 6000,
+          photoHeight: 4000,
+          style: FrameStyle.classic,
+          ratio: FrameRatio.original,
+          content: content,
+          borderWidth: .07);
+      expect(wide.photo, const PixelRect(280, 280, 6000, 4000));
+      expect(wide.canvasHeight, 5200);
+      for (final style in FrameStyle.values) {
+        final zero = computeFrameLayout(
+            photoWidth: 600,
+            photoHeight: 400,
+            style: style,
+            ratio: FrameRatio.original,
+            content: content,
+            borderWidth: 0);
+        expect(zero.photo, const PixelRect(0, 0, 600, 400));
+        expect((zero.canvasWidth, zero.canvasHeight), (600, 400));
+        expect(zero.overlays, isEmpty);
+      }
+    });
+
+    test('date stamp uses source date inside the photo for every frame', () {
+      for (final style in FrameStyle.values) {
+        final layout = computeFrameLayout(
+            photoWidth: 600,
+            photoHeight: 400,
+            style: style,
+            ratio: FrameRatio.square,
+            content: content,
+            dateStamp: true);
+        final stamp = layout.overlays.last;
+        expect(stamp.rect.x, greaterThanOrEqualTo(layout.photo.x));
+        expect(stamp.rect.y, greaterThanOrEqualTo(layout.photo.y));
+        expect(stamp.rect.right, lessThanOrEqualTo(layout.photo.right));
+        expect(stamp.rect.bottom, lessThanOrEqualTo(layout.photo.bottom));
+        expect(stamp.elements.whereType<FrameText>().single.text, '2026.10.10');
+      }
+      final missing = computeFrameLayout(
+          photoWidth: 1,
+          photoHeight: 1,
+          style: FrameStyle.none,
+          ratio: FrameRatio.original,
+          content: const FrameContent(),
+          dateStamp: true);
+      expect(missing.overlays, isEmpty);
+    });
+
+    test('thin crops always retain at least one scaled pixel', () {
+      expect(scaledPhotoSize(1, 6000, ExportSize.long1440), (1, 1440));
+      expect(scaledPhotoSize(6000, 1, ExportSize.long2560), (2560, 1));
+    });
+  });
+
   group('EditDocument', () {
     test('round-trips hidden fields and text', () {
       final doc = EditDocument(

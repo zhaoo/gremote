@@ -8,6 +8,7 @@ import 'package:gremote/darkroom/frame/overlay_rasterizer.dart';
 import 'package:gremote/darkroom/model/edit_document.dart';
 import 'package:gremote/darkroom/model/export_recipe.dart';
 import 'package:gremote/darkroom/model/photo_meta.dart';
+import 'package:gremote/darkroom/model/photo_edits.dart';
 import 'package:gremote/imaging/imaging_engine.dart';
 import 'package:gremote/imaging/imaging_exception.dart';
 import 'package:gremote/media/local/local_media_repository.dart';
@@ -131,6 +132,49 @@ void main() {
     expect(engine.jobs.single.cube, isNull);
     expect((engine.jobs.single.photoWidth, engine.jobs.single.photoHeight),
         (1440, 960));
+  });
+
+  test('export applies crop after EXIF and passes the complete edit document',
+      () async {
+    var edits = const PhotoEdits().copyWith(
+        crop: const CropEdit(
+            left: .25, width: .5, quarterTurns: 1, flipX: true, angle: 10),
+        seed: 1234,
+        curves: [
+          ToneCurve.fromPoints(
+              const [CurvePoint(0, 0), CurvePoint(.5, .7), CurvePoint(1, 1)])
+        ]);
+    for (final parameter in PhotoAdjustment.values) {
+      edits = edits.withValue(parameter, parameter.max * .2);
+    }
+    final recipe = ExportRecipe(
+        edits: edits,
+        frame: FrameStyle.black,
+        frameWidth: .1,
+        dateStamp: true,
+        size: ExportSize.long1440,
+        lutId: 'custom:one',
+        strength: .45);
+    await service.export(
+        photo(1,
+            meta: const PhotoMeta(
+                width: 6000,
+                height: 4000,
+                orientation: 6,
+                takenAt: '2020:03:04 08:30:00')),
+        doc(1, recipe));
+    final job = engine.jobs.single;
+    // EXIF6 -> 4000x6000; quarterturn -> 6000x4000;
+    // half-width crop -> 3000x4000; long1440 -> 1080x1440.
+    expect((job.photoWidth, job.photoHeight), (1080, 1440));
+    expect((job.photoX, job.photoY), (108, 108));
+    expect((job.canvasWidth, job.canvasHeight), (1296, 1656));
+    expect(job.background, 0xff000000);
+    expect(job.adjustments, edits.nativeParameters);
+    expect(job.lutStrength, .45);
+    expect(job.cube, [1, 2, 3]);
+    final stamp = rasterizer.layouts.single.overlays.last;
+    expect(stamp.elements.whereType<FrameText>().single.text, '2020.03.04');
   });
 
   test('native failure skips publishing and deletes the temp file', () async {

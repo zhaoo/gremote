@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:meta/meta.dart';
 
 import '../model/edit_document.dart';
@@ -163,8 +165,8 @@ class FrameContent {
   if (target == null || longEdge <= target) return (width, height);
   final scale = target / longEdge;
   return width >= height
-      ? (target, (height * scale).round())
-      : ((width * scale).round(), target);
+      ? (target, math.max(1, (height * scale).round()))
+      : (math.max(1, (width * scale).round()), target);
 }
 
 abstract final class FramePalette {
@@ -186,11 +188,20 @@ FrameLayout computeFrameLayout({
   required FrameStyle style,
   required FrameRatio ratio,
   required FrameContent content,
+  double borderWidth = .035,
+  bool dateStamp = false,
 }) {
-  final base = switch (style) {
-    FrameStyle.classic => _classic(photoWidth, photoHeight, content),
-    FrameStyle.street => _street(photoWidth, photoHeight, content),
-    FrameStyle.contact => _contact(photoWidth, photoHeight, content),
+  final margin =
+      borderWidth.isFinite ? borderWidth.clamp(0, .2).toDouble() : .035;
+  final factor = margin / .035;
+  final frame = switch (style) {
+    FrameStyle.classic => _classic(photoWidth, photoHeight, content, factor),
+    FrameStyle.street => _street(photoWidth, photoHeight, content, factor),
+    FrameStyle.contact => _contact(photoWidth, photoHeight, content, factor),
+    FrameStyle.white => _plain(photoWidth, photoHeight, margin, false),
+    FrameStyle.black => _plain(photoWidth, photoHeight, margin, true),
+    FrameStyle.polaroid =>
+      _plain(photoWidth, photoHeight, margin, false, polaroid: true),
     FrameStyle.none => FrameLayout(
         canvasWidth: photoWidth,
         canvasHeight: photoHeight,
@@ -199,6 +210,15 @@ FrameLayout computeFrameLayout({
         overlays: const [],
       ),
   };
+  final base = !dateStamp || content.date == null || content.date!.isEmpty
+      ? frame
+      : FrameLayout(
+          canvasWidth: frame.canvasWidth,
+          canvasHeight: frame.canvasHeight,
+          background: frame.background,
+          photo: frame.photo,
+          overlays: [...frame.overlays, _dateStamp(frame.photo, content.date!)],
+        );
   final aspect = ratio.aspect;
   if (aspect == null) return base;
   final (rw, rh) = aspect;
@@ -285,17 +305,17 @@ bool _hasCaption(FrameContent content) => [
 int _pixels(double value) => value.round().clamp(1, 1 << 30);
 int _short(int w, int h) => w < h ? w : h;
 
-FrameLayout _classic(int pw, int ph, FrameContent content) {
+FrameLayout _classic(int pw, int ph, FrameContent content, double factor) {
   final unit = _short(pw, ph);
-  final side = _pixels(0.035 * unit);
-  final bar = _hasCaption(content) ? _pixels(0.115 * unit) : side;
+  final side = _margin(0.035 * unit * factor);
+  final bar = _hasCaption(content) ? _margin(0.115 * unit * factor) : side;
   return FrameLayout(
     canvasWidth: pw + 2 * side,
     canvasHeight: side + ph + bar,
     background: FramePalette.classicBackground,
     photo: PixelRect(side, side, pw, ph),
     overlays: [
-      if (_hasCaption(content))
+      if (_hasCaption(content) && bar > 0)
         OverlayRegion(
             PixelRect(side, side + ph, pw, bar),
             _caption(pw, bar, content,
@@ -305,10 +325,10 @@ FrameLayout _classic(int pw, int ph, FrameContent content) {
   );
 }
 
-FrameLayout _street(int pw, int ph, FrameContent content) {
+FrameLayout _street(int pw, int ph, FrameContent content, double factor) {
   final unit = _short(pw, ph);
-  final margin = _pixels(0.035 * unit);
-  final bar = _hasCaption(content) ? _pixels(0.115 * unit) : margin;
+  final margin = _margin(0.035 * unit * factor);
+  final bar = _hasCaption(content) ? _margin(0.115 * unit * factor) : margin;
   // One short accent replaces the four bright rules surrounding the photo.
   final line = _pixels(unit * 0.001);
   final accent = _pixels(pw * 0.045);
@@ -320,7 +340,7 @@ FrameLayout _street(int pw, int ph, FrameContent content) {
     background: FramePalette.streetBackground,
     photo: PixelRect(margin, margin, pw, ph),
     overlays: [
-      if (_hasCaption(content))
+      if (_hasCaption(content) && bar > 0)
         OverlayRegion(PixelRect(margin, margin + ph, pw, bar), [
           FrameRect(PixelRect(0, _pixels(bar * 0.07), accent, line),
               FramePalette.streetGold),
@@ -330,10 +350,10 @@ FrameLayout _street(int pw, int ph, FrameContent content) {
   );
 }
 
-FrameLayout _contact(int pw, int ph, FrameContent content) {
+FrameLayout _contact(int pw, int ph, FrameContent content, double factor) {
   final unit = _short(pw, ph);
-  final side = _pixels(0.035 * unit);
-  final strip = _pixels(0.10 * unit);
+  final side = _margin(0.035 * unit * factor);
+  final strip = _margin(0.10 * unit * factor);
   final width = pw + 2 * side;
   final s = strip.toDouble();
   final holeBand = _pixels(0.18 * s);
@@ -373,8 +393,49 @@ FrameLayout _contact(int pw, int ph, FrameContent content) {
     background: FramePalette.contactBackground,
     photo: PixelRect(side, strip, pw, ph),
     overlays: [
-      OverlayRegion(PixelRect(0, 0, width, strip), top),
-      OverlayRegion(PixelRect(0, strip + ph, width, strip), bottom),
+      if (strip > 0) OverlayRegion(PixelRect(0, 0, width, strip), top),
+      if (strip > 0)
+        OverlayRegion(PixelRect(0, strip + ph, width, strip), bottom),
+    ],
+  );
+}
+
+int _margin(double pixels) => pixels <= 0 ? 0 : _pixels(pixels);
+
+FrameLayout _plain(int pw, int ph, double border, bool black,
+    {bool polaroid = false}) {
+  final side = _margin(_short(pw, ph) * border);
+  final bottom = polaroid ? side * 4 : side;
+  return FrameLayout(
+    canvasWidth: pw + side * 2,
+    canvasHeight: ph + side + bottom,
+    background: black ? 0xff000000 : 0xffffffff,
+    photo: PixelRect(side, side, pw, ph),
+    overlays: const [],
+  );
+}
+
+OverlayRegion _dateStamp(PixelRect photo, String date) {
+  final short = _short(photo.width, photo.height);
+  final inset = (short * .025).round();
+  final width =
+      math.max(1, math.min(photo.width - inset * 2, (short * .5).round()));
+  final height =
+      math.max(1, math.min(photo.height - inset * 2, (short * .065).round()));
+  return OverlayRegion(
+    PixelRect(photo.right - inset - width, photo.bottom - inset - height, width,
+        height),
+    [
+      FrameText(
+        text: date,
+        x: width.toDouble(),
+        y: 0,
+        fontSize: math.min(short * .025, height * .8),
+        color: 0xffffaa66,
+        maxWidth: width.toDouble(),
+        font: FrameFont.mono,
+        align: FrameAlign.right,
+      )
     ],
   );
 }

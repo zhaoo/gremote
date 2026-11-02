@@ -49,6 +49,9 @@ final class NativeExportRequest extends Struct {
   @Int32()
   external int quality;
   external Pointer<Utf8> outputPath;
+  external Pointer<Float> edits;
+  @Int32()
+  external int editCount;
 }
 
 typedef _DecodePreviewC = Int32 Function(Int32, Int32, Int32,
@@ -61,6 +64,20 @@ typedef _ApplyLutC = Int32 Function(
     Pointer<Uint8>, Int32, Int32, Pointer<Uint8>, Int64, Float);
 typedef ApplyLutFn = int Function(
     Pointer<Uint8>, int, int, Pointer<Uint8>, int, double);
+typedef _RenderPhotoC = Int32 Function(
+    Pointer<Uint8>,
+    Int32,
+    Int32,
+    Pointer<Float>,
+    Int32,
+    Pointer<Uint8>,
+    Int64,
+    Float,
+    Int32,
+    Int32,
+    Pointer<Pointer<Uint8>>);
+typedef RenderPhotoFn = int Function(Pointer<Uint8>, int, int, Pointer<Float>,
+    int, Pointer<Uint8>, int, double, int, int, Pointer<Pointer<Uint8>>);
 typedef _ExportC = Int32 Function(Pointer<NativeExportRequest>, Pointer<Int32>);
 typedef ExportFn = int Function(Pointer<NativeExportRequest>, Pointer<Int32>);
 typedef _FreeC = Void Function(Pointer<Void>);
@@ -76,6 +93,8 @@ class ImagingBindings {
             'gremote_lut_validate'),
         applyLut = library
             .lookupFunction<_ApplyLutC, ApplyLutFn>('gremote_apply_lut_rgba'),
+        renderPhoto = library.lookupFunction<_RenderPhotoC, RenderPhotoFn>(
+            'gremote_render_edit_rgba'),
         exportJpeg =
             library.lookupFunction<_ExportC, ExportFn>('gremote_export_jpeg'),
         free = library.lookupFunction<_FreeC, FreeFn>('gremote_free');
@@ -87,6 +106,7 @@ class ImagingBindings {
   final DecodePreviewFn decodePreview;
   final LutValidateFn lutValidate;
   final ApplyLutFn applyLut;
+  final RenderPhotoFn renderPhoto;
   final ExportFn exportJpeg;
   final FreeFn free;
 }

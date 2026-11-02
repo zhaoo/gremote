@@ -51,6 +51,7 @@ class ExportJob {
     required this.quality,
     required this.outputPath,
     this.cube,
+    this.adjustments,
     this.lutStrength = 1,
     this.overlays = const [],
   });
@@ -59,6 +60,9 @@ class ExportJob {
   final int fd;
   final int orientation;
   final Uint8List? cube;
+
+  /// Optional v1 photo edits; null keeps the legacy export pipeline.
+  final Float32List? adjustments;
   final double lutStrength;
   final int photoWidth;
   final int photoHeight;
@@ -113,6 +117,17 @@ abstract interface class ImagingEngine {
   /// Returns a mapped copy; [source] is untouched.
   Future<PreviewImage> applyLut(
       PreviewImage source, Uint8List cube, double strength);
+
+  /// Renders an edited RGBA copy on a background isolate.
+  /// [adjustments] uses the 1062-float v1 wire format; [source] is untouched.
+  Future<PreviewImage> renderPhoto(
+    PreviewImage source, {
+    required Float32List adjustments,
+    Uint8List? cube,
+    double strength = 1,
+    required int width,
+    required int height,
+  });
 
   Future<void> exportJpeg(ExportJob job, {ImagingCancelToken? cancel});
 }
