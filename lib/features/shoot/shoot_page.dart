@@ -183,7 +183,7 @@ class _ShootPageState extends ConsumerState<ShootPage> {
                     onBack: _goHome,
                     onRecipe: () =>
                         setState(() => _showRecipes = !_showRecipes),
-                    onSettings: () => _showSettings(camera),
+                    onSettings: _showSettings,
                     recipeDetached: recipeSession.detached,
                   ),
                   WorkspaceReveal(
@@ -512,19 +512,6 @@ class _ShootPageState extends ConsumerState<ShootPage> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _cycleTimer(CameraState camera) {
-    final drive = camera.param(ParamKey.drive);
-    if (drive?.writable != true) return;
-    const values = ['single', 'self2s', 'self10s'];
-    final current = values.indexOf(drive!.current ?? '');
-    final next = values[(current + 1) % values.length];
-    if (drive.options.contains(next)) {
-      unawaited(ref
-          .read(cameraStateControllerProvider.notifier)
-          .setParam(drive.wireKey, next));
-    }
-  }
-
   void _toggleHistogram() {
     setState(() => _histogram = !_histogram);
     _histogramTimer?.cancel();
@@ -611,71 +598,195 @@ class _ShootPageState extends ConsumerState<ShootPage> {
     }
   }
 
-  void _showSettings(CameraState camera) {
+  void _showSettings() {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: GRemoteColors.navy,
-      builder: (_) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.all(18),
-          children: [
-            Text('拍摄设置', style: Theme.of(context).textTheme.titleLarge),
-            ListTile(
-                title: const Text('直方图'),
-                trailing: Icon(_histogram ? Icons.check : Icons.bar_chart),
-                onTap: () {
-                  Navigator.pop(context);
-                  _toggleHistogram();
-                }),
-            ListTile(
-                title: const Text('定时拍摄'),
-                trailing: Text(switch (camera.value(ParamKey.drive)) {
-                  'self2s' => '2 秒',
-                  'self10s' => '10 秒',
-                  _ => '关闭',
-                }),
-                onTap: () {
-                  Navigator.pop(context);
-                  _cycleTimer(camera);
-                }),
-            const _AspectChoices(),
-            ListTile(
-                leading: const Icon(Icons.local_movies_outlined),
-                title: const Text('胶卷库'),
-                onTap: () {
-                  Navigator.pop(context);
-                  unawaited(_exitTo('/camera'));
-                }),
-            for (final param in camera.params.values.where((param) => !{
-                  'av',
-                  'tv',
-                  'sv',
-                  'xv',
-                  'WBMode',
-                  'meteringMode',
-                  'aspectRatio',
-                  'exposureMode'
-                }.contains(param.wireKey)))
-              ListTile(
-                title: Text(shootParamLabel(param.wireKey)),
-                trailing: Text(shootValueLabel(param.wireKey, param.current)),
-                onTap: param.writable
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF202528),
+      sheetAnimationStyle: AnimationStyle(
+          duration: WorkspaceMotion.duration(context, 250),
+          reverseDuration: WorkspaceMotion.duration(context, 200)),
+      constraints:
+          BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * .88),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, updateSheet) => Consumer(builder: (context, ref, _) {
+          final camera = ref.watch(cameraStateControllerProvider);
+          final extras = camera.params.values.where((param) =>
+              hasShootParamLabel(param.wireKey) &&
+              !{
+                'av',
+                'tv',
+                'sv',
+                'xv',
+                'WBMode',
+                'meteringMode',
+                'aspectRatio',
+                'exposureMode',
+                'stillFormat',
+                'focusSetting',
+                'focusMode'
+              }.contains(param.wireKey));
+          Widget parameter(CameraParam param) => _SettingsRow(
+                label: shootParamLabel(param.wireKey),
+                value: shootValueLabel(param.wireKey, param.current),
+                onTap: _canSet(camera, param)
                     ? () {
-                        Navigator.pop(context);
+                        Navigator.pop(sheetContext);
                         setState(() => _ruler = param);
                       }
                     : null,
-              ),
-            const SwitchListTile(
-              value: false,
-              onChanged: null,
-              title: Text('测光渐变延时（实验）'),
-              subtitle: Text('真机温度门禁通过后开放'),
+              );
+          return SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+              child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                        child: Container(
+                            width: 30,
+                            height: 3,
+                            decoration: BoxDecoration(
+                                color: const Color(0xFF737B7D),
+                                borderRadius: BorderRadius.circular(3)))),
+                    const SizedBox(height: 10),
+                    Row(children: [
+                      Expanded(
+                          child: Text('拍摄设置',
+                              style: Theme.of(context).textTheme.titleLarge)),
+                      IconButton(
+                          tooltip: '关闭拍摄设置',
+                          onPressed: () => Navigator.pop(sheetContext),
+                          icon: const Icon(Icons.close, size: 20)),
+                    ]),
+                    const _SettingsGroupLabel('拍摄'),
+                    ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('直方图'),
+                        trailing: Switch(
+                            key: const Key('settings-histogram'),
+                            value: _histogram,
+                            activeTrackColor: const Color(0xFF697477),
+                            activeColor: const Color(0xFFE0E5E2),
+                            onChanged: (_) => updateSheet(_toggleHistogram))),
+                    const Divider(height: 1, color: Color(0xFF353C3F)),
+                    _SettingsRow(
+                        label: '定时拍摄',
+                        value: _timerLabel(camera.value(ParamKey.drive)),
+                        onTap: _canSet(camera, camera.param(ParamKey.drive))
+                            ? () => _showTimerChoices(context)
+                            : null),
+                    const _SettingsGroupLabel('相机'),
+                    for (final key in [
+                      'stillFormat',
+                      'focusSetting',
+                      'focusMode'
+                    ])
+                      if (camera.params[key] case final CameraParam param)
+                        parameter(param),
+                    const _AspectChoices(),
+                    if (extras.isNotEmpty)
+                      ExpansionTile(
+                        key: const Key('settings-more-parameters'),
+                        expansionAnimationStyle: AnimationStyle(
+                            duration: WorkspaceMotion.duration(context, 200)),
+                        tilePadding: EdgeInsets.zero,
+                        childrenPadding: EdgeInsets.zero,
+                        title:
+                            const Text('更多参数', style: TextStyle(fontSize: 14)),
+                        children: [
+                          for (final param in extras) parameter(param)
+                        ],
+                      ),
+                    const Divider(height: 1, color: Color(0xFF353C3F)),
+                    ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading:
+                            const Icon(Icons.local_movies_outlined, size: 28),
+                        title: const Text('机内胶卷'),
+                        subtitle: const Text('选择胶卷与装卷',
+                            style: TextStyle(
+                                fontSize: 11, color: GRemoteColors.muted)),
+                        trailing: const Icon(Icons.chevron_right, size: 18),
+                        onTap: () {
+                          Navigator.pop(sheetContext);
+                          unawaited(_exitTo('/camera'));
+                        }),
+                  ]),
             ),
-          ],
-        ),
+          );
+        }),
       ),
+    );
+  }
+
+  bool _canSet(CameraState camera, CameraParam? param) =>
+      camera.online &&
+      camera.writesEnabled &&
+      param?.writable == true &&
+      !camera.pending.containsKey(param!.wireKey);
+
+  String _timerLabel(String? value) => switch (value) {
+        null || 'single' => '关闭',
+        'self2s' => '2 秒',
+        'self10s' => '10 秒',
+        _ => shootValueLabel('shootMode', value),
+      };
+
+  void _showTimerChoices(BuildContext settingsContext) {
+    showModalBottomSheet<void>(
+      context: settingsContext,
+      backgroundColor: const Color(0xFF202528),
+      sheetAnimationStyle: AnimationStyle(
+          duration: WorkspaceMotion.duration(context, 250),
+          reverseDuration: WorkspaceMotion.duration(context, 200)),
+      isScrollControlled: true,
+      constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(settingsContext).height * .85),
+      builder: (context) => Consumer(builder: (context, ref, _) {
+        final camera = ref.watch(cameraStateControllerProvider);
+        final drive = camera.param(ParamKey.drive);
+        return SafeArea(
+            child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Row(children: [
+              const Expanded(
+                  child: Text('定时拍摄', style: TextStyle(fontSize: 18))),
+              IconButton(
+                  tooltip: '关闭定时选择',
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close, size: 20)),
+            ]),
+            for (final (wire, label) in [
+              ('single', '关闭'),
+              ('self2s', '2 秒'),
+              ('self10s', '10 秒')
+            ])
+              ListTile(
+                  key: Key('timer-$wire'),
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(label),
+                  trailing: drive?.current == wire
+                      ? const Icon(Icons.check, size: 20)
+                      : null,
+                  selected: drive?.current == wire,
+                  onTap: _canSet(camera, drive) && drive!.options.contains(wire)
+                      ? () {
+                          if (wire != drive.current) {
+                            unawaited(ref
+                                .read(cameraStateControllerProvider.notifier)
+                                .setParam(drive.wireKey, wire));
+                          }
+                          Navigator.pop(context);
+                        }
+                      : null),
+          ]),
+        ));
+      }),
     );
   }
 }
@@ -689,7 +800,7 @@ class _AspectChoices extends ConsumerWidget {
     final aspect = camera.param(ParamKey.aspectRatio);
     if (aspect == null) return const SizedBox.shrink();
     return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const Text('画幅',
               style: TextStyle(fontSize: 12, color: GRemoteColors.muted)),
@@ -701,7 +812,9 @@ class _AspectChoices extends ConsumerWidget {
                   label: Text(shootValueLabel(aspect.wireKey, value)),
                   showCheckmark: false,
                   selected: value == aspect.current,
-                  onSelected: aspect.writable &&
+                  onSelected: camera.online &&
+                          camera.writesEnabled &&
+                          aspect.writable &&
                           !camera.pending.containsKey(aspect.wireKey)
                       ? (_) {
                           if (value != aspect.current) {
@@ -714,4 +827,43 @@ class _AspectChoices extends ConsumerWidget {
           ]),
         ]));
   }
+}
+
+class _SettingsGroupLabel extends StatelessWidget {
+  const _SettingsGroupLabel(this.label);
+  final String label;
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(top: 18, bottom: 4),
+        child: Text(label,
+            style: const TextStyle(fontSize: 11, color: GRemoteColors.muted)),
+      );
+}
+
+class _SettingsRow extends StatelessWidget {
+  const _SettingsRow({required this.label, required this.value, this.onTap});
+  final String label, value;
+  final VoidCallback? onTap;
+  @override
+  Widget build(BuildContext context) => Column(children: [
+        ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(label, style: const TextStyle(fontSize: 14)),
+            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+              ConstrainedBox(
+                  constraints: BoxConstraints(
+                      maxWidth: MediaQuery.sizeOf(context).width * .42),
+                  child: Text(value,
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(
+                          fontSize: 12, color: GRemoteColors.muted))),
+              if (onTap != null) ...[
+                const SizedBox(width: 6),
+                const Icon(Icons.chevron_right,
+                    size: 17, color: GRemoteColors.muted)
+              ],
+            ]),
+            onTap: onTap),
+        const Divider(height: 1, color: Color(0xFF353C3F)),
+      ]);
 }

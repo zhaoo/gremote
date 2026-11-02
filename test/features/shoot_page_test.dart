@@ -63,6 +63,156 @@ Future<({TestDarkroom env, FakeCameraGateways gateways})> pumpShoot(
 }
 
 void main() {
+  testWidgets('shoot settings switch and explicit timer keep current readback',
+      (tester) async {
+    final harness = await pumpShoot(tester, connect: true);
+    await tester.tap(find.byTooltip('设置'));
+    await tester.pumpAndSettle();
+    expect(find.text('拍摄'), findsOneWidget);
+    expect(find.text('相机'), findsOneWidget);
+    final histogram = find.byKey(const Key('settings-histogram'));
+    expect(tester.widget<Switch>(histogram).value, false);
+    await tester.tap(histogram);
+    await tester.pump();
+    expect(tester.widget<Switch>(histogram).value, true);
+    expect(find.text('拍摄设置'), findsOneWidget);
+    await tester.tap(find.text('定时拍摄'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('timer-self10s')));
+    await tester.pumpAndSettle();
+    expect(harness.gateways.camera.props['shootMode'], 'self10s');
+    expect(find.text('10 秒'), findsOneWidget);
+    final container = ProviderScope.containerOf(
+        tester.element(find.byKey(const Key('settings-histogram'))));
+    harness.gateways.camera.props['shootMode'] = 'self2s';
+    final refresh =
+        container.read(cameraStateControllerProvider.notifier).refresh();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+    await refresh;
+    expect(find.text('2 秒'), findsOneWidget);
+    expect(find.text('照片格式'), findsOneWidget);
+    expect(find.text('对焦模式'), findsOneWidget);
+    expect(find.text('其他参数'), findsNothing);
+    expect(find.text('测光渐变延时（实验）'), findsNothing);
+    await tester.tap(find.byTooltip('关闭拍摄设置'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('设置'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<Switch>(histogram).value, true);
+    // Leave no periodic histogram timer alive after the test.
+    await tester.tap(histogram);
+    await tester.pump();
+  });
+
+  testWidgets(
+      'settings omit unknown raw fields and keep labelled extras secondary',
+      (tester) async {
+    final camera = FakeCameraModel();
+    camera.props['mysteryParameter'] = '6';
+    camera.props['mysteryParameterList'] = ['6', '7'];
+    await pumpShoot(tester, connect: true, camera: camera);
+    await tester.tap(find.byTooltip('设置'));
+    await tester.pumpAndSettle();
+    expect(find.text('其他参数'), findsNothing);
+    expect(find.text('6'), findsNothing);
+    expect(find.text('降噪'), findsNothing);
+    await tester.ensureVisible(find.text('更多参数'));
+    await tester.tap(find.text('更多参数'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('降噪'));
+    await tester.tap(find.text('降噪'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('低'));
+    await tester.pumpAndSettle();
+    expect(camera.props['noiseReduction'], 'low');
+  });
+
+  testWidgets('secondary drive selector retains non-timer camera wire options',
+      (tester) async {
+    final camera = FakeCameraModel();
+    camera.props['shootModeList'] = [
+      'single',
+      'self2s',
+      'self10s',
+      'continuousH'
+    ];
+    await pumpShoot(tester, connect: true, camera: camera);
+    await tester.tap(find.byTooltip('设置'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('更多参数'));
+    await tester.tap(find.text('更多参数'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('驱动模式'));
+    await tester.tap(find.text('驱动模式'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('ruler')), findsOneWidget);
+    await tester.ensureVisible(find.text('高速连拍'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('高速连拍'));
+    await tester.pumpAndSettle();
+    expect(camera.props['shootMode'], 'continuousH');
+    expect(camera.files, isEmpty);
+  });
+
+  for (final size in [const Size(320, 568), const Size(844, 390)]) {
+    testWidgets('settings remain reachable with large text at $size',
+        (tester) async {
+      tester.binding.platformDispatcher.textScaleFactorTestValue = 1.6;
+      addTearDown(
+          tester.binding.platformDispatcher.clearTextScaleFactorTestValue);
+      await pumpShoot(tester, connect: true);
+      tester.view.physicalSize = size;
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('设置'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('机内胶卷'));
+      expect(find.text('机内胶卷').hitTestable(), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.ensureVisible(find.text('定时拍摄'));
+      await tester.tap(find.text('定时拍摄'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('timer-self2s')));
+      expect(
+          find.byKey(const Key('timer-self2s')).hitTestable(), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('reduced motion expands settings without a forced transition',
+      (tester) async {
+    tester.binding.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(
+        tester.binding.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    await pumpShoot(tester, connect: true);
+    await tester.tap(find.byTooltip('设置'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('更多参数'));
+    await tester.tap(find.text('更多参数'));
+    await tester.pump();
+    expect(find.text('降噪').hitTestable(), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('timer choices respect camera supported values', (tester) async {
+    final camera = FakeCameraModel();
+    camera.props['shootMode'] = 'continuous';
+    camera.props['shootModeList'] = ['single', 'self10s', 'continuous'];
+    await pumpShoot(tester, connect: true, camera: camera);
+    await tester.tap(find.byTooltip('设置'));
+    await tester.pumpAndSettle();
+    expect(find.text('连续'), findsOneWidget);
+    await tester.tap(find.text('定时拍摄'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<ListTile>(find.byKey(const Key('timer-self2s'))).onTap,
+        isNull);
+    await tester.tap(find.byKey(const Key('timer-single')));
+    await tester.pumpAndSettle();
+    expect(camera.props['shootMode'], 'single');
+    expect(find.text('关闭'), findsOneWidget);
+  });
+
   testWidgets('held shutter releases once after rotating the workspace',
       (tester) async {
     final harness = await pumpShoot(tester, connect: true);
@@ -271,9 +421,11 @@ void main() {
     final harness = await pumpShoot(tester, connect: true);
     await tester.tap(find.byTooltip('设置'));
     await tester.pumpAndSettle();
-    final timer =
-        tester.widget<ListTile>(find.widgetWithText(ListTile, '定时拍摄'));
-    expect((timer.trailing as Text).data, '关闭');
+    expect(
+        find.descendant(
+            of: find.widgetWithText(ListTile, '定时拍摄'),
+            matching: find.text('关闭')),
+        findsOneWidget);
     expect(find.text('对焦模式'), findsOneWidget);
     expect(find.text('focusSetting'), findsNothing);
     await tester.tap(find.text('对焦模式'));

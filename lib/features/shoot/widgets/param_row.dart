@@ -28,20 +28,25 @@ class CameraParamRow extends StatelessWidget {
   final bool compact;
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-        height: compact ? 66 : 56,
-        child: Row(children: [
-          for (final (key, label) in compact
-              ? const [
-                  (ParamKey.shutter, '快门'),
-                  (ParamKey.aperture, '光圈'),
-                  (ParamKey.iso, 'ISO'),
-                  (ParamKey.exposureComp, '补偿')
-                ]
-              : _params)
-            Expanded(child: _item(context, key, label)),
-        ]),
-      );
+  Widget build(BuildContext context) {
+    final fontSize = compact ? 17.0 : 12.0;
+    final scale = (MediaQuery.textScalerOf(context).scale(fontSize) / fontSize)
+        .clamp(1.0, double.infinity);
+    return SizedBox(
+      height: (compact ? 66.0 : 56.0) * scale,
+      child: Row(children: [
+        for (final (key, label) in compact
+            ? const [
+                (ParamKey.shutter, '快门'),
+                (ParamKey.aperture, '光圈'),
+                (ParamKey.iso, 'ISO'),
+                (ParamKey.exposureComp, '补偿')
+              ]
+            : _params)
+          Expanded(child: _item(context, key, label)),
+      ]),
+    );
+  }
 
   Widget _item(BuildContext context, ParamKey key, String label) {
     final param = state.param(key);

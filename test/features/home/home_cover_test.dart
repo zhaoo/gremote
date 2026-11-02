@@ -73,72 +73,6 @@ void main() {
         false);
     expect(find.text('已选 1 / 5 · 单张即固定封面'), findsOneWidget);
   });
-  testWidgets('framing preview matches narrow home aspect', (t) async {
-    t.view.physicalSize = const Size(320, 844);
-    t.view.devicePixelRatio = 1;
-    addTearDown(t.view.resetPhysicalSize);
-    addTearDown(t.view.resetDevicePixelRatio);
-    final gateway = _ValidThumbnails();
-    final frame = CoverFrame(
-        entry: const HomeCoverEntry(id: 1, uri: 'image:1'),
-        bytes: gateway.bytes);
-    final data = HomeCoverData(settings: const HomeCoverSettings(), available: [
-      const LocalMediaItem(
-          id: 1, uri: 'image:1', displayName: 'one.jpg', dateModified: 1)
-    ], frames: [
-      frame
-    ]);
-    await t.pumpWidget(ProviderScope(overrides: [
-      mediaGatewayProvider.overrideWithValue(gateway),
-      homeCoverDataProvider.overrideWith((ref) async => data)
-    ], child: const MaterialApp(home: Scaffold(body: HomeCover()))));
-    await t.pumpAndSettle();
-    await t.longPress(find.byType(CoverCarousel));
-    await t.pumpAndSettle();
-    await t.tap(find.byTooltip('调整取景位置'));
-    await t.pumpAndSettle();
-    expect(t.widget<AspectRatio>(find.byType(AspectRatio)).aspectRatio,
-        closeTo(320 / 232, .001));
-  });
-  testWidgets('open manager stays paused across background and resume',
-      (t) async {
-    final gateway = _ValidThumbnails();
-    final frames = [
-      for (var i = 1; i <= 2; i++)
-        CoverFrame(
-            entry: HomeCoverEntry(id: i, uri: 'image:$i'), bytes: gateway.bytes)
-    ];
-    final data = HomeCoverData(
-        settings: const HomeCoverSettings(),
-        available: [
-          for (var i = 1; i <= 2; i++)
-            LocalMediaItem(
-                id: i, uri: 'image:$i', displayName: '$i.jpg', dateModified: i)
-        ],
-        frames: frames);
-    await t.pumpWidget(ProviderScope(overrides: [
-      mediaGatewayProvider.overrideWithValue(gateway),
-      homeCoverDataProvider.overrideWith((ref) async => data)
-    ], child: const MaterialApp(home: Scaffold(body: HomeCover()))));
-    await t.pumpAndSettle();
-    await t.longPress(find.byType(CoverCarousel));
-    await t.pumpAndSettle();
-    t.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
-    await t.pump();
-    t.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-    await t.pumpAndSettle();
-    await t.pump(const Duration(seconds: 9));
-    await t.pump(const Duration(milliseconds: 300));
-    expect(find.text('1 / 2'), findsOneWidget);
-    Navigator.of(t.element(find.byType(HomeCoverManager))).pop();
-    await t.pumpAndSettle();
-    await t.pump(const Duration(seconds: 7));
-    expect(find.text('1 / 2'), findsOneWidget);
-    await t.pump(const Duration(seconds: 1));
-    await t.pump(const Duration(milliseconds: 300));
-    expect(find.text('2 / 2'), findsOneWidget);
-    await t.pumpWidget(const SizedBox());
-  });
   testWidgets('large album only requests visible manager thumbnails',
       (t) async {
     final gateway = _CountThumbnails();
@@ -155,65 +89,35 @@ void main() {
     expect(gateway.calls, lessThan(50));
     expect(t.takeException(), isNull);
   });
-  final bytes = base64Decode(
-      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=');
-  Widget app({bool visible = true, bool motion = false, int count = 2}) =>
-      MaterialApp(
-          home: MediaQuery(
-              data: MediaQueryData(disableAnimations: motion),
-              child: Scaffold(
-                  body: CoverCarousel(
-                frames: [
-                  for (var i = 0; i < count; i++)
-                    CoverFrame(
-                        entry: HomeCoverEntry(id: i, uri: 'image:$i'),
-                        bytes: bytes)
-                ],
-                autoplay: true,
-                visible: visible,
-                onManage: () async {},
-              ))));
-  testWidgets('works show no slogan and advance after eight seconds',
+  testWidgets('fixed street cover never reads album or opens cover manager',
       (t) async {
-    await t.pumpWidget(app());
-    expect(find.text('街头'), findsNothing);
-    expect(find.text('1 / 2'), findsOneWidget);
-    await t.pump(const Duration(seconds: 7));
-    expect(find.text('1 / 2'), findsOneWidget);
-    await t.pump(const Duration(seconds: 1));
-    await t.pump(const Duration(milliseconds: 300));
-    expect(find.text('2 / 2'), findsOneWidget);
-    await t.pumpWidget(const SizedBox());
-  });
-  testWidgets('hidden view and reduced motion do not auto advance', (t) async {
-    await t.pumpWidget(app(visible: false));
-    await t.pump(const Duration(seconds: 16));
-    expect(find.text('1 / 2'), findsOneWidget);
-    await t.pumpWidget(app(motion: true));
-    await t.pump(const Duration(seconds: 16));
-    expect(find.text('1 / 2'), findsOneWidget);
-    await t.pumpWidget(const SizedBox());
-  });
-  testWidgets('touch pauses and restarts a full interval', (t) async {
-    await t.pumpWidget(app());
-    await t.pump(const Duration(seconds: 7));
-    final g = await t.startGesture(t.getCenter(find.byType(CoverCarousel)));
-    await t.pump(const Duration(seconds: 2));
-    expect(find.text('1 / 2'), findsOneWidget);
-    await g.up();
-    await t.pump(const Duration(seconds: 7));
-    expect(find.text('1 / 2'), findsOneWidget);
-    await t.pump(const Duration(seconds: 1));
-    await t.pump(const Duration(milliseconds: 300));
-    expect(find.text('2 / 2'), findsOneWidget);
-    await t.pumpWidget(const SizedBox());
-  });
-  testWidgets('empty or unreadable source falls back to default cover',
-      (t) async {
-    await t.pumpWidget(app(count: 0));
+    var coverReads = 0;
+    final gateway = _CountThumbnails();
+    await t.pumpWidget(ProviderScope(overrides: [
+      mediaGatewayProvider.overrideWithValue(gateway),
+      homeCoverDataProvider.overrideWith((ref) async {
+        coverReads++;
+        throw StateError('homepage must not request user covers');
+      }),
+    ], child: const MaterialApp(home: Scaffold(body: HomeCover()))));
+    await t.pumpAndSettle();
+    expect(coverReads, 0);
+    expect(gateway.calls, 0);
     expect(find.text('街头'), findsOneWidget);
-    expect(find.text('1 / 2'), findsNothing);
-    await t.pumpWidget(const SizedBox());
+    expect(find.text('让平凡的日子，\n留下不平凡的眼光。'), findsOneWidget);
+    final image = t.widget<Image>(find.byType(Image));
+    expect(
+        (image.image as AssetImage).assetName, 'assets/images/home_header.jpg');
+    await t.longPress(find.byType(HomeCover));
+    await t.drag(find.byType(HomeCover), const Offset(-200, 0));
+    t.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    t.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await t.pump(const Duration(seconds: 16));
+    await t.pumpAndSettle();
+    expect(find.byType(HomeCoverManager), findsNothing);
+    expect(coverReads, 0);
+    expect(find.text('街头'), findsOneWidget);
+    expect(t.takeException(), isNull);
   });
 }
 

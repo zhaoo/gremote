@@ -1,35 +1,37 @@
 /// Chinese presentation labels. Camera keys and values stay unchanged on wire.
-String shootParamLabel(String key) =>
-    const {
-      'av': '光圈',
-      'tv': '快门',
-      'sv': '感光度',
-      'xv': '曝光补偿',
-      'WBMode': '白平衡',
-      'meteringMode': '测光',
-      'focusSetting': '对焦模式',
-      'focusMode': '对焦方式',
-      'exposureMode': '曝光模式',
-      'shootMode': '驱动模式',
-      'captureMode': '拍摄类型',
-      'effect': '影像效果',
-      'aspectRatio': '画幅比例',
-      'stillFormat': '照片格式',
-      'stillSize': '照片尺寸',
-      'movieSize': '视频尺寸',
-      'noiseReduction': '降噪',
-      'whiteBalance': '白平衡',
-      'imageQuality': '画质',
-      'flashMode': '闪光模式',
-      'flashComp': '闪光补偿',
-      'snapDistance': '快拍距离',
-      'NDFilter': '减光滤镜',
-      'ndFilter': '减光滤镜',
-      'crop': '裁切',
-      'WBColorTemp': '色温',
-      'WBShift': '白平衡偏移',
-    }[key] ??
-    '其他参数';
+const _shootParamLabels = {
+  'av': '光圈',
+  'tv': '快门',
+  'sv': '感光度',
+  'xv': '曝光补偿',
+  'WBMode': '白平衡',
+  'meteringMode': '测光',
+  'focusSetting': '对焦模式',
+  'focusMode': '对焦方式',
+  'exposureMode': '曝光模式',
+  'shootMode': '驱动模式',
+  'captureMode': '拍摄类型',
+  'effect': '影像效果',
+  'aspectRatio': '画幅比例',
+  'stillFormat': '照片格式',
+  'stillSize': '照片尺寸',
+  'movieSize': '视频尺寸',
+  'noiseReduction': '降噪',
+  'whiteBalance': '白平衡',
+  'imageQuality': '画质',
+  'flashMode': '闪光模式',
+  'flashComp': '闪光补偿',
+  'snapDistance': '快拍距离',
+  'NDFilter': '减光滤镜',
+  'ndFilter': '减光滤镜',
+  'crop': '裁切',
+  'WBColorTemp': '色温',
+  'WBShift': '白平衡偏移',
+};
+
+bool hasShootParamLabel(String key) => _shootParamLabels.containsKey(key);
+
+String shootParamLabel(String key) => _shootParamLabels[key] ?? '其他参数';
 
 String shootValueLabel(String key, String? value) {
   if (value == null) return '—';
