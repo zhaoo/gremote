@@ -25,6 +25,29 @@ abstract final class GRemoteTheme {
     );
 
     return base.copyWith(
+      appBarTheme: const AppBarTheme(
+        backgroundColor: GRemoteColors.night,
+        foregroundColor: GRemoteColors.text,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        titleSpacing: 20,
+        titleTextStyle: TextStyle(fontSize: 26, fontWeight: FontWeight.w500),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: GRemoteColors.raised,
+        surfaceTintColor: Colors.transparent,
+        showDragHandle: true,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      ),
+      tabBarTheme: const TabBarTheme(
+        indicator: BoxDecoration(),
+        dividerColor: Colors.transparent,
+        labelColor: GRemoteColors.text,
+        unselectedLabelColor: GRemoteColors.muted,
+        labelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+      ),
       textTheme: base.textTheme.copyWith(
         displaySmall: GRemoteType.display.copyWith(
           color: GRemoteColors.text,
@@ -36,7 +59,7 @@ abstract final class GRemoteTheme {
         ),
         bodyLarge: GRemoteType.body.copyWith(color: GRemoteColors.text),
         bodyMedium: GRemoteType.body.copyWith(color: GRemoteColors.muted),
-        labelLarge: GRemoteType.body.copyWith(fontWeight: FontWeight.w700),
+        labelLarge: GRemoteType.body.copyWith(fontWeight: FontWeight.w500),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
@@ -46,7 +69,7 @@ abstract final class GRemoteTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(6),
           ),
-          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
         ),
       ),
       cardTheme: const CardTheme(
