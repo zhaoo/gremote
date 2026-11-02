@@ -1,17 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../app/theme/app_colors.dart';
 import '../../camera/companion/extensions_controller.dart';
 import '../../camera/companion/extensions_protocol.dart';
 import '../film_workbench/companion_providers.dart';
 import 'extensions_providers.dart';
-import '../film_workbench/camera_films_page.dart';
-
-Widget _pairingPage() => Scaffold(
-    appBar: AppBar(title: const Text('机内胶卷')),
-    body: const SafeArea(child: CameraFilmsPage()));
 
 class CameraExtensions extends ConsumerStatefulWidget {
   const CameraExtensions({super.key});
@@ -33,24 +27,11 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
       });
     }
     if (controller == null || !connected) {
-      return Center(
-          child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.camera_outlined,
-                    size: 36, color: GRemoteColors.muted),
-                const SizedBox(height: 16),
-                Text(controller == null ? '连接并配对 M10V 相机' : '未连接相机'),
-                const SizedBox(height: 20),
-                FilledButton(
-                    onPressed: () => context.go('/home'),
-                    child: const Text('连接相机')),
-                TextButton(
-                    onPressed: () => Navigator.of(context, rootNavigator: true)
-                        .push(MaterialPageRoute<void>(
-                            builder: (_) => _pairingPage())),
-                    child: const Text('配对与机内胶卷')),
-              ])));
+      return _disabledSettings(controller?.pending == true
+          ? '结果待核对 · 重新连接后核对'
+          : controller == null
+              ? '配对 M10V 后可设置'
+              : '连接相机后读取机身设置');
     }
     return ListenableBuilder(
         listenable: controller,
@@ -59,9 +40,8 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
                 children: [
                   Row(children: [
                     Expanded(
-                        child: Text(
-                            controller.snapshot == null ? '机身设置' : 'GR III',
-                            style: Theme.of(context).textTheme.titleMedium)),
+                        child: Text('机身设置',
+                            style: Theme.of(context).textTheme.bodySmall)),
                     IconButton(
                         tooltip: '读取机身设置',
                         onPressed:
@@ -85,39 +65,68 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
                             : () => _acknowledge(controller),
                         child: const Text('核对当前设置')),
                   if (controller.unsupported)
-                    Card(
-                        child: ListTile(
-                            title: const Text('扩展需要新版固件与 SD 服务'),
-                            subtitle: const Text('胶卷读取和装卷仍可使用'),
-                            trailing: const Icon(Icons.chevron_right),
-                            onTap: () =>
-                                Navigator.of(context, rootNavigator: true).push(
-                                    MaterialPageRoute<void>(
-                                        builder: (_) => _pairingPage())))),
+                    const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Text('扩展需更新固件与 SD 服务',
+                            style: TextStyle(
+                                color: GRemoteColors.muted, fontSize: 12))),
                   for (final group in ['功能', '效果', '水印', '焦距', '画幅']) ...[
                     Padding(
                         padding: const EdgeInsets.only(top: 24, bottom: 8),
                         child: Text(group,
                             style: Theme.of(context).textTheme.titleMedium)),
-                    Card(
-                        child: Column(children: [
+                    Column(children: [
                       for (final field in extensionFields.entries
                           .where((e) => e.value.group == group))
                         _field(controller, field.key, field.value)
-                    ])),
+                    ]),
                     if (group == '功能') _half(controller),
                   ],
                   Padding(
                       padding: const EdgeInsets.only(top: 24, bottom: 8),
                       child: Text('开关机画面',
                           style: Theme.of(context).textTheme.titleMedium)),
-                  const Card(
-                      child: ListTile(
-                          title: Text('开机 / 关机画面'),
-                          subtitle: Text('需制作固件并重启，暂不支持无线替换'),
-                          trailing: Icon(Icons.lock_outline, size: 18))),
+                  const ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    enabled: false,
+                    title: Text('开机 / 关机画面'),
+                    subtitle: Text('需制作固件并重启，暂不支持无线替换'),
+                  ),
                 ]));
   }
+
+  Widget _disabledSettings(String hint) =>
+      ListView(padding: const EdgeInsets.fromLTRB(20, 16, 20, 28), children: [
+        Text(hint,
+            style: const TextStyle(color: GRemoteColors.muted, fontSize: 12)),
+        for (final group in ['功能', '效果', '水印', '焦距', '画幅']) ...[
+          Padding(
+              padding: const EdgeInsets.only(top: 24, bottom: 8),
+              child:
+                  Text(group, style: Theme.of(context).textTheme.titleMedium)),
+          for (final field
+              in extensionFields.values.where((f) => f.group == group))
+            ListTile(
+                contentPadding: EdgeInsets.zero,
+                enabled: false,
+                title: Text(field.label, style: const TextStyle(fontSize: 14)),
+                trailing: const Text('—',
+                    style: TextStyle(color: GRemoteColors.muted))),
+          if (group == '功能')
+            const ListTile(
+                contentPadding: EdgeInsets.zero,
+                enabled: false,
+                title: Text('Half'),
+                trailing: Text('—')),
+        ],
+        const Padding(
+            padding: EdgeInsets.only(top: 24, bottom: 8), child: Text('开关机画面')),
+        const ListTile(
+            contentPadding: EdgeInsets.zero,
+            enabled: false,
+            title: Text('开机 / 关机画面'),
+            trailing: Text('—')),
+      ]);
 
   Widget _field(
       CameraExtensionsController controller, String key, ExtensionField field) {
@@ -127,8 +136,12 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
             controller.snapshot?.supported.contains(key) == true;
     final pairedEdit = (key == 'quickSwitchA' || key == 'quickSwitchB') &&
         controller.snapshot?.values['quickSwitch'] == 1;
+    final enabled =
+        supported && controller.canWrite && value != null && !pairedEdit;
     return ListTile(
-      title: Text(field.label),
+      contentPadding: EdgeInsets.zero,
+      enabled: enabled,
+      title: Text(field.label, style: const TextStyle(fontSize: 14)),
       subtitle: pairedEdit
           ? const Text('先关闭快切再修改配对', style: TextStyle(fontSize: 11))
           : field.runtime
@@ -139,37 +152,39 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
         ConstrainedBox(
             constraints: BoxConstraints(
                 maxWidth: MediaQuery.sizeOf(context).width * .38),
-            child: Text(
-                supported && value != null ? field.display(value) : '未开放',
+            child: Text(supported && value != null ? field.display(value) : '—',
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                     color:
-                        supported ? GRemoteColors.gold : GRemoteColors.muted))),
+                        enabled ? GRemoteColors.text : GRemoteColors.muted))),
         const SizedBox(width: 6),
-        Icon(supported ? Icons.chevron_right : Icons.lock_outline,
-            size: 18, color: GRemoteColors.muted),
+        if (enabled)
+          const Icon(Icons.chevron_right, size: 18, color: GRemoteColors.muted),
       ]),
-      onTap: supported && controller.canWrite && value != null && !pairedEdit
-          ? () => _choose(controller, key, field, value)
-          : null,
+      onTap: enabled ? () => _choose(controller, key, field, value) : null,
     );
   }
 
   Widget _half(CameraExtensionsController controller) {
     final value = controller.snapshot?.values['aspect'];
     return ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+        contentPadding: EdgeInsets.zero,
         title: const Text('Half'),
         subtitle: const Text('两次拍摄拼接'),
-        trailing: Switch(
-            value: value == 6,
-            onChanged: controller.canWrite &&
-                    value != null &&
-                    controller.capabilities?.supported.contains('aspect') ==
-                        true
-                ? (enabled) => _confirm(controller, 'aspect', enabled ? 6 : 0)
-                : null));
+        trailing: value == null
+            ? const Text('—')
+            : Switch(
+                value: value == 6,
+                onChanged: controller.canWrite &&
+                        value != null &&
+                        controller.capabilities?.supported.contains('aspect') ==
+                            true &&
+                        controller.snapshot?.supported.contains('aspect') ==
+                            true
+                    ? (enabled) =>
+                        _confirm(controller, 'aspect', enabled ? 6 : 0)
+                    : null));
   }
 
   Future<void> _choose(CameraExtensionsController controller, String key,

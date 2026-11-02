@@ -55,10 +55,18 @@ class _CameraPageState extends ConsumerState<CameraPage> {
                                   ? GRemoteColors.text
                                   : GRemoteColors.muted),
                           label: ConstrainedBox(
-                              constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * .4),
-                              child: Text(connected ? connection.snapshot.identity.model : '未连接',
-                                  maxLines: 1, overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 12, color: GRemoteColors.muted)))),
+                              constraints: BoxConstraints(
+                                  maxWidth:
+                                      MediaQuery.sizeOf(context).width * .4),
+                              child: Text(
+                                  connected
+                                      ? connection.snapshot.identity.model
+                                      : '未连接',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      color: GRemoteColors.muted)))),
                     ])),
                 Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 6),

@@ -46,7 +46,15 @@ void main() {
       expect(tester.takeException(), isNull);
       await tester.tap(find.text('扩展'));
       await tester.pumpAndSettle();
-      expect(find.text('连接并配对 M10V 相机'), findsOneWidget);
+      expect(find.text('配对 M10V 后可设置'), findsOneWidget);
+      expect(
+          tester
+              .widget<ListTile>(find
+                  .ancestor(
+                      of: find.text('HDF'), matching: find.byType(ListTile))
+                  .first)
+              .onTap,
+          isNull);
       expect(tester.takeException(), isNull);
     });
   }

@@ -9,6 +9,30 @@ import 'package:gremote/features/film_workbench/companion_providers.dart';
 import '../../camera/extensions_controller_test.dart';
 
 void main() {
+  testWidgets(
+      'unpaired camera shows disabled settings without an unlock button',
+      (tester) async {
+    await tester.pumpWidget(ProviderScope(
+        overrides: [
+          cameraExtensionsControllerProvider.overrideWithValue(null),
+          companionNetworkReadyProvider.overrideWithValue(false),
+          companionIdentityHydrationProvider.overrideWith((_) async {}),
+        ],
+        child: MaterialApp(
+            theme: GRemoteTheme.dark,
+            home: const Scaffold(body: CameraExtensions()))));
+    await tester.pumpAndSettle();
+    expect(find.text('HDF'), findsOneWidget);
+    final row = tester.widget<ListTile>(find
+        .ancestor(of: find.text('HDF'), matching: find.byType(ListTile))
+        .first);
+    expect(row.onTap, isNull);
+    expect(row.enabled, isFalse);
+    expect(find.widgetWithText(FilledButton, '连接相机'), findsNothing);
+    await tester.tap(find.text('HDF'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
+  });
   for (final width in [320.0, 390.0]) {
     testWidgets(
         'extension HDF save uses confirmation and real readback at $width',
