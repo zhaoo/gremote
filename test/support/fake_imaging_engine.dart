@@ -24,6 +24,7 @@ class RenderPhotoCall {
 
 class FakeImagingEngine implements ImagingEngine {
   Future<void>? renderGate;
+  Future<void>? validationGate;
   int activeRenders = 0, maxActiveRenders = 0;
   int lutSize = 33;
   ImagingErrorCode? validateError;
@@ -44,6 +45,7 @@ class FakeImagingEngine implements ImagingEngine {
   @override
   Future<int> validateLut(Uint8List cube) async {
     validated.add(cube);
+    if (validationGate != null) await validationGate;
     if (validateError != null) throw ImagingException(validateError!);
     return lutSize;
   }

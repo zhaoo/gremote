@@ -83,14 +83,26 @@ class _EditorPageState extends ConsumerState<EditorPage> {
       _finish();
       return;
     }
-    _leaving = true;
+    setState(() => _leaving = true);
     _controller.commitTool();
     await _controller.flushEdits();
     if (!mounted) return;
+    if (ref.read(editorProvider(widget.mediaId)).saveError != null) {
+      setState(() => _leaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('调整尚未保存，请重试后退出'),
+          action: SnackBarAction(
+              label: '重试',
+              onPressed: () async {
+                await _controller.retrySave();
+                if (mounted) _leave();
+              })));
+      return;
+    }
     setState(() => _allowPop = true);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) Navigator.of(context).maybePop();
-      _leaving = false;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (mounted) await Navigator.of(context).maybePop();
+      if (mounted) setState(() => _leaving = false);
     });
   }
 
@@ -124,7 +136,7 @@ class _EditorPageState extends ConsumerState<EditorPage> {
                 automaticallyImplyLeading: false,
                 leading: IconButton(
                     tooltip: '返回相册',
-                    onPressed: s.exporting ? null : _leave,
+                    onPressed: s.exporting || _leaving ? null : _leave,
                     icon: const Icon(Icons.chevron_left, size: 24)),
                 titleSpacing: 0,
                 title: Text(s.item?.displayName ?? '照片编辑',
@@ -157,7 +169,7 @@ class _EditorPageState extends ConsumerState<EditorPage> {
                                           : GRemoteColors.muted))))),
                   PopupMenuButton<String>(
                       tooltip: '更多',
-                      enabled: !s.exporting,
+                      enabled: !s.exporting && !_leaving,
                       icon: const Icon(Icons.more_horiz, size: 22),
                       onSelected: _more,
                       itemBuilder: (_) => [
@@ -177,10 +189,12 @@ class _EditorPageState extends ConsumerState<EditorPage> {
                               minimumSize: const Size(50, 36),
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 10)),
-                          onPressed:
-                              s.doc == null || s.base == null || s.exporting
-                                  ? null
-                                  : _export,
+                          onPressed: s.doc == null ||
+                                  s.base == null ||
+                                  s.exporting ||
+                                  _leaving
+                              ? null
+                              : _export,
                           child: Text(s.exporting ? '导出中…' : '导出',
                               style: const TextStyle(fontSize: 12))))
                 ]),
@@ -189,7 +203,7 @@ class _EditorPageState extends ConsumerState<EditorPage> {
                 : SafeArea(
                     top: false,
                     child: AbsorbPointer(
-                        absorbing: s.exporting,
+                        absorbing: s.exporting || _leaving,
                         child: landscape
                             ? Row(children: [
                                 Expanded(child: _photo(s)),
@@ -314,8 +328,8 @@ class _EditorPageState extends ConsumerState<EditorPage> {
                 onTap: s.error == null && s.saveError == null
                     ? null
                     : () {
-                        _controller.retrySave();
-                        _controller.regrade();
+                        if (s.saveError != null) _controller.retrySave();
+                        if (s.error != null) _controller.regrade();
                       },
                 child: Text(
                     s.saveError ??

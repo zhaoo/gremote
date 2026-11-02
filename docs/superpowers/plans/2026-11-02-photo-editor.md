@@ -71,6 +71,6 @@
 ### Task 6: 整体验证与独立审查
 
 **Files:** docs/testing/2026-11-02-photo-editor.md; dist/verification/photo-editor.
-- [ ] Native ctest, full flutter test, flutter analyze, arm64 APK build; inspect widget captures and pixel comparison evidence. Record skipped/hardware limits precisely.
-- [ ] Fresh reviewer for whole changed range, fix material findings with RED/GREEN tests, rerun required suites.
-- [ ] Record report, package APK, commit final changes. Preserve develop, do not push or publish; provide reviewable result.
+- [x] Native ctest, full flutter test, flutter analyze, arm64 APK build; inspect widget captures and pixel comparison evidence. Record skipped/hardware limits precisely.
+- [x] Fresh reviewer for whole changed range, fix material findings with RED/GREEN tests, rerun required suites.
+- [x] Record report, package APK, commit final changes. Preserve develop, do not push or publish; provide reviewable result.

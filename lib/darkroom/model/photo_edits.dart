@@ -128,6 +128,24 @@ class CropEdit {
     );
   }
 
+  /// Reframe a locked crop when applying a preset to a different photo shape.
+  CropEdit adaptToSource(int sourceWidth, int sourceHeight) {
+    if (aspectRatio <= 0) return this;
+    final w = quarterTurns.isOdd ? sourceHeight : sourceWidth;
+    final h = quarterTurns.isOdd ? sourceWidth : sourceHeight;
+    final relative = aspectRatio / (math.max(1, w) / math.max(1, h));
+    final area = width * height;
+    var cw = math.sqrt(area * relative), ch = math.sqrt(area / relative);
+    final scale = math.min(1.0, math.min(1 / cw, 1 / ch));
+    cw *= scale;
+    ch *= scale;
+    return copyWith(
+        left: (left + width / 2 - cw / 2).clamp(0, 1 - cw),
+        top: (top + height / 2 - ch / 2).clamp(0, 1 - ch),
+        width: cw,
+        height: ch);
+  }
+
   static double _floatProduct(int pixels, double fraction) {
     final p = Float32List.fromList([pixels.toDouble(), fraction]);
     p[0] = p[0] * p[1];

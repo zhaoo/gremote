@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:gremote/darkroom/model/export_recipe.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gremote/darkroom/darkroom_providers.dart';
@@ -8,6 +9,7 @@ import '../support/fake_media_gateway.dart';
 import '../support/test_darkroom.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   late TestDarkroom env;
   late ProviderContainer c;
   late EditorController editor;
@@ -137,5 +139,95 @@ void main() {
     expect(c.read(editorProvider(3)).error, isNull);
     expect(
         c.read(editorProvider(3)).graded, same(c.read(editorProvider(3)).base));
+  });
+  test('frame width and date stamp are individual undoable persisted changes',
+      () async {
+    editor.setFrameWidth(.08);
+    await editor.flushEdits();
+    expect(c.read(editorProvider(3)).recipe.frameWidth, .08);
+    expect((await env.store.loadEdit(3))!.recipe.frameWidth, .08);
+    editor.setDateStamp(true);
+    await editor.flushEdits();
+    expect(c.read(editorProvider(3)).recipe.dateStamp, isTrue);
+    expect((await env.store.loadEdit(3))!.recipe.dateStamp, isTrue);
+    editor.undo();
+    expect(c.read(editorProvider(3)).recipe.dateStamp, isFalse);
+    expect(c.read(editorProvider(3)).recipe.frameWidth, .08);
+    editor.redo();
+    expect(c.read(editorProvider(3)).recipe.dateStamp, isTrue);
+  });
+
+  test('save retry inside a tool never persists unconfirmed draft', () async {
+    editor.setEdits(const PhotoEdits().withValue(PhotoAdjustment.grain, .2));
+    await editor.flushEdits();
+    editor.beginTool();
+    editor.setEdits(c
+        .read(editorProvider(3))
+        .recipe
+        .edits
+        .withValue(PhotoAdjustment.grain, .8));
+    await editor.retrySave();
+    editor.cancelTool();
+    await editor.flushPreview();
+    expect(c.read(editorProvider(3)).recipe.edits.value(PhotoAdjustment.grain),
+        .2);
+    expect(
+        (await env.store.loadEdit(3))!
+            .recipe
+            .edits
+            .value(PhotoAdjustment.grain),
+        .2);
+  });
+
+  test('late LUT import refreshes library but never overrides cancelled tool',
+      () async {
+    final gate = Completer<void>();
+    env.engine.validationGate = gate.future;
+    final bytes = await c
+        .read(lutLibraryProvider)
+        .load(c.read(editorProvider(3)).luts.first.id);
+    editor.beginTool();
+    final importing = editor.importLut('cancelled.cube', bytes);
+    await Future<void>.delayed(Duration.zero);
+    editor.cancelTool();
+    gate.complete();
+    await importing;
+    await editor.flushEdits();
+    expect(c.read(editorProvider(3)).recipe.lutId, isNull);
+    expect(await env.store.importedLuts(), hasLength(1));
+    expect(await env.store.loadEdit(3), isNull);
+  });
+
+  test('late LUT import never overrides newer explicit LUT selection',
+      () async {
+    final gate = Completer<void>();
+    env.engine.validationGate = gate.future;
+    final first = c.read(editorProvider(3)).luts.first.id;
+    final bytes = await c.read(lutLibraryProvider).load(first);
+    editor.beginTool();
+    final importing = editor.importLut('late.cube', bytes);
+    await Future<void>.delayed(Duration.zero);
+    await editor.setLut(first);
+    gate.complete();
+    await importing;
+    expect(c.read(editorProvider(3)).recipe.lutId, first);
+  });
+
+  test(
+      'locked crop preset adapts to destination orientation and survives resize',
+      () async {
+    editor.applyPreset(const ExportRecipe(edits: PhotoEdits()).copyWith(
+        edits: const PhotoEdits().copyWith(
+            crop: const CropEdit(
+                width: 1, height: 2 / 3, top: 1 / 6, aspectRatio: 1))));
+    final crop = c.read(editorProvider(3)).recipe.edits.crop;
+    expect(crop.outputSize(6000, 4000), (4000, 4000));
+    expect(crop.left, closeTo(1 / 6, .00001));
+    expect(crop.top, 0);
+    expect(crop.aspectRatio, 1);
+    await editor.flushEdits();
+    expect(
+        (await env.store.loadEdit(3))!.recipe.edits.crop.outputSize(6000, 4000),
+        (4000, 4000));
   });
 }

@@ -141,7 +141,9 @@ class ExportRecipe {
       other.size == size &&
       other.quality == quality &&
       other.keepGps == keepGps &&
-      other.edits == edits;
+      other.edits == edits &&
+      other.frameWidth == frameWidth &&
+      other.dateStamp == dateStamp;
 
   @override
   int get hashCode => Object.hash(lutId, strength, frame, ratio, size, quality,

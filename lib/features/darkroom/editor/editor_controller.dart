@@ -121,6 +121,8 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
   EditDocument? _toolStart, _gestureStart;
   List<EditDocument>? _toolUndo, _toolRedo;
   var _gradeTicket = 0;
+  var _toolEpoch = 0;
+  var _lutEpoch = 0;
   var _alive = true;
   var _dirtyPreview = false;
   var _saveTicket = 0;
@@ -243,7 +245,8 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
   }
 
   Future<void> retrySave() async {
-    if (state.doc != null) _persist(state.doc!);
+    final confirmed = _toolStart ?? state.doc;
+    if (confirmed != null) _persist(confirmed);
     await _saving;
   }
 
@@ -254,6 +257,7 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
   void beginTool({bool crop = false}) {
     if (state.exporting || state.doc == null) return;
     if (_toolStart != null) commitTool();
+    ++_toolEpoch;
     _toolStart = state.doc;
     _toolUndo = List.of(_undo);
     _toolRedo = List.of(_redo);
@@ -264,6 +268,7 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
   void commitTool() {
     if (_toolStart == null) return;
     endGesture();
+    ++_toolEpoch;
     final crop = state.cropEditing;
     _toolStart = null;
     _toolUndo = null;
@@ -276,6 +281,7 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
   void cancelTool() {
     final start = _toolStart;
     if (start == null || state.exporting) return;
+    ++_toolEpoch;
     _gestureStart = null;
     _undo
       ..clear()
@@ -327,6 +333,7 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
   void setEdits(PhotoEdits edits) =>
       _updateRecipe(state.recipe.copyWith(edits: edits));
   Future<void> setLut(String? id) async {
+    ++_lutEpoch;
     _updateRecipe(state.recipe.copyWith(lutId: () => id));
     await flushPreview();
   }
@@ -360,15 +367,28 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
       title: '',
       location: '',
       hidden: const {}));
-  void applyPreset(ExportRecipe recipe) => _updateRecipe(recipe);
+  void applyPreset(ExportRecipe recipe) {
+    final meta = state.meta;
+    if (meta != null) {
+      recipe = recipe.copyWith(
+          edits: recipe.edits.copyWith(
+              crop: recipe.edits.crop
+                  .adaptToSource(meta.orientedWidth, meta.orientedHeight)));
+    }
+    _updateRecipe(recipe);
+  }
+
   Future<void> importLut(String name, Uint8List bytes) async {
     final library = ref.read(lutLibraryProvider);
+    final selection = ++_lutEpoch, tool = _toolEpoch;
     final entry = await library.import(name, bytes);
     if (!_alive) return;
     final luts = await library.entries();
     if (!_alive) return;
     _emit(state.copyWith(luts: luts));
-    await setLut(entry.id);
+    if (selection == _lutEpoch && tool == _toolEpoch && !state.exporting) {
+      await setLut(entry.id);
+    }
   }
 
   Future<void> requestLocationAccess() async {

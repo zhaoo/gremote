@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:gremote/darkroom/store/darkroom_store.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,8 +18,20 @@ import 'package:gremote/features/darkroom/editor/widgets/frame_preview.dart';
 import '../support/fake_media_gateway.dart';
 import '../support/test_darkroom.dart';
 
+class GatedEditStore extends DarkroomStore {
+  GatedEditStore(super.db, this.gate);
+  final Future<void> gate;
+  @override
+  Future<void> saveEdit(EditDocument doc) async {
+    await gate;
+    await super.saveEdit(doc);
+  }
+}
+
 Future<(TestDarkroom, ProviderContainer)> pumpEditor(WidgetTester tester,
-    {bool locationAccess = true, Size size = const Size(390, 844)}) async {
+    {bool locationAccess = true,
+    Size size = const Size(390, 844),
+    Future<void>? saveGate}) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
@@ -30,7 +44,11 @@ Future<(TestDarkroom, ProviderContainer)> pumpEditor(WidgetTester tester,
     ),
   );
   addTearDown(env.close);
-  final container = ProviderContainer(overrides: env.overrides);
+  final container = ProviderContainer(overrides: [
+    ...env.overrides,
+    if (saveGate != null)
+      darkroomStoreProvider.overrideWithValue(GatedEditStore(env.db, saveGate))
+  ]);
   addTearDown(container.dispose);
   await container.read(localMediaRepositoryProvider).scan().drain<void>();
   await tester.pumpWidget(UncontrolledProviderScope(
@@ -272,5 +290,88 @@ void main() {
     await tester.tap(find.byTooltip('完成调整'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
+  });
+  testWidgets(
+      'failed autosave blocks leaving and keeps current edits available',
+      (tester) async {
+    final (env, c) = await pumpEditor(tester);
+    final nav = Navigator.of(tester.element(find.byType(EditorPage)));
+    nav.push(
+        MaterialPageRoute<void>(builder: (_) => const EditorPage(mediaId: 3)));
+    await tester.pumpAndSettle();
+    expect(nav.canPop(), isTrue);
+    await env.db.execute(
+        "CREATE TRIGGER reject_edit BEFORE INSERT ON edit_documents BEGIN SELECT RAISE(FAIL, 'disk full'); END");
+    final editor = c.read(editorProvider(3).notifier);
+    editor.setEdits(const PhotoEdits().withValue(PhotoAdjustment.exposure, .7));
+    await tester.pumpAndSettle();
+    await editor.flushEdits();
+    await tester.tap(find.byTooltip('返回相册'));
+    await tester.pumpAndSettle();
+    expect(nav.canPop(), isTrue);
+    expect(
+        c.read(editorProvider(3)).recipe.edits.value(PhotoAdjustment.exposure),
+        .7);
+    expect(find.textContaining('尚未保存'), findsOneWidget);
+    await env.db.execute('DROP TRIGGER reject_edit');
+    await editor.retrySave();
+    await tester.tap(find.byTooltip('返回相册'));
+    await tester.pumpAndSettle();
+    expect(nav.canPop(), isFalse);
+  });
+
+  testWidgets(
+      'date switch and border width slider produce real standalone edits',
+      (tester) async {
+    final (_, c) = await pumpEditor(tester);
+    await openTab(tester, '日期印记');
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+    expect(c.read(editorProvider(3)).recipe.dateStamp, isTrue);
+    await tester.tap(find.byTooltip('完成调整'));
+    await tester.pumpAndSettle();
+    await openTab(tester, '边框');
+    await tester.tap(find.text('等宽白边'));
+    await tester.pumpAndSettle();
+    final slider = tester.widget<Slider>(find.byType(Slider));
+    slider.onChangeStart!(.035);
+    slider.onChanged!(.08);
+    slider.onChangeEnd!(.08);
+    await tester.pumpAndSettle();
+    expect(c.read(editorProvider(3)).recipe.frameWidth, .08);
+  });
+  testWidgets('leaving locks export and tools until pending save completes',
+      (tester) async {
+    final gate = Completer<void>();
+    final (env, c) = await pumpEditor(tester, saveGate: gate.future);
+    final nav = Navigator.of(tester.element(find.byType(EditorPage)));
+    nav.push(
+        MaterialPageRoute<void>(builder: (_) => const EditorPage(mediaId: 3)));
+    await tester.pumpAndSettle();
+    c
+        .read(editorProvider(3).notifier)
+        .setEdits(const PhotoEdits().withValue(PhotoAdjustment.exposure, .7));
+    await tester.pump();
+    await tester.tap(find.byTooltip('返回相册'));
+    await tester.pump();
+    expect(
+        tester
+            .widget<FilledButton>(find.widgetWithText(FilledButton, '导出'))
+            .onPressed,
+        isNull);
+    final absorbing = tester.widget<AbsorbPointer>(find
+        .descendant(
+            of: find.byType(EditorPage), matching: find.byType(AbsorbPointer))
+        .first);
+    expect(absorbing.absorbing, isTrue);
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(nav.canPop(), isFalse);
+    expect(
+        (await env.store.loadEdit(3))!
+            .recipe
+            .edits
+            .value(PhotoAdjustment.exposure),
+        .7);
   });
 }
