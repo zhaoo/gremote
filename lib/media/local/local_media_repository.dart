@@ -176,7 +176,9 @@ class LocalMediaRepository {
       (await _db.rawQuery(
         'SELECT m.* FROM local_media m INNER JOIN album_collection a ON m.media_id=a.media_id ORDER BY a.added_at DESC, m.media_id DESC LIMIT ?',
         [limit.clamp(0, 5)],
-      )).map(_item).toList();
+      ))
+          .map(_item)
+          .toList();
 
   Map<String, Object?> _entryRow(LocalMediaEntry e) => {
         'media_id': e.id,

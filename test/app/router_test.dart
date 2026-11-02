@@ -43,13 +43,19 @@ void main() {
     expect(find.text('相册').last, findsOneWidget);
     expect(find.text('相机'), findsOneWidget);
     expect(find.text('GOOD PHOTOS  A KINDER WORLD'), findsNothing);
-    expect(find.byWidgetPredicate((w) => w is Image && w.semanticLabel == 'GRemote'), findsOneWidget);
+    expect(
+        find.byWidgetPredicate(
+            (w) => w is Image && w.semanticLabel == 'GRemote'),
+        findsOneWidget);
     await tester.tap(find.text('拍摄'));
     await tester.pumpAndSettle();
     expect(find.text('连接相机后显示取景画面'), findsOneWidget);
     await tester.tap(find.text('前往连接'));
     await tester.pumpAndSettle();
-    expect(find.byWidgetPredicate((w) => w is Image && w.semanticLabel == 'GRemote'), findsOneWidget);
+    expect(
+        find.byWidgetPredicate(
+            (w) => w is Image && w.semanticLabel == 'GRemote'),
+        findsOneWidget);
   });
 
   testWidgets('unfinished sections explain their availability', (tester) async {

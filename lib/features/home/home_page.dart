@@ -54,7 +54,7 @@ class HomePage extends ConsumerWidget {
                   ),
                 ]),
               ),
-              const DefaultHomeCover(),
+              const HomeCover(),
               const SizedBox(height: 22),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 23),
@@ -208,9 +208,8 @@ class _StatusCell extends StatelessWidget {
         borderRadius: BorderRadius.circular(9),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 19),
-          decoration: BoxDecoration(
-            border:
-                const Border(bottom: BorderSide(color: GRemoteColors.divider)),
+          decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: GRemoteColors.divider)),
           ),
           child: Row(
             children: [

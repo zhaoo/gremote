@@ -51,9 +51,9 @@ Future<({TestDarkroom env, FakeCameraGateways gateways})> pumpShoot(
   ));
   await tester.pumpAndSettle();
   if (connect) {
-    await tester.tap(find.text('连接 GR III'));
+    await tester.tap(find.text('连接相机'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('进入实景遥控'));
+    await tester.tap(find.text('进入拍摄'));
   } else {
     await tester.tap(find.text('拍摄'));
   }

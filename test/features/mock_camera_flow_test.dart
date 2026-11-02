@@ -35,11 +35,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('连接 GR III'));
+    await tester.tap(find.text('连接相机'));
     await tester.pumpAndSettle();
     expect(find.text('已连接'), findsOneWidget);
 
-    await tester.tap(find.text('进入实景遥控'));
+    await tester.tap(find.text('进入拍摄'));
     await tester.pumpAndSettle();
     final context =
         tester.element(find.byKey(const Key('live-view-focus-surface')));
