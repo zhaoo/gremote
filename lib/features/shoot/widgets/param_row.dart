@@ -19,17 +19,26 @@ class CameraParamRow extends StatelessWidget {
   const CameraParamRow({
     required this.state,
     required this.onSelected,
+    this.compact = false,
     super.key,
   });
 
   final CameraState state;
   final ValueChanged<CameraParam> onSelected;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        height: 48,
+        height: compact ? 66 : 56,
         child: Row(children: [
-          for (final (key, label) in _params)
+          for (final (key, label) in compact
+              ? const [
+                  (ParamKey.shutter, '快门'),
+                  (ParamKey.aperture, '光圈'),
+                  (ParamKey.iso, 'ISO'),
+                  (ParamKey.exposureComp, '补偿')
+                ]
+              : _params)
             Expanded(child: _item(context, key, label)),
         ]),
       );
@@ -53,8 +62,9 @@ class CameraParamRow extends StatelessWidget {
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
         Text(label,
             maxLines: 1,
-            style: const TextStyle(color: GRemoteColors.muted, fontSize: 9)),
-        const SizedBox(height: 2),
+            style: TextStyle(
+                color: GRemoteColors.muted, fontSize: compact ? 11 : 10)),
+        const SizedBox(height: 6),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Flexible(
             child: Text(shootValueLabel(key.wireKey, param?.current),
@@ -62,8 +72,8 @@ class CameraParamRow extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                     color: enabled ? GRemoteColors.text : GRemoteColors.muted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600)),
+                    fontSize: compact ? 17 : 12,
+                    fontWeight: FontWeight.w400)),
           ),
           if (state.pending.containsKey(key.wireKey)) ...[
             const SizedBox(width: 3),

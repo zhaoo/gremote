@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/app_presence.dart';
 import '../../app/theme/app_colors.dart';
+import '../../app/widgets/workspace_motion.dart';
 import '../../camera/connection/connection_controller.dart';
 import '../../camera/connection/connection_state.dart';
 import '../../camera/live/live_frame_analyzer.dart';
@@ -38,6 +39,7 @@ import 'widgets/recipe_editor_dialog.dart';
 import 'widgets/recipe_strip.dart';
 import 'widgets/top_bar.dart';
 import 'widgets/viewfinder.dart';
+import 'widgets/shoot_workspace_layout.dart';
 
 class ShootPage extends ConsumerStatefulWidget {
   const ShootPage({super.key});
@@ -167,131 +169,121 @@ class _ShootPageState extends ConsumerState<ShootPage> {
       canPop: false,
       onPopInvokedWithResult: (_, __) => _goHome(),
       child: Scaffold(
-        backgroundColor: GRemoteColors.night,
+        backgroundColor: const Color(0xFF111416),
         body: SafeArea(
-          bottom: false,
+          bottom: true,
           child: Stack(children: [
-            Column(children: [
-              ShootTopBar(
-                exposureMode: camera.value(ParamKey.exposureMode) ?? 'GR III',
-                onBack: _goHome,
-                onRecipe: () => setState(() => _showRecipes = !_showRecipes),
-                onTimer: () => _cycleTimer(camera),
-                onHistogram: _toggleHistogram,
-                onSettings: () => _showSettings(camera),
-                histogram: _histogram,
-                recipeDetached: recipeSession.detached,
-              ),
-              if (_showRecipes)
-                RecipeStrip(
-                  recipes: recipes,
-                  session: recipeSession,
-                  onSelect: _activateRecipe,
-                  onAdd: () => _addRecipe(camera),
-                ),
-              if (recipeSession.detached)
-                Container(
-                  width: double.infinity,
-                  color: const Color(0xAA682C25),
-                  padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: const Text('已脱离',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 10)),
-                ),
-              Expanded(
-                child: _mode == ShootMode.more
+            ShootWorkspaceLayout(
+                header: [
+                  ShootTopBar(
+                    exposureMode:
+                        camera.value(ParamKey.exposureMode) ?? 'GR III',
+                    onBack: _goHome,
+                    onRecipe: () =>
+                        setState(() => _showRecipes = !_showRecipes),
+                    onSettings: () => _showSettings(camera),
+                    recipeDetached: recipeSession.detached,
+                  ),
+                  WorkspaceReveal(
+                      visible: _showRecipes,
+                      child: RecipeStrip(
+                        recipes: recipes,
+                        session: recipeSession,
+                        onSelect: _activateRecipe,
+                        onAdd: () => _addRecipe(camera),
+                      )),
+                  if (recipeSession.detached)
+                    Container(
+                      width: double.infinity,
+                      color: const Color(0xAA682C25),
+                      padding: const EdgeInsets.symmetric(vertical: 3),
+                      child: const Text('已脱离',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 10)),
+                    ),
+                ],
+                viewfinder: _mode == ShootMode.more
                     ? MoreGrid(
                         onProbe: () => unawaited(_exitTo('/probe', push: true)))
-                    : LayoutBuilder(builder: (context, constraints) {
-                        final height = constraints.maxHeight;
-                        final width =
-                            (height * 3 / 4).clamp(0.0, constraints.maxWidth);
-                        return Center(
-                          child: SizedBox(
-                            width: width,
-                            height: (width * 4 / 3).clamp(0.0, height),
-                            child: ShootViewfinder(
-                              frame: frame,
-                              connected: connected,
-                              onConnect: _goHome,
-                              focusPoint: _focusPoint,
-                              focusing: _focusing,
-                              focusFailed: _focusFailed,
-                              onFocus: connected &&
-                                      !programActive &&
-                                      !_focusing &&
-                                      !_shutterHeld
-                                  ? (point) => unawaited(_tapAf(point: point))
-                                  : null,
-                              overlay: Stack(children: [
-                                if (_histogram) HistogramOverlay(_stats),
-                                if (programActive)
-                                  Positioned(
-                                    left: 10,
-                                    top: 8,
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xAA000000),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 4),
-                                        child: Text(
-                                          '${program.done}/${program.total}'
-                                          '${program.reason == null ? '' : ' · ${shootReasonLabel(program.reason!)}'}',
-                                          style: const TextStyle(fontSize: 10),
-                                        ),
-                                      ),
-                                    ),
+                    : ShootViewfinder(
+                        frame: frame,
+                        connected: connected,
+                        onConnect: _goHome,
+                        focusPoint: _focusPoint,
+                        focusing: _focusing,
+                        focusFailed: _focusFailed,
+                        onFocus: connected &&
+                                !programActive &&
+                                !_focusing &&
+                                !_shutterHeld
+                            ? (point) => unawaited(_tapAf(point: point))
+                            : null,
+                        overlay: Stack(children: [
+                          if (_histogram) HistogramOverlay(_stats),
+                          if (programActive)
+                            Positioned(
+                              left: 10,
+                              top: 8,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xAA000000),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  child: Text(
+                                    '${program.done}/${program.total}'
+                                    '${program.reason == null ? '' : ' · ${shootReasonLabel(program.reason!)}'}',
+                                    style: const TextStyle(fontSize: 10),
                                   ),
-                              ]),
+                                ),
+                              ),
                             ),
-                          ),
-                        );
-                      }),
-              ),
-              if (_mode == ShootMode.pro)
-                CameraParamRow(
-                  state: camera,
-                  onSelected: (param) => setState(() => _ruler = param),
-                )
-              else if (_mode == ShootMode.photo)
-                _AspectDots(camera: camera)
-              else if (_mode == ShootMode.bracket ||
-                  _mode == ShootMode.timelapse)
-                DriveOptions(mode: _mode, onProgram: _selectDrive),
-              if (_ruler case final CameraParam ruler)
-                ParamRuler(
-                  param: camera.params[ruler.wireKey] ?? ruler,
-                  onChanged: (value) => unawaited(ref
-                      .read(cameraStateControllerProvider.notifier)
-                      .setParam(ruler.wireKey, value)),
-                  onClose: () => setState(() => _ruler = null),
-                ),
-              ModeCarousel(
-                mode: _mode,
-                locked: programActive,
-                onChanged: (mode) => setState(() {
-                  _mode = mode;
-                  _ruler = null;
-                }),
-              ),
-              ShootBottomBar(
-                connected: connected,
-                focusing: _focusing,
-                shutterHeld: _shutterHeld,
-                program: program,
-                onPressed: _pressShutter,
-                onReleased: _releaseShutter,
-                onStop: () => unawaited(
-                    ref.read(programControllerProvider.notifier).abort()),
-                onPause: ref.read(programControllerProvider.notifier).pause,
-                onResume: () => unawaited(
-                    ref.read(programControllerProvider.notifier).resume()),
-                onLibrary: () => unawaited(_exitTo('/library')),
-              ),
-            ]),
+                        ]),
+                      ),
+                controls: [
+                  if (_mode == ShootMode.pro || _mode == ShootMode.photo)
+                    CameraParamRow(
+                      state: camera,
+                      compact: _mode == ShootMode.photo,
+                      onSelected: (param) => setState(() => _ruler = param),
+                    )
+                  else if (_mode == ShootMode.bracket ||
+                      _mode == ShootMode.timelapse)
+                    DriveOptions(mode: _mode, onProgram: _selectDrive),
+                  if (_ruler case final CameraParam ruler)
+                    ParamRuler(
+                      param: camera.params[ruler.wireKey] ?? ruler,
+                      onChanged: (value) => unawaited(ref
+                          .read(cameraStateControllerProvider.notifier)
+                          .setParam(ruler.wireKey, value)),
+                      onClose: () => setState(() => _ruler = null),
+                    ),
+                  ModeCarousel(
+                    mode: _mode,
+                    locked: programActive,
+                    onChanged: (mode) => setState(() {
+                      _mode = mode;
+                      _ruler = null;
+                    }),
+                  ),
+                  ShootBottomBar(
+                    connected: connected,
+                    focusing: _focusing,
+                    shutterHeld: _shutterHeld,
+                    program: program,
+                    onPressed: _pressShutter,
+                    onReleased: _releaseShutter,
+                    onStop: () => unawaited(
+                        ref.read(programControllerProvider.notifier).abort()),
+                    onPause: ref.read(programControllerProvider.notifier).pause,
+                    onResume: () => unawaited(
+                        ref.read(programControllerProvider.notifier).resume()),
+                    onLibrary: () => unawaited(_exitTo('/library')),
+                    onFocus: () => unawaited(_tapAf()),
+                  ),
+                ]),
             if (programActive)
               Positioned(
                 right: 10,
@@ -625,7 +617,23 @@ class _ShootPageState extends ConsumerState<ShootPage> {
           shrinkWrap: true,
           padding: const EdgeInsets.all(18),
           children: [
-            Text('更多参数', style: Theme.of(context).textTheme.titleLarge),
+            Text('拍摄设置', style: Theme.of(context).textTheme.titleLarge),
+            ListTile(
+                title: const Text('直方图'),
+                trailing: Icon(_histogram ? Icons.check : Icons.bar_chart),
+                onTap: () {
+                  Navigator.pop(context);
+                  _toggleHistogram();
+                }),
+            ListTile(
+                title: const Text('定时拍摄'),
+                trailing: Text(
+                    shootValueLabel('driveMode', camera.value(ParamKey.drive))),
+                onTap: () {
+                  Navigator.pop(context);
+                  _cycleTimer(camera);
+                }),
+            _AspectDots(camera: camera),
             ListTile(
                 leading: const Icon(Icons.local_movies_outlined),
                 title: const Text('胶卷库'),

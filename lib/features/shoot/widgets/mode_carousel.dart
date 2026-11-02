@@ -17,13 +17,12 @@ class ModeCarousel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        height: 38,
+        height: 44,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             for (final item in ShootMode.values)
-              SizedBox(
-                width: 56,
+              Expanded(
                 child: TextButton(
                   key: Key('mode-${item.name}'),
                   onPressed: locked ? null : () => onChanged(item),

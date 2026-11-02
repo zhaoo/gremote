@@ -62,6 +62,39 @@ Future<({TestDarkroom env, FakeCameraGateways gateways})> pumpShoot(
 }
 
 void main() {
+  testWidgets('landscape keeps full preview beside reachable capture controls',
+      (tester) async {
+    tester.binding.platformDispatcher.textScaleFactorTestValue = 1.4;
+    addTearDown(
+        tester.binding.platformDispatcher.clearTextScaleFactorTestValue);
+    final bytes = File('test/fixtures/live_view_600x400.jpg').readAsBytesSync();
+    await pumpShoot(tester, connect: true, frame: bytes);
+    tester.view.physicalSize = const Size(844, 390);
+    await tester.pumpAndSettle();
+    final preview =
+        tester.getRect(find.byKey(const Key('live-view-focus-surface')));
+    final shutter = tester.getRect(find.byKey(const Key('shutter-button')));
+    expect(preview.width, greaterThan(500));
+    expect(preview.right, lessThanOrEqualTo(shutter.left));
+    await tester.tap(find.byKey(const Key('mode-pro')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('param-sv')));
+    await tester.pumpAndSettle();
+    expect(
+        find.byKey(const Key('shutter-button')).hitTestable(), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('independent AF focuses without creating a photo',
+      (tester) async {
+    final harness = await pumpShoot(tester, connect: true);
+    await tester.tap(find.byKey(const Key('af-button')));
+    await tester.pumpAndSettle();
+    expect(harness.gateways.trace, contains('/v1/lens/focus?pos=50,50'));
+    expect(harness.gateways.camera.files, isEmpty);
+    await tester.tap(find.byKey(const Key('shutter-button')));
+    await tester.pumpAndSettle();
+    expect(harness.gateways.camera.files, hasLength(1));
+  });
   testWidgets('opening probe ends shoot session and popping reactivates it',
       (tester) async {
     final harness = await pumpShoot(tester, connect: true);
@@ -112,7 +145,7 @@ void main() {
     expect(harness.gateways.camera.files, isEmpty);
     expect(find.byKey(const Key('focus-request-box')), findsOneWidget);
     expect(find.byType(SnackBar), findsNothing);
-    expect(find.byKey(const Key('af-button')), findsNothing);
+    expect(find.byKey(const Key('af-button')), findsOneWidget);
     final box = tester.widget<DecoratedBox>(find.descendant(
       of: find.byKey(const Key('focus-request-box')),
       matching: find.byType(DecoratedBox),
@@ -205,7 +238,7 @@ void main() {
     final reconnect = controller.connect();
     await tester.pumpAndSettle();
     await reconnect;
-    expect(find.byKey(const Key('af-button')), findsNothing);
+    expect(find.byKey(const Key('af-button')), findsOneWidget);
     await tester.tap(find.byKey(const Key('shutter-button')));
     await tester.pumpAndSettle();
     expect(harness.gateways.camera.files, hasLength(1));
@@ -222,7 +255,7 @@ void main() {
     expect(find.text('拍照'), findsOneWidget);
     expect(find.text('专业'), findsOneWidget);
     expect(find.byKey(const Key('shutter-button')), findsOneWidget);
-    expect(find.byKey(const Key('af-button')), findsNothing);
+    expect(find.byKey(const Key('af-button')), findsOneWidget);
     expect(find.text('前往连接'), findsOneWidget);
   });
 

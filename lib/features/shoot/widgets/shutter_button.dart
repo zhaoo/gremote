@@ -83,26 +83,17 @@ class _ShutterButtonState extends State<ShutterButton> {
             duration: reduceMotion
                 ? Duration.zero
                 : const Duration(milliseconds: 160),
-            width: 86,
-            height: 86,
-            padding: const EdgeInsets.all(6),
+            width: 76,
+            height: 76,
+            padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: GRemoteColors.night,
+              color: const Color(0xFF111416),
               border: Border.all(
-                color: widget.enabled
-                    ? GRemoteColors.goldSoft
-                    : GRemoteColors.muted,
+                color:
+                    widget.enabled ? GRemoteColors.text : GRemoteColors.muted,
                 width: 2.5,
               ),
-              boxShadow: widget.enabled
-                  ? const [
-                      BoxShadow(
-                        color: Color(0x44C4A36D),
-                        blurRadius: 18,
-                      ),
-                    ]
-                  : null,
             ),
             child: Container(
               decoration: BoxDecoration(

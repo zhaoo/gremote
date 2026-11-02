@@ -20,6 +20,7 @@ class CameraPage extends ConsumerStatefulWidget {
 
 class _CameraPageState extends ConsumerState<CameraPage> {
   var _tab = 0;
+  var _extensionsVisited = false;
   CompanionSyncController? _loaded;
   @override
   Widget build(BuildContext context) {
@@ -73,14 +74,20 @@ class _CameraPageState extends ConsumerState<CameraPage> {
                     child: WorkspaceTabs<int>(
                         items: const [(0, '胶卷库'), (1, '扩展')],
                         value: _tab,
-                        onChanged: (v) => setState(() => _tab = v))),
+                        onChanged: (v) => setState(() {
+                              _tab = v;
+                              if (v == 1) _extensionsVisited = true;
+                            }))),
                 const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 20),
                     child: Divider(height: 12)),
                 Expanded(
-                    child: IndexedStack(index: _tab, children: const [
-                  FilmLibraryPage(),
-                  CameraExtensions()
+                    child: IndexedStack(index: _tab, children: [
+                  const FilmLibraryPage(),
+                  if (_extensionsVisited)
+                    const CameraExtensions()
+                  else
+                    const SizedBox.shrink(),
                 ])),
               ],
             )));

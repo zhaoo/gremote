@@ -138,7 +138,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('media-3')));
     await tester.pumpAndSettle();
     expect(find.text('R003.JPG'), findsOneWidget);
-    expect(find.text('存为方案'), findsOneWidget);
+    expect(find.byTooltip('存为方案'), findsOneWidget);
     expect(find.text('GOOD PHOTOS  A KINDER WORLD'), findsNothing,
         reason: 'the editor covers the tab shell');
     await tester.pageBack();

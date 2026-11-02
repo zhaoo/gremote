@@ -177,7 +177,6 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
             : Switch(
                 value: value == 6,
                 onChanged: controller.canWrite &&
-                        value != null &&
                         controller.capabilities?.supported.contains('aspect') ==
                             true &&
                         controller.snapshot?.supported.contains('aspect') ==

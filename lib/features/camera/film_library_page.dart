@@ -174,10 +174,11 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
                     _searching = !_searching;
                     if (!_searching) _query = '';
                   });
-                  if (_searching)
+                  if (_searching) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (mounted) _searchFocus.requestFocus();
                     });
+                  }
                 },
                 icon: const Icon(Icons.search, size: 20)),
             IconButton(

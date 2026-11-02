@@ -109,15 +109,11 @@ class MediaTile extends ConsumerWidget {
                 child: Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                  child: Text(
-                    match.usable ? '◍' : '待确认',
-                    style: TextStyle(
-                      color: match.usable
-                          ? GRemoteColors.gold
-                          : GRemoteColors.muted,
-                      fontSize: match.usable ? 15 : 9,
-                    ),
-                  ),
+                  child: match.usable
+                      ? const Tooltip(message: '胶卷配方', child: Icon(
+                          Icons.tune, color: GRemoteColors.text, size: 16))
+                      : const Text('待确认', style: TextStyle(
+                          color: GRemoteColors.muted, fontSize: 11)),
                 ),
               ),
             ),
