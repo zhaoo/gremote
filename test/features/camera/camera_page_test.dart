@@ -46,15 +46,35 @@ void main() {
       expect(tester.takeException(), isNull);
       await tester.tap(find.text('扩展'));
       await tester.pumpAndSettle();
-      expect(find.text('配对 M10V 后可设置'), findsOneWidget);
+      expect(find.text('未连接 · 配对 M10V 后可设置'), findsOneWidget);
+      expect(find.text('HDF'), findsNothing);
+      expect(find.widgetWithText(TextButton, '重新读取'), findsNothing);
+      for (final group in ['功能', '效果', '水印', '焦距', '画幅']) {
+        expect(find.byKey(ValueKey('extension-group-$group')), findsOneWidget);
+      }
+      await tester.tap(find.byKey(const ValueKey('extension-group-效果')));
+      await tester.pumpAndSettle();
+      final hdf = tester
+          .widget<ListTile>(find.byKey(const ValueKey('extension-field-hdf')));
+      expect(hdf.enabled, isFalse);
+      expect(hdf.onTap, isNull);
+      expect(
+          find.descendant(
+              of: find.byKey(const ValueKey('extension-field-hdf')),
+              matching: find.text('—')),
+          findsOneWidget);
+      expect(find.byType(AlertDialog), findsNothing);
+      // Inspecting the connection choices remains available while writes are gated.
+      await tester.tap(find.text('未连接'));
+      await tester.pumpAndSettle();
+      expect(
+          tester.widget<ListTile>(find.widgetWithText(ListTile, '相机连接')).onTap,
+          isNotNull);
       expect(
           tester
-              .widget<ListTile>(find
-                  .ancestor(
-                      of: find.text('HDF'), matching: find.byType(ListTile))
-                  .first)
+              .widget<ListTile>(find.widgetWithText(ListTile, '配对与机内胶卷'))
               .onTap,
-          isNull);
+          isNotNull);
       expect(tester.takeException(), isNull);
     });
   }

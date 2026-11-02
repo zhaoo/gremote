@@ -90,7 +90,8 @@ class CameraExtensionsController extends ChangeNotifier {
   String _error(Object e) {
     final code = e is CompanionException ? e.code : '';
     return const {
-          'extensionsUnsupported': '请更新相机扩展固件和 SD 服务',
+          'extensionsUnsupported': '此相机不支持扩展设置',
+          'unsupportedProtocol': '扩展设置协议不兼容，暂不可设置',
           'revisionConflict': '机身设置已变化，请重新选择',
           'busy': '请结束拍摄、程序或原图传输后重试',
           'unauthorized': '配对已失效，请重新配对',
@@ -101,6 +102,28 @@ class CameraExtensionsController extends ChangeNotifier {
           'invalidRecipe': '参数不受支持或所选胶卷槽为空'
         }[code] ??
         '操作未完成，请重新读取核对';
+  }
+
+  // GET failures must not imply that a mutation was submitted. The actual
+  // pending journal always takes precedence at the call site.
+  String _readError(Object error) {
+    if (error is FormatException) return '扩展设置协议不兼容，暂不可设置';
+    if (error is! CompanionException) return '读取失败，请重新读取';
+    switch (error.code) {
+      case 'bridgeUnavailable':
+      case 'companionUnavailable':
+        return '机内服务未就绪，请稍后重新读取';
+      case 'busy':
+        return '机身忙碌，请结束拍摄、程序或原图传输后重新读取';
+      case 'extensionsUnsupported':
+      case 'unsupportedProtocol':
+      case 'unauthorized':
+      case 'identityMismatch':
+      case 'sessionChanged':
+        return _error(error);
+      default:
+        return '读取失败，请重新读取';
+    }
   }
 
   void _validatePending(Map<String, Object?> op) {
@@ -165,7 +188,7 @@ class CameraExtensionsController extends ChangeNotifier {
     } catch (e) {
       unsupported =
           e is CompanionException && e.code == 'extensionsUnsupported';
-      message = pending ? '结果待核对，请勿重复提交' : _error(e);
+      message = pending ? '结果待核对，请勿重复提交' : _readError(e);
     } finally {
       working = false;
       _changed();
@@ -304,7 +327,7 @@ class CameraExtensionsController extends ChangeNotifier {
       await _clear();
       message = '已核对当前设置';
     } catch (e) {
-      message = _error(e);
+      message = pending ? '结果待核对，请勿重复提交' : _readError(e);
     } finally {
       working = false;
       _changed();

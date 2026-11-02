@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gremote/camera/companion/companion_client.dart';
 import 'package:gremote/camera/companion/extensions_protocol.dart';
 import 'package:gremote/camera/companion/extensions_controller.dart';
 
@@ -80,7 +81,64 @@ class ExtensionFake implements CompanionExtensionsApi {
           {'requestId': id, 'bootId': bootId, 'status': 'unknown'});
 }
 
+class ReadFailureExtensionFake extends ExtensionFake {
+  ReadFailureExtensionFake(this.failure);
+  Object? failure;
+  @override
+  Future<ExtensionCapabilities> extensionCapabilities() async {
+    if (failure case final failure?) throw failure;
+    return super.extensionCapabilities();
+  }
+}
+
 void main() {
+  for (final (failure, expected) in <(Object, String)>[
+    (StateError('GET failed'), '读取失败，请重新读取'),
+    (const CompanionException('bridgeUnavailable'), '机内服务未就绪，请稍后重新读取'),
+    (const CompanionException('extensionsUnsupported'), '此相机不支持扩展设置'),
+    (const CompanionException('unsupportedProtocol'), '扩展设置协议不兼容，暂不可设置'),
+    (const FormatException('扩展设置协议不兼容'), '扩展设置协议不兼容，暂不可设置'),
+  ]) {
+    test('GET failure has read-only wording: $expected', () async {
+      final api = ReadFailureExtensionFake(failure);
+      final controller = CameraExtensionsController(
+          api: api,
+          store: MemoryPending(),
+          instanceId: '01' * 16,
+          bootstrap: () async {},
+          blocked: () => false,
+          onPending: (_) {});
+      addTearDown(controller.dispose);
+      await controller.refresh();
+      expect(controller.message, expected);
+      expect(controller.canWrite, isFalse);
+      expect(controller.pending, isFalse);
+      expect(api.submissions, 0);
+    });
+  }
+  test('failed GET preserves a real pending write and its reconciliation copy',
+      () async {
+    final api = ReadFailureExtensionFake(null)..uncertain = true;
+    final store = MemoryPending();
+    final controller = CameraExtensionsController(
+        api: api,
+        store: store,
+        instanceId: '01' * 16,
+        bootstrap: () async {},
+        blocked: () => false,
+        onPending: (_) {});
+    addTearDown(controller.dispose);
+    await controller.refresh();
+    await controller.set('hdf', 2);
+    api.failure = const CompanionException('bridgeUnavailable');
+    await controller.refresh();
+    expect(controller.message, '结果待核对，请勿重复提交');
+    expect(controller.pending, isTrue);
+    expect(controller.canWrite, isFalse);
+    expect(store.saved, isNotNull);
+    expect(api.submissions, 1);
+  });
+
   test('same-boot manual reconciliation cannot unlock an unresolved write',
       () async {
     final api = ExtensionFake()..uncertain = true, store = MemoryPending();
