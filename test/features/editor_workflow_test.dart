@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gremote/darkroom/darkroom_providers.dart';
 import 'package:gremote/darkroom/model/photo_edits.dart';
 import 'package:gremote/features/darkroom/editor/editor_controller.dart';
+import 'package:gremote/imaging/imaging_exception.dart';
 import '../support/fake_media_gateway.dart';
 import '../support/test_darkroom.dart';
 
@@ -110,6 +111,227 @@ void main() {
     expect(env.engine.renderCalls.last.adjustments[1], closeTo(1.4, .00001));
     expect(env.engine.renderCalls.length, 2);
     expect(c.read(editorProvider(3)).rendering, isFalse);
+  });
+
+  test('active tool publishes completed draft while newest render is pending',
+      () async {
+    final first = Completer<void>(), newest = Completer<void>();
+    editor.beginTool();
+    editor.beginGesture();
+    env.engine.renderGate = first.future;
+    editor.setEdits(const PhotoEdits().withValue(PhotoAdjustment.exposure, .2));
+    await Future<void>.delayed(Duration.zero);
+    env.engine.renderGate = newest.future;
+    editor
+        .setEdits(const PhotoEdits().withValue(PhotoAdjustment.exposure, 1.4));
+    first.complete();
+    await Future<void>.delayed(Duration.zero);
+    final during = c.read(editorProvider(3));
+    expect(during.rendering, isTrue);
+    expect(during.renderedEdits!.value(PhotoAdjustment.exposure), .2);
+    expect(during.recipe.edits.value(PhotoAdjustment.exposure), 1.4);
+    newest.complete();
+    await editor.flushPreview();
+    expect(
+        c
+            .read(editorProvider(3))
+            .renderedEdits!
+            .value(PhotoAdjustment.exposure),
+        1.4);
+    expect(env.engine.maxActiveRenders, 1);
+  });
+
+  test('intermediate crop frame keeps its own geometry until newest is ready',
+      () async {
+    final first = Completer<void>(), newest = Completer<void>();
+    editor.beginTool(crop: true);
+    await editor.flushPreview();
+    editor.beginGesture();
+    env.engine.renderGate = first.future;
+    editor.setEdits(
+        const PhotoEdits().copyWith(crop: const CropEdit(quarterTurns: 1)));
+    await Future<void>.delayed(Duration.zero);
+    env.engine.renderGate = newest.future;
+    editor.setEdits(
+        const PhotoEdits().copyWith(crop: const CropEdit(quarterTurns: 2)));
+    first.complete();
+    await Future<void>.delayed(Duration.zero);
+    final during = c.read(editorProvider(3));
+    expect(during.graded!.width, 4);
+    expect(during.graded!.height, 6);
+    expect(during.layout!.canvasWidth / during.layout!.canvasHeight,
+        closeTo(2 / 3, .00001));
+    expect(during.recipe.edits.crop.quarterTurns, 2);
+    newest.complete();
+    await editor.flushPreview();
+    final finished = c.read(editorProvider(3));
+    expect(finished.graded!.width, 6);
+    expect(finished.graded!.height, 4);
+    expect(finished.layout!.canvasWidth / finished.layout!.canvasHeight, 1.5);
+  });
+
+  test('applying crop rejects unfinished full-image crop-mode preview',
+      () async {
+    editor.beginTool(crop: true);
+    await editor.flushPreview();
+    final displayed = c.read(editorProvider(3)).graded;
+    final first = Completer<void>(), newest = Completer<void>();
+    editor.beginGesture();
+    env.engine.renderGate = first.future;
+    editor.setEdits(const PhotoEdits()
+        .copyWith(crop: const CropEdit(quarterTurns: 1, width: .5)));
+    await Future<void>.delayed(Duration.zero);
+    env.engine.renderGate = newest.future;
+    editor.commitTool();
+    first.complete();
+    await Future<void>.delayed(Duration.zero);
+    expect(c.read(editorProvider(3)).graded, same(displayed));
+    newest.complete();
+    await editor.flushPreview();
+    final finished = c.read(editorProvider(3));
+    expect(finished.cropEditing, isFalse);
+    expect(finished.graded!.width, 2);
+    expect(finished.graded!.height, 6);
+    expect(finished.layout!.canvasWidth / finished.layout!.canvasHeight,
+        closeTo(1 / 3, .00001));
+  });
+
+  for (final barrier in [
+    'cancel',
+    'undo',
+    'tool switch',
+    'LUT',
+    'same LUT',
+    'reset',
+    'preset'
+  ]) {
+    test('$barrier prevents a superseded tool render from flashing', () async {
+      editor
+          .setEdits(const PhotoEdits().withValue(PhotoAdjustment.exposure, .2));
+      await editor.flushPreview();
+      final displayed = c.read(editorProvider(3)).graded;
+      final first = Completer<void>(), newest = Completer<void>();
+      editor.beginTool();
+      editor.beginGesture();
+      env.engine.renderGate = first.future;
+      editor
+          .setEdits(const PhotoEdits().withValue(PhotoAdjustment.exposure, .8));
+      await Future<void>.delayed(Duration.zero);
+      env.engine.renderGate = newest.future;
+      switch (barrier) {
+        case 'cancel':
+          editor.cancelTool();
+        case 'undo':
+          editor.endGesture();
+          editor.undo();
+        case 'tool switch':
+          editor.beginTool();
+          editor.setEdits(
+              const PhotoEdits().withValue(PhotoAdjustment.exposure, 1.2));
+        case 'LUT':
+          unawaited(editor.setLut(c.read(editorProvider(3)).luts.first.id));
+        case 'same LUT':
+          unawaited(editor.setLut(null));
+        case 'reset':
+          editor.resetAll();
+        case 'preset':
+          editor.applyPreset(const ExportRecipe().copyWith(
+              edits:
+                  const PhotoEdits().withValue(PhotoAdjustment.exposure, 1.2)));
+      }
+      final published = <double>[];
+      final subscription = c.listen(editorProvider(3), (_, next) {
+        published.add(next.renderedEdits!.value(PhotoAdjustment.exposure));
+      });
+      first.complete();
+      await Future<void>.delayed(Duration.zero);
+      expect(published, isNot(contains(.8)));
+      if (barrier != 'reset') {
+        expect(c.read(editorProvider(3)).graded, same(displayed));
+      }
+      newest.complete();
+      await editor.flushPreview();
+      subscription.close();
+      final finished = c.read(editorProvider(3));
+      expect(finished.rendering, isFalse);
+      expect(finished.renderedEdits, finished.recipe.edits);
+    });
+  }
+
+  test('redo blocks an unfinished undo frame from replacing the preview',
+      () async {
+    editor.setEdits(const PhotoEdits().withValue(PhotoAdjustment.exposure, .2));
+    await editor.flushPreview();
+    editor.beginTool();
+    editor.setEdits(const PhotoEdits().withValue(PhotoAdjustment.exposure, .8));
+    await editor.flushPreview();
+    final displayed = c.read(editorProvider(3)).graded;
+    final first = Completer<void>(), newest = Completer<void>();
+    env.engine.renderGate = first.future;
+    editor.undo();
+    await Future<void>.delayed(Duration.zero);
+    env.engine.renderGate = newest.future;
+    editor.redo();
+    final published = <double>[];
+    final subscription = c.listen(editorProvider(3), (_, next) {
+      published.add(next.renderedEdits!.value(PhotoAdjustment.exposure));
+    });
+    first.complete();
+    await Future<void>.delayed(Duration.zero);
+    expect(published, isNot(contains(.2)));
+    expect(c.read(editorProvider(3)).graded, same(displayed));
+    newest.complete();
+    await editor.flushPreview();
+    subscription.close();
+    expect(
+        c
+            .read(editorProvider(3))
+            .renderedEdits!
+            .value(PhotoAdjustment.exposure),
+        .8);
+  });
+
+  test('tool switch discards old failure and resumes the queued preview',
+      () async {
+    editor.beginTool();
+    final first = Completer<void>(), newest = Completer<void>();
+    env.engine.renderGate = first.future;
+    env.engine.renderFailures[1] = ImagingErrorCode.invalidArgument;
+    editor.setEdits(const PhotoEdits().withValue(PhotoAdjustment.exposure, .8));
+    await Future<void>.delayed(Duration.zero);
+    env.engine.renderGate = newest.future;
+    editor.beginTool();
+    first.complete();
+    await Future<void>.delayed(Duration.zero);
+    expect(c.read(editorProvider(3)).error, isNull);
+    expect(c.read(editorProvider(3)).rendering, isTrue);
+    newest.complete();
+    await editor.flushPreview();
+    expect(c.read(editorProvider(3)).error, isNull);
+    expect(
+        c
+            .read(editorProvider(3))
+            .renderedEdits!
+            .value(PhotoAdjustment.exposure),
+        .8);
+    expect(c.read(editorProvider(3)).rendering, isFalse);
+  });
+
+  test('a failed current render does not block later adjustments', () async {
+    env.engine.renderFailures[1] = ImagingErrorCode.invalidArgument;
+    editor.setEdits(const PhotoEdits().withValue(PhotoAdjustment.exposure, .2));
+    await editor.flushPreview();
+    expect(c.read(editorProvider(3)).error, contains('预览处理失败'));
+    expect(c.read(editorProvider(3)).rendering, isFalse);
+    editor.setEdits(const PhotoEdits().withValue(PhotoAdjustment.exposure, .4));
+    await editor.flushPreview();
+    expect(c.read(editorProvider(3)).error, isNull);
+    expect(
+        c
+            .read(editorProvider(3))
+            .renderedEdits!
+            .value(PhotoAdjustment.exposure),
+        .4);
   });
 
   test('autosave failure survives preview and retry persists latest edits',

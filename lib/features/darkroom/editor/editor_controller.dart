@@ -121,6 +121,7 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
   EditDocument? _toolStart, _gestureStart;
   List<EditDocument>? _toolUndo, _toolRedo;
   var _gradeTicket = 0;
+  var _previewEpoch = 0;
   var _toolEpoch = 0;
   var _lutEpoch = 0;
   var _alive = true;
@@ -188,6 +189,14 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
     }
   }
 
+  // Discrete changes revoke in-flight draft publication. Keep a newest job
+  // queued even when the document did not change (for example selecting the
+  // same LUT), so revoking a render can never leave the preview stranded.
+  void _invalidatePreviews() {
+    ++_previewEpoch;
+    if (_renderFuture != null) _dirtyPreview = true;
+  }
+
   /// At most one native job in flight; updates during it collapse to newest.
   Future<void> regrade() {
     if (!_alive || state.base == null) return Future<void>.value();
@@ -207,6 +216,8 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
     while (_alive && _dirtyPreview) {
       _dirtyPreview = false;
       final ticket = _gradeTicket, recipe = state.recipe, base = state.base!;
+      final epoch = _previewEpoch;
+      final progressive = _toolStart != null || _gestureStart != null;
       var edits = recipe.edits;
       if (state.cropEditing) {
         edits = edits.copyWith(
@@ -225,12 +236,17 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
                 strength: recipe.strength,
                 width: w,
                 height: h);
-        if (_alive && ticket == _gradeTicket) {
+        // A completed draft is useful feedback while the same tool keeps
+        // changing. Waiting for a ticket with no newer input starves every
+        // frame during a drag. Epochs still reject cancelled/replaced work.
+        if (_alive &&
+            epoch == _previewEpoch &&
+            (ticket == _gradeTicket || progressive)) {
           _emit(state.copyWith(
               graded: graded, renderedEdits: edits, error: () => null));
         }
       } on Object catch (e) {
-        if (_alive && ticket == _gradeTicket) {
+        if (_alive && epoch == _previewEpoch && ticket == _gradeTicket) {
           _emit(state.copyWith(error: () => '预览处理失败：$e'));
         }
       }
@@ -257,6 +273,7 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
   void beginTool({bool crop = false}) {
     if (state.exporting || state.doc == null) return;
     if (_toolStart != null) commitTool();
+    _invalidatePreviews();
     ++_toolEpoch;
     _toolStart = state.doc;
     _toolUndo = List.of(_undo);
@@ -270,6 +287,7 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
     endGesture();
     ++_toolEpoch;
     final crop = state.cropEditing;
+    if (crop) _invalidatePreviews();
     _toolStart = null;
     _toolUndo = null;
     _toolRedo = null;
@@ -281,6 +299,7 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
   void cancelTool() {
     final start = _toolStart;
     if (start == null || state.exporting) return;
+    _invalidatePreviews();
     ++_toolEpoch;
     _gestureStart = null;
     _undo
@@ -314,6 +333,7 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
   void undo() {
     if (state.exporting || _undo.isEmpty || state.doc == null) return;
     endGesture();
+    _invalidatePreviews();
     _redo.add(state.doc!);
     _emit(state.copyWith(doc: _undo.removeLast()));
     _historyState();
@@ -323,6 +343,7 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
 
   void redo() {
     if (state.exporting || _redo.isEmpty || state.doc == null) return;
+    _invalidatePreviews();
     _undo.add(state.doc!);
     _emit(state.copyWith(doc: _redo.removeLast()));
     _historyState();
@@ -333,6 +354,7 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
   void setEdits(PhotoEdits edits) =>
       _updateRecipe(state.recipe.copyWith(edits: edits));
   Future<void> setLut(String? id) async {
+    _invalidatePreviews();
     ++_lutEpoch;
     _updateRecipe(state.recipe.copyWith(lutId: () => id));
     await flushPreview();
@@ -362,12 +384,17 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
         if (!hidden.remove(field)) hidden.add(field);
         return d.copyWith(hidden: hidden);
       });
-  void resetAll() => _updateDoc((d) => d.copyWith(
-      recipe: const ExportRecipe(frame: FrameStyle.none),
-      title: '',
-      location: '',
-      hidden: const {}));
+  void resetAll() {
+    _invalidatePreviews();
+    _updateDoc((d) => d.copyWith(
+        recipe: const ExportRecipe(frame: FrameStyle.none),
+        title: '',
+        location: '',
+        hidden: const {}));
+  }
+
   void applyPreset(ExportRecipe recipe) {
+    _invalidatePreviews();
     final meta = state.meta;
     if (meta != null) {
       recipe = recipe.copyWith(

@@ -33,6 +33,9 @@ class FakeImagingEngine implements ImagingEngine {
   /// 1-based export call index → failure.
   final exportFailures = <int, ImagingErrorCode>{};
 
+  /// 1-based native render call index → failure.
+  final renderFailures = <int, ImagingErrorCode>{};
+
   /// Runs before each export completes; may cancel the token.
   void Function(ExportJob job)? onExport;
 
@@ -91,8 +94,10 @@ class FakeImagingEngine implements ImagingEngine {
       width: width,
       height: height,
     ));
+    final failure = renderFailures[renderCalls.length];
     if (renderGate != null) await renderGate;
     activeRenders--;
+    if (failure != null) throw ImagingException(failure);
     if (cube != null && cube.isNotEmpty) lutCalls.add(strength);
     final output = Uint8List(width * height * 4);
     for (var y = 0; y < height; y++) {

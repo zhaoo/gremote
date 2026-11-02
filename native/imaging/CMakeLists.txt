@@ -75,6 +75,11 @@ list(APPEND GREMOTE_CORE_SOURCES
   vendor/m10v/film_newstocks.c)
 
 add_library(gremote_core OBJECT ${GREMOTE_CORE_SOURCES})
+# Keep the on-device imaging kernels interactive in debug APKs as well. The
+# Flutter app remains debuggable; native symbols are retained by the debug build.
+if(ANDROID)
+  target_compile_options(gremote_core PRIVATE $<$<CONFIG:Debug>:-O2>)
+endif()
 target_include_directories(gremote_core PUBLIC include src PRIVATE vendor/m10v)
 target_link_libraries(gremote_core PUBLIC gremote_jpeg)
 find_package(Threads REQUIRED)
