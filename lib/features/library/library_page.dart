@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/theme/app_colors.dart';
+import '../../app/widgets/workspace_tabs.dart';
 import '../../darkroom/export/export_queue.dart';
 import '../../darkroom/model/export_recipe.dart';
 import '../../media/local/local_media_repository.dart';
@@ -71,56 +72,47 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-              child: Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 12,
-                  runSpacing: 8,
-                  children: [
-                    Row(mainAxisSize: MainAxisSize.min, children: [
-                      Text('相册',
-                          style: Theme.of(context).textTheme.headlineMedium),
-                      IconButton(
-                          tooltip: '导入照片',
-                          onPressed: _busy ? null : _importPhotos,
-                          icon: const Icon(Icons.add)),
-                      PopupMenuButton<String>(
-                        tooltip: '更多',
-                        onSelected: (value) {
-                          if (value == 'select') {
-                            setState(() => _selectMode = true);
-                          } else {
-                            context.push('/darkroom');
-                          }
-                        },
-                        itemBuilder: (_) => const [
+              padding: const EdgeInsets.fromLTRB(20, 16, 12, 4),
+              child: Row(children: [
+                Expanded(
+                    child: Text('相册',
+                        style: Theme.of(context).textTheme.headlineMedium)),
+                IconButton(
+                    tooltip: '导入照片',
+                    onPressed: _busy ? null : _importPhotos,
+                    icon: const Icon(Icons.add)),
+                PopupMenuButton<String>(
+                    tooltip: '更多',
+                    icon: const Icon(Icons.more_horiz),
+                    onSelected: (value) {
+                      if (value == 'select') {
+                        setState(() => _selectMode = true);
+                      } else {
+                        context.push('/darkroom');
+                      }
+                    },
+                    itemBuilder: (_) => const [
                           PopupMenuItem(value: 'select', child: Text('选择照片')),
                           PopupMenuItem(
-                              value: 'resources', child: Text('LUT 与出图方案'))
-                        ],
-                      ),
-                    ]),
-                    SegmentedButton<_Source>(
-                      showSelectedIcon: false,
-                      segments: const [
-                        ButtonSegment(value: _Source.local, label: Text('相册')),
-                        ButtonSegment(value: _Source.camera, label: Text('相机')),
-                      ],
-                      selected: {_source},
-                      onSelectionChanged: (value) {
-                        final next = value.single;
-                        if (_source != _Source.local && next == _Source.local) {
-                          unawaited(_controller.refresh());
-                        }
-                        setState(() {
-                          _source = next;
-                          if (next == _Source.camera) _cameraVisited = true;
-                        });
-                      },
-                    ),
-                  ]),
+                              value: 'resources', child: Text('LUT 与出图方案')),
+                        ]),
+              ]),
             ),
+            Padding(
+                padding: const EdgeInsets.fromLTRB(6, 0, 6, 8),
+                child: WorkspaceTabs<_Source>(
+                  items: const [(_Source.local, '相册'), (_Source.camera, '相机')],
+                  value: _source,
+                  onChanged: (next) {
+                    if (_source != _Source.local && next == _Source.local) {
+                      unawaited(_controller.refresh());
+                    }
+                    setState(() {
+                      _source = next;
+                      if (next == _Source.camera) _cameraVisited = true;
+                    });
+                  },
+                )),
             if (_busy) const LinearProgressIndicator(minHeight: 2),
             Expanded(
               child: IndexedStack(index: _source.index, children: [

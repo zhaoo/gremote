@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../app/theme/app_colors.dart';
+import '../../app/widgets/workspace_motion.dart';
 import '../../camera/connection/connection_controller.dart';
 import '../../camera/gateway/ble_gateway.dart';
 import '../../camera/connection/connection_state.dart';
@@ -307,7 +308,7 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
         child: Row(children: [
           Expanded(
               child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 180),
+                  duration: WorkspaceMotion.duration(context, 180),
                   child: Align(
                       alignment: Alignment.centerLeft,
                       key: ValueKey(_selectionMode),
@@ -325,8 +326,8 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                             const SizedBox(height: 3),
                             Text(
                                 _selectionMode
-                                    ? '轻点照片选择 · 长按开始多选'
-                                    : '${groups.length} 张照片 · 原始画质',
+                                    ? '选择要保存的照片'
+                                    : '${groups.length} 张',
                                 style: const TextStyle(
                                     color: GRemoteColors.muted, fontSize: 11)),
                           ])))),
@@ -385,22 +386,17 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                   title: _error == null ? '相机里还没有照片' : '暂时无法显示照片',
                   message: _error == null ? '拍摄后轻点右上角刷新。' : '轻点右上角重试。')
               : GridView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  padding: const EdgeInsets.fromLTRB(0, 0, 0, 16),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 10,
-                      childAspectRatio: 0.88),
+                      crossAxisCount: 3,
+                      mainAxisSpacing: 8,
+                      crossAxisSpacing: 3,
+                      childAspectRatio: 0.78),
                   itemCount: entries.length,
                   itemBuilder: (context, index) =>
                       _tile(entries[index].value))),
-      AnimatedSize(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          alignment: Alignment.bottomCenter,
-          child: _selectionMode || _downloading
-              ? _savePanel()
-              : const SizedBox(width: double.infinity)),
+      WorkspaceReveal(
+          visible: _selectionMode || _downloading, child: _savePanel()),
     ]);
   }
 
@@ -449,7 +445,7 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                       ]),
                       const SizedBox(height: 10),
                       TweenAnimationBuilder<double>(
-                          duration: const Duration(milliseconds: 150),
+                          duration: WorkspaceMotion.duration(context, 150),
                           tween: Tween(end: fraction ?? 0),
                           builder: (context, value, _) => ClipRRect(
                               borderRadius: BorderRadius.circular(4),
@@ -551,24 +547,24 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
     final preview = _thumbnails.putIfAbsent(
         cover.remoteId, () => _service.thumbnail(cover));
     return InkWell(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.zero,
       onTap: _downloading
           ? null
           : () => _selectionMode ? _toggle(files) : _showFileSheet(files),
       onLongPress: _downloading ? null : () => _toggle(files),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+        duration: WorkspaceMotion.duration(context, 180),
         curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
             color: GRemoteColors.raised,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.zero,
             border: Border.all(
                 color:
                     selected > 0 ? GRemoteColors.gold : GRemoteColors.divider)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Expanded(
               child: ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(13)),
+            borderRadius: BorderRadius.zero,
             child: Stack(fit: StackFit.expand, children: [
               FutureBuilder<Uint8List>(
                   future: preview,
@@ -587,7 +583,7 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                     top: 10,
                     right: 10,
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
+                      duration: WorkspaceMotion.duration(context, 180),
                       width: 26,
                       height: 26,
                       decoration: BoxDecoration(
@@ -601,7 +597,7 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                                   : Colors.white70,
                               width: 1.5)),
                       child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 150),
+                          duration: WorkspaceMotion.duration(context, 150),
                           child: selected > 0
                               ? const Icon(Icons.check_rounded,
                                   key: ValueKey(true),
@@ -633,7 +629,7 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
             ]),
           )),
           Padding(
-            padding: const EdgeInsets.fromLTRB(11, 9, 11, 11),
+            padding: const EdgeInsets.fromLTRB(6, 7, 6, 8),
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(cover.baseName,

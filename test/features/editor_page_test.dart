@@ -9,6 +9,7 @@ import 'package:gremote/darkroom/model/edit_document.dart';
 import 'package:gremote/features/darkroom/editor/editor_controller.dart';
 import 'package:gremote/features/darkroom/editor/editor_page.dart';
 import 'package:gremote/features/darkroom/editor/widgets/editor_panels.dart';
+import 'package:gremote/features/darkroom/editor/widgets/frame_preview.dart';
 
 import '../support/fake_media_gateway.dart';
 import '../support/test_darkroom.dart';
@@ -51,6 +52,23 @@ Future<void> openTab(WidgetTester tester, String label) async {
 }
 
 void main() {
+  testWidgets('cancelled press on compare restores the graded preview',
+      (tester) async {
+    final (_, container) = await pumpEditor(tester);
+    await tester.tap(find.text(builtinLooks.first.name));
+    await tester.pumpAndSettle();
+    final state = container.read(editorProvider(3));
+    expect(state.graded, isNot(same(state.base)));
+    final gesture =
+        await tester.startGesture(tester.getCenter(find.byTooltip('按住对比')));
+    await tester.pump();
+    expect(tester.widget<FramePreview>(find.byType(FramePreview)).image,
+        same(state.base));
+    await gesture.cancel();
+    await tester.pumpAndSettle();
+    expect(tester.widget<FramePreview>(find.byType(FramePreview)).image,
+        same(state.graded));
+  });
   testWidgets('frame cards remain usable on a compact screen with large text',
       (tester) async {
     tester.binding.platformDispatcher.textScaleFactorTestValue = 1.4;
@@ -140,7 +158,7 @@ void main() {
 
   testWidgets('saves the recipe as a preset', (tester) async {
     final (env, _) = await pumpEditor(tester);
-    await tester.tap(find.text('存为方案'));
+    await tester.tap(find.byTooltip('存为方案'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, '夜街');
     await tester.tap(find.text('保存'));

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../app/widgets/workspace_motion.dart';
 import '../../../darkroom/export/export_service.dart';
 import '../../../darkroom/model/export_recipe.dart';
 import '../widgets/name_dialog.dart';
@@ -29,14 +30,50 @@ class _EditorPageState extends ConsumerState<EditorPage> {
   Widget build(BuildContext context) {
     final state = ref.watch(editorProvider(widget.mediaId));
     final layout = state.layout;
+    final panelHeight =
+        (MediaQuery.sizeOf(context).height * .28).clamp(150.0, 220.0);
     return Scaffold(
       appBar: AppBar(
-        title: Text(state.item?.displayName ?? '暗房'),
+        title: Text(state.item?.displayName ?? '照片编辑',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 15)),
         actions: [
-          TextButton(
-            onPressed: state.doc == null ? null : _savePreset,
-            child: const Text('存为方案'),
-          ),
+          Tooltip(
+              message: '按住对比',
+              child: Semantics(
+                button: true,
+                label: '对比原图',
+                value: _showOriginal ? '原图' : '编辑后',
+                onTap: () => setState(() => _showOriginal = !_showOriginal),
+                child: Listener(
+                  onPointerDown: (_) => setState(() => _showOriginal = true),
+                  onPointerUp: (_) => setState(() => _showOriginal = false),
+                  onPointerCancel: (_) => setState(() => _showOriginal = false),
+                  child: SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: Icon(Icons.compare_outlined,
+                          size: 21,
+                          color: _showOriginal
+                              ? GRemoteColors.text
+                              : GRemoteColors.muted)),
+                ),
+              )),
+          IconButton(
+              tooltip: '存为方案',
+              onPressed: state.doc == null ? null : _savePreset,
+              icon: const Icon(Icons.bookmark_add_outlined, size: 21)),
+          Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: FilledButton(
+                  style: FilledButton.styleFrom(
+                      minimumSize: const Size(52, 36),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      textStyle: const TextStyle(fontSize: 13)),
+                  onPressed:
+                      state.doc == null || state.exporting ? null : _export,
+                  child: Text(state.exporting ? '导出中…' : '导出'))),
         ],
       ),
       body: layout == null
@@ -45,69 +82,70 @@ class _EditorPageState extends ConsumerState<EditorPage> {
                   style: Theme.of(context).textTheme.bodyMedium))
           : DefaultTabController(
               length: 5,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onLongPressStart: (_) =>
-                          setState(() => _showOriginal = true),
-                      onLongPressEnd: (_) =>
-                          setState(() => _showOriginal = false),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: FramePreview(
-                          key: const ValueKey('frame-preview'),
-                          layout: layout,
-                          image: _showOriginal ? state.base : state.graded,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Text(
-                    state.error ?? (_showOriginal ? '原图' : '长按预览查看原图'),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: state.error == null
-                            ? GRemoteColors.muted
-                            : GRemoteColors.danger,
-                        fontSize: 11),
-                  ),
-                  const TabBar(tabs: [
-                    Tab(text: 'LUT'),
-                    Tab(text: '边框'),
-                    Tab(text: '画幅'),
-                    Tab(text: '信息'),
-                    Tab(text: '导出'),
-                  ]),
-                  SizedBox(
-                    height: 220,
-                    child: TabBarView(children: [
-                      LutPanel(state: state, controller: _controller),
-                      FrameStylePanel(state: state, controller: _controller),
-                      ChoicePanel<FrameRatio>(
-                        values: FrameRatio.values,
-                        selected: state.recipe.ratio,
-                        label: (v) => v.label,
-                        onSelected: _controller.setRatio,
-                        note: '固定画幅只增加留白，不裁切照片',
-                      ),
-                      InfoPanel(state: state, controller: _controller),
-                      ExportPanel(state: state, controller: _controller),
-                    ]),
-                  ),
-                  SafeArea(
-                    top: false,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-                      child: FilledButton(
-                        onPressed: state.exporting ? null : _export,
-                        child: Text(state.exporting ? '导出中…' : '导出'),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              animationDuration: WorkspaceMotion.duration(context, 180),
+              child: SafeArea(
+                  top: false,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                          child: GestureDetector(
+                        onLongPressStart: (_) =>
+                            setState(() => _showOriginal = true),
+                        onLongPressEnd: (_) =>
+                            setState(() => _showOriginal = false),
+                        onLongPressCancel: () =>
+                            setState(() => _showOriginal = false),
+                        child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 10),
+                            child: FramePreview(
+                                key: const ValueKey('frame-preview'),
+                                layout: layout,
+                                image:
+                                    _showOriginal ? state.base : state.graded)),
+                      )),
+                      SizedBox(
+                          height: 22,
+                          child: Center(
+                              child: AnimatedSwitcher(
+                            duration: WorkspaceMotion.duration(context, 120),
+                            child: Text(
+                                state.error ?? (_showOriginal ? '原图' : ''),
+                                key: ValueKey((state.error, _showOriginal)),
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: state.error == null
+                                        ? GRemoteColors.muted
+                                        : GRemoteColors.danger)),
+                          ))),
+                      const TabBar(
+                          isScrollable: true,
+                          tabAlignment: TabAlignment.start,
+                          tabs: [
+                            Tab(text: 'LUT'),
+                            Tab(text: '边框'),
+                            Tab(text: '画幅'),
+                            Tab(text: '信息'),
+                            Tab(text: '导出')
+                          ]),
+                      SizedBox(
+                          height: panelHeight,
+                          child: TabBarView(children: [
+                            LutPanel(state: state, controller: _controller),
+                            FrameStylePanel(
+                                state: state, controller: _controller),
+                            ChoicePanel<FrameRatio>(
+                                values: FrameRatio.values,
+                                selected: state.recipe.ratio,
+                                label: (v) => v.label,
+                                onSelected: _controller.setRatio,
+                                note: '增加留白，保留完整照片'),
+                            InfoPanel(state: state, controller: _controller),
+                            ExportPanel(state: state, controller: _controller),
+                          ])),
+                    ],
+                  )),
             ),
     );
   }
