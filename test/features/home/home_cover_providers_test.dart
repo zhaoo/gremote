@@ -20,6 +20,30 @@ class _Photos extends FakeMediaGateway {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test('older readable imports replace five recently deleted candidates',
+      () async {
+    final gateway = _Photos()
+      ..entries = [for (var i = 1; i <= 6; i++) mediaEntry(i)];
+    final env = await TestDarkroom.create(gateway: gateway);
+    addTearDown(env.close);
+    final repo = LocalMediaRepository(env.db, gateway);
+    await repo.scan().drain<void>();
+    for (var i = 1; i <= 6; i++) {
+      await repo.addToAlbum(i, source: 'import');
+      await env.db.update('album_collection', {'added_at': 100 - i},
+          where: 'media_id=?', whereArgs: [i]);
+    }
+    gateway.entries = [mediaEntry(6)];
+    final c = ProviderContainer(overrides: env.overrides);
+    addTearDown(c.dispose);
+    final sub = c.listen(homeCoverDataProvider, (_, __) {});
+    addTearDown(sub.close);
+    expect(
+        (await c.read(homeCoverDataProvider.future))
+            .frames
+            .map((f) => f.entry.id),
+        [6]);
+  });
   test(
       'revoked permission and deleted photos yield no old cover, keep saved intent',
       () async {

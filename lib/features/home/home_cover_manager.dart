@@ -7,8 +7,10 @@ import 'home_cover_settings.dart';
 import '../../media/local/local_media_repository.dart';
 
 class HomeCoverManager extends ConsumerStatefulWidget {
-  const HomeCoverManager({required this.data, super.key});
+  const HomeCoverManager(
+      {required this.data, this.aspectRatio = 390 / 232, super.key});
   final HomeCoverData data;
+  final double aspectRatio;
   @override
   ConsumerState<HomeCoverManager> createState() => _HomeCoverManagerState();
 }
@@ -23,7 +25,7 @@ class _HomeCoverManagerState extends ConsumerState<HomeCoverManager> {
     super.initState();
     final s = widget.data.settings;
     _entries = s.entries.isEmpty
-        ? widget.data.frames.map((f) => f.entry).toList()
+        ? widget.data.recentFrames.map((f) => f.entry).toList()
         : s.entries.toList();
     _autoplay = s.autoplay;
     _default = s.useDefault;
@@ -80,7 +82,8 @@ class _HomeCoverManagerState extends ConsumerState<HomeCoverManager> {
     }
     final changed = await showDialog<HomeCoverEntry>(
         context: context,
-        builder: (_) => _FramingDialog(entry: item, bytes: bytes));
+        builder: (_) => _FramingDialog(
+            entry: item, bytes: bytes, aspectRatio: widget.aspectRatio));
     if (changed != null && mounted) {
       setState(() {
         _manual = true;
@@ -131,7 +134,9 @@ class _HomeCoverManagerState extends ConsumerState<HomeCoverManager> {
                                   onSelected: (_) => setState(() {
                                         _default = false;
                                         _manual = false;
-                                        _entries = widget.data.frames
+                                        _entries = (current.valueOrNull
+                                                    ?.recentFrames ??
+                                                widget.data.recentFrames)
                                             .map((f) => f.entry)
                                             .toList();
                                       })),
@@ -141,6 +146,7 @@ class _HomeCoverManagerState extends ConsumerState<HomeCoverManager> {
                                   onSelected: (_) => setState(() {
                                         _default = true;
                                         _manual = false;
+                                        _entries = [];
                                       })),
                             ]),
                             SwitchListTile(
@@ -273,9 +279,11 @@ class _CoverThumbnail extends ConsumerWidget {
 }
 
 class _FramingDialog extends StatefulWidget {
-  const _FramingDialog({required this.entry, required this.bytes});
+  const _FramingDialog(
+      {required this.entry, required this.bytes, required this.aspectRatio});
   final HomeCoverEntry entry;
   final Uint8List bytes;
+  final double aspectRatio;
   @override
   State<_FramingDialog> createState() => _FramingDialogState();
 }
@@ -313,7 +321,7 @@ class _FramingDialogState extends State<_FramingDialog>
               child: SingleChildScrollView(
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
                 AspectRatio(
-                    aspectRatio: 390 / 232,
+                    aspectRatio: widget.aspectRatio,
                     child: LayoutBuilder(
                         builder: (_, size) => GestureDetector(
                             onPanUpdate: (d) => setState(() {

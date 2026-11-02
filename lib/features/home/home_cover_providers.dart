@@ -15,14 +15,16 @@ class CoverFrame {
 }
 
 class HomeCoverData {
-  const HomeCoverData(
+  HomeCoverData(
       {required this.settings,
       required this.available,
       required this.frames,
-      this.configError = false});
+      List<CoverFrame>? recentFrames,
+      this.configError = false})
+      : recentFrames = recentFrames ?? frames;
   final HomeCoverSettings settings;
   final List<LocalMediaItem> available;
-  final List<CoverFrame> frames;
+  final List<CoverFrame> frames, recentFrames;
   final bool configError;
 }
 
@@ -56,18 +58,11 @@ final homeCoverDataProvider =
   final uris = {for (final e in live) e.id: e.uri};
   final available =
       (await repository.album()).where((e) => uris[e.id] == e.uri).toList();
-  final recent = (await repository.recentAlbumImports())
-      .where((e) => uris[e.id] == e.uri)
-      .toList();
-  final chosen = resolveCoverItems(
-      settings, settings.entries.isEmpty ? recent : available);
-  final frames = <CoverFrame>[];
-  for (final item in chosen) {
-    if (!active) break;
+  Future<CoverFrame?> read(LocalMediaItem item) async {
+    if (!active || uris[item.id] != item.uri) return null;
     try {
       final bytes = await gateway.thumbnail(item.id, 1024);
-      if (bytes == null || !active) continue;
-      // Reject corrupt thumbnails before replacing the previous visible frame.
+      if (bytes == null || !active) return null;
       final codec = await ui.instantiateImageCodec(bytes, targetWidth: 1024);
       try {
         final decoded = await codec.getNextFrame();
@@ -75,13 +70,42 @@ final homeCoverDataProvider =
       } finally {
         codec.dispose();
       }
-      final entry = settings.entries
-              .where((e) => e.id == item.id && e.uri == item.uri)
-              .firstOrNull ??
-          HomeCoverEntry(id: item.id, uri: item.uri);
-      frames.add(CoverFrame(entry: entry, bytes: bytes));
+      return CoverFrame(
+          entry: HomeCoverEntry(id: item.id, uri: item.uri), bytes: bytes);
     } catch (_) {
-      /* Missing or unreadable media is omitted, never persisted away. */
+      return null;
+    }
+  }
+
+  // Read in import order until five readable works have been collected.
+  final recentFrames = <CoverFrame>[];
+  var offset = 0;
+  while (active && recentFrames.length < 5) {
+    final batch = await repository.recentAlbumImports(offset: offset);
+    for (final item in batch) {
+      final frame = await read(item);
+      if (frame != null) recentFrames.add(frame);
+      if (recentFrames.length == 5 || !active) break;
+    }
+    if (batch.length < 5) break;
+    offset += batch.length;
+  }
+  final frames = <CoverFrame>[];
+  if (!settings.useDefault) {
+    if (settings.entries.isEmpty) {
+      frames.addAll(recentFrames);
+    } else {
+      for (final item in resolveCoverItems(settings, available)) {
+        final recent = recentFrames
+            .where((f) => f.entry.id == item.id && f.entry.uri == item.uri)
+            .firstOrNull;
+        final frame = recent ?? await read(item);
+        if (frame != null) {
+          final entry = settings.entries
+              .firstWhere((e) => e.id == item.id && e.uri == item.uri);
+          frames.add(CoverFrame(entry: entry, bytes: frame.bytes));
+        }
+      }
     }
   }
   if (await gateway.access() == MediaAccess.denied) {
@@ -95,5 +119,6 @@ final homeCoverDataProvider =
       settings: settings,
       available: available,
       frames: frames,
+      recentFrames: recentFrames,
       configError: configError);
 });

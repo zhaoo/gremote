@@ -12,6 +12,133 @@ import 'package:gremote/media/local/local_media_repository.dart';
 import '../../support/fake_media_gateway.dart';
 
 void main() {
+  testWidgets('recent source uses independent recent frames before reordering',
+      (t) async {
+    final gateway = _ValidThumbnails();
+    CoverFrame frame(int id) => CoverFrame(
+        entry: HomeCoverEntry(id: id, uri: 'image:$id'), bytes: gateway.bytes);
+    final data = HomeCoverData(
+        settings: const HomeCoverSettings(
+            entries: [HomeCoverEntry(id: 99, uri: 'image:99')]),
+        available: [
+          for (final i in [1, 2, 99])
+            LocalMediaItem(
+                id: i, uri: 'image:$i', displayName: '$i.jpg', dateModified: i)
+        ],
+        frames: [
+          frame(99)
+        ],
+        recentFrames: [
+          frame(1),
+          frame(2)
+        ]);
+    await t.pumpWidget(ProviderScope(overrides: [
+      mediaGatewayProvider.overrideWithValue(gateway),
+      homeCoverDataProvider.overrideWith((ref) async => data)
+    ], child: MaterialApp(home: Scaffold(body: HomeCoverManager(data: data)))));
+    await t.pumpAndSettle();
+    await t.tap(find.text('最近导入'));
+    await t.pump();
+    final rows = find.byType(ListTile);
+    expect(
+        find.descendant(of: rows, matching: find.text('99.jpg')), findsNothing);
+    expect(find.descendant(of: rows, matching: find.text('1.jpg')),
+        findsOneWidget);
+    await t.tap(find.byTooltip('前移').last);
+    await t.pump();
+    expect(find.descendant(of: rows.at(1), matching: find.text('2.jpg')),
+        findsOneWidget);
+  });
+  testWidgets('default mode then selecting photo begins a new manual selection',
+      (t) async {
+    final data = HomeCoverData(
+        settings: const HomeCoverSettings(
+            entries: [HomeCoverEntry(id: 1, uri: 'image:1')]),
+        available: [
+          const LocalMediaItem(
+              id: 1, uri: 'image:1', displayName: 'one.jpg', dateModified: 1)
+        ],
+        frames: []);
+    await t.pumpWidget(ProviderScope(overrides: [
+      mediaGatewayProvider.overrideWithValue(_CountThumbnails()),
+      homeCoverDataProvider.overrideWith((ref) async => data)
+    ], child: MaterialApp(home: Scaffold(body: HomeCoverManager(data: data)))));
+    await t.pumpAndSettle();
+    await t.tap(find.text('默认街景'));
+    await t.pump();
+    await t.tap(find.bySemanticsLabel('one.jpg'));
+    await t.pump();
+    expect(
+        t.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, '默认街景')).selected,
+        false);
+    expect(find.text('已选 1 / 5 · 单张即固定封面'), findsOneWidget);
+  });
+  testWidgets('framing preview matches narrow home aspect', (t) async {
+    t.view.physicalSize = const Size(320, 844);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.resetPhysicalSize);
+    addTearDown(t.view.resetDevicePixelRatio);
+    final gateway = _ValidThumbnails();
+    final frame = CoverFrame(
+        entry: const HomeCoverEntry(id: 1, uri: 'image:1'),
+        bytes: gateway.bytes);
+    final data = HomeCoverData(settings: const HomeCoverSettings(), available: [
+      const LocalMediaItem(
+          id: 1, uri: 'image:1', displayName: 'one.jpg', dateModified: 1)
+    ], frames: [
+      frame
+    ]);
+    await t.pumpWidget(ProviderScope(overrides: [
+      mediaGatewayProvider.overrideWithValue(gateway),
+      homeCoverDataProvider.overrideWith((ref) async => data)
+    ], child: const MaterialApp(home: Scaffold(body: HomeCover()))));
+    await t.pumpAndSettle();
+    await t.longPress(find.byType(CoverCarousel));
+    await t.pumpAndSettle();
+    await t.tap(find.byTooltip('调整取景位置'));
+    await t.pumpAndSettle();
+    expect(t.widget<AspectRatio>(find.byType(AspectRatio)).aspectRatio,
+        closeTo(320 / 232, .001));
+  });
+  testWidgets('open manager stays paused across background and resume',
+      (t) async {
+    final gateway = _ValidThumbnails();
+    final frames = [
+      for (var i = 1; i <= 2; i++)
+        CoverFrame(
+            entry: HomeCoverEntry(id: i, uri: 'image:$i'), bytes: gateway.bytes)
+    ];
+    final data = HomeCoverData(
+        settings: const HomeCoverSettings(),
+        available: [
+          for (var i = 1; i <= 2; i++)
+            LocalMediaItem(
+                id: i, uri: 'image:$i', displayName: '$i.jpg', dateModified: i)
+        ],
+        frames: frames);
+    await t.pumpWidget(ProviderScope(overrides: [
+      mediaGatewayProvider.overrideWithValue(gateway),
+      homeCoverDataProvider.overrideWith((ref) async => data)
+    ], child: const MaterialApp(home: Scaffold(body: HomeCover()))));
+    await t.pumpAndSettle();
+    await t.longPress(find.byType(CoverCarousel));
+    await t.pumpAndSettle();
+    t.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await t.pump();
+    t.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await t.pumpAndSettle();
+    await t.pump(const Duration(seconds: 9));
+    await t.pump(const Duration(milliseconds: 300));
+    expect(find.text('1 / 2'), findsOneWidget);
+    Navigator.of(t.element(find.byType(HomeCoverManager))).pop();
+    await t.pumpAndSettle();
+    await t.pump(const Duration(seconds: 7));
+    expect(find.text('1 / 2'), findsOneWidget);
+    await t.pump(const Duration(seconds: 1));
+    await t.pump(const Duration(milliseconds: 300));
+    expect(find.text('2 / 2'), findsOneWidget);
+    await t.pumpWidget(const SizedBox());
+  });
   testWidgets('large album only requests visible manager thumbnails',
       (t) async {
     final gateway = _CountThumbnails();
@@ -97,4 +224,11 @@ class _CountThumbnails extends FakeMediaGateway {
     calls++;
     return null;
   }
+}
+
+class _ValidThumbnails extends FakeMediaGateway {
+  final bytes = base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=');
+  @override
+  Future<Uint8List?> thumbnail(int id, int edge) async => bytes;
 }

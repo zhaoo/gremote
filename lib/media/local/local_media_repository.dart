@@ -172,10 +172,11 @@ class LocalMediaRepository {
     return rows.isEmpty ? null : _item(rows.single);
   }
 
-  Future<List<LocalMediaItem>> recentAlbumImports({int limit = 5}) async =>
+  Future<List<LocalMediaItem>> recentAlbumImports(
+          {int limit = 5, int offset = 0}) async =>
       (await _db.rawQuery(
-        'SELECT m.* FROM local_media m INNER JOIN album_collection a ON m.media_id=a.media_id ORDER BY a.added_at DESC, m.media_id DESC LIMIT ?',
-        [limit.clamp(0, 5)],
+        'SELECT m.* FROM local_media m INNER JOIN album_collection a ON m.media_id=a.media_id ORDER BY a.added_at DESC, m.media_id DESC LIMIT ? OFFSET ?',
+        [limit.clamp(0, 5), offset.clamp(0, 1 << 31)],
       ))
           .map(_item)
           .toList();

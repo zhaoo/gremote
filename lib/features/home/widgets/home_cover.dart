@@ -13,7 +13,7 @@ class HomeCover extends ConsumerStatefulWidget {
 
 class _HomeCoverState extends ConsumerState<HomeCover>
     with WidgetsBindingObserver {
-  bool _foreground = true;
+  bool _foreground = true, _managerOpen = false;
   @override
   void initState() {
     super.initState();
@@ -48,12 +48,22 @@ class _HomeCoverState extends ConsumerState<HomeCover>
         data: (value) => CoverCarousel(
             frames: value.frames,
             autoplay: value.settings.autoplay,
+            visible: !_managerOpen,
             onManage: () async {
-              await showModalBottomSheet<void>(
-                  context: context,
-                  isScrollControlled: true,
-                  showDragHandle: true,
-                  builder: (_) => HomeCoverManager(data: value));
+              final box = context.findRenderObject() as RenderBox?;
+              final aspect =
+                  (box?.size.width ?? MediaQuery.sizeOf(context).width) / 232;
+              setState(() => _managerOpen = true);
+              try {
+                await showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    showDragHandle: true,
+                    builder: (_) =>
+                        HomeCoverManager(data: value, aspectRatio: aspect));
+              } finally {
+                if (mounted) setState(() => _managerOpen = false);
+              }
             }));
   }
 }
