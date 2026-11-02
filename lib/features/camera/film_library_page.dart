@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -64,8 +65,19 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
           .read(officialFilmLibraryProvider)
           .sync(expectedRenderer: catalog.rendererHash);
       ref.invalidate(officialFilmCacheProvider);
-    } catch (_) {
-      if (mounted) setState(() => _error = '同步失败，已保留本地胶卷库');
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('胶卷库已同步')));
+      }
+    } catch (error) {
+      final reason = switch (error) {
+        SocketException() => '无法连接官网，请检查网络',
+        TimeoutException() => '连接超时，请重试',
+        HttpException() => error.message,
+        FormatException() => error.message,
+        _ => '同步失败，请重试',
+      };
+      if (mounted) setState(() => _error = '$reason · 已保留本地胶卷库');
     } finally {
       if (mounted) setState(() => _syncing = false);
     }
@@ -93,6 +105,7 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
   Widget build(BuildContext context) {
     final catalog = ref.watch(cameraFilmCatalogProvider);
     final cache = ref.watch(officialFilmCacheProvider).valueOrNull;
+    final compatible = cache?.cameraCompatible ?? true;
     final local = catalog.valueOrNull;
     final availability = ref.watch(cameraAvailabilityProvider);
     final films = cache?.films ??
@@ -217,6 +230,11 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
             child: Text(_error!,
                 style: const TextStyle(
                     color: GRemoteColors.danger, fontSize: 12))),
+      if (!compatible && _group != '我的 LUT')
+        const Padding(
+            padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
+            child: Text('胶卷版本与当前机身不匹配 · 可浏览',
+                style: TextStyle(color: GRemoteColors.muted, fontSize: 12))),
       if (!availability.canInstallFilms && _group != '我的 LUT')
         Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
@@ -262,7 +280,10 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
                               film.icon;
                           return FilmLibraryTile(
                               name: film.name,
-                              available: availability.canInstallFilms,
+                              available: compatible &&
+                                  availability.canInstallFilms &&
+                                  (local?.entries.any((f) => f.id == film.id) ??
+                                      false),
                               image: icon.startsWith('https:')
                                   ? Image.network(icon,
                                       fit: BoxFit.contain,
@@ -272,7 +293,8 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
                                       fit: BoxFit.contain,
                                       errorBuilder: (_, __, ___) => const Icon(
                                           Icons.local_movies_outlined)),
-                              onTap: () => _details(film, local));
+                              onTap: () => _details(film, local,
+                                  compatible: compatible));
                         },
                       );
                     })),
@@ -307,7 +329,8 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
                         child: const Text('管理 LUT')),
                   ]))));
 
-  Future<void> _details(OfficialFilm film, CameraFilmCatalog? catalog) async {
+  Future<void> _details(OfficialFilm film, CameraFilmCatalog? catalog,
+      {required bool compatible}) async {
     final supported = catalog?.entries.any((f) => f.id == film.id) ?? false;
     await showModalBottomSheet<void>(
         context: context,
@@ -315,6 +338,12 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
         showDragHandle: true,
         builder: (sheet) => Consumer(builder: (_, ref, __) {
               final availability = ref.watch(cameraAvailabilityProvider);
+              final versionMatches = compatible &&
+                  (ref
+                          .watch(officialFilmCacheProvider)
+                          .valueOrNull
+                          ?.cameraCompatible ??
+                      true);
               return DraggableScrollableSheet(
                   expand: false,
                   initialChildSize: .86,
@@ -343,24 +372,37 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
                                     color: GRemoteColors.muted, fontSize: 12)),
                             const SizedBox(height: 24),
                             FilledButton(
-                                onPressed: supported &&
+                                onPressed: versionMatches &&
+                                        supported &&
                                         availability.canInstallFilms
                                     ? () {
                                         if (!ref
-                                            .read(cameraAvailabilityProvider)
-                                            .canInstallFilms) return;
+                                                .read(
+                                                    cameraAvailabilityProvider)
+                                                .canInstallFilms ||
+                                            !compatible ||
+                                            ref
+                                                    .read(
+                                                        officialFilmCacheProvider)
+                                                    .valueOrNull
+                                                    ?.cameraCompatible ==
+                                                false) return;
                                         Navigator.pop(sheet);
                                         _openSlots(context, filmId: film.id);
                                       }
                                     : null,
                                 child: const Text('装入相机')),
-                            if (!supported || !availability.canInstallFilms)
+                            if (!versionMatches ||
+                                !supported ||
+                                !availability.canInstallFilms)
                               Padding(
                                   padding: const EdgeInsets.only(top: 12),
                                   child: Text(
-                                      supported
-                                          ? availability.hint
-                                          : '需要更新机身胶卷目录',
+                                      !versionMatches
+                                          ? '胶卷版本与当前机身不匹配'
+                                          : supported
+                                              ? availability.hint
+                                              : '需要更新机身胶卷目录',
                                       textAlign: TextAlign.center,
                                       style: const TextStyle(
                                           color: GRemoteColors.muted,

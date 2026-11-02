@@ -24,7 +24,7 @@ class OfficialFilm {
         icon = json['icon_url'];
     if (id is! int ||
         id < 1 ||
-        id > 321 ||
+        id > 0xffffffff ||
         name is! String ||
         name.isEmpty ||
         name.length > 80 ||
@@ -75,7 +75,7 @@ int filmCrc(List<int> bytes) {
   return (~crc) & 0xffffffff;
 }
 
-void validateOfficialPack(List<int> input, Set<int> expectedIds,
+String validateOfficialPack(List<int> input, Set<int> expectedIds,
     {String? expectedRenderer}) {
   void need(bool value) {
     if (!value) throw const FormatException('官网胶卷库校验失败');
@@ -96,6 +96,7 @@ void validateOfficialPack(List<int> input, Set<int> expectedIds,
       data.getUint32(28, Endian.little) == 1);
   need(filmCrc(bytes.sublist(0, 4092)) == data.getUint32(4092, Endian.little));
   final ids = <int>{};
+  String? packRenderer;
   for (var i = 0; i < count; i++) {
     final id = data.getUint32(64 + 12 * i, Endian.little);
     need(ids.add(id) &&
@@ -114,8 +115,11 @@ void validateOfficialPack(List<int> input, Set<int> expectedIds,
         .map((v) => v.toRadixString(16).padLeft(2, '0'))
         .join();
     need(record.sublist(8448, 8480).any((v) => v != 0) &&
+        (packRenderer == null || renderer == packRenderer) &&
         (expectedRenderer == null || renderer == expectedRenderer));
+    packRenderer = renderer;
   }
+  return packRenderer!;
 }
 
 /// Reads the website's stored-entry ZIP in memory. Never extracts paths to disk.
@@ -150,10 +154,13 @@ Uint8List officialPackFromZip(Uint8List zip) {
 }
 
 class OfficialFilmSnapshot {
-  const OfficialFilmSnapshot(this.films, this.updatedAt, this.sha256);
+  const OfficialFilmSnapshot(this.films, this.updatedAt, this.sha256,
+      {required this.rendererHash, required this.cameraCompatible});
   final List<OfficialFilm> films;
   final DateTime updatedAt;
   final String sha256;
+  final String rendererHash;
+  final bool cameraCompatible;
 }
 
 class OfficialFilmLibrary {
@@ -197,13 +204,14 @@ class OfficialFilmLibrary {
       final json = jsonDecode(await cache.readAsString()) as Map;
       final films = parseOfficialCatalog(json['catalog'] as String),
           pack = base64Decode(json['pack'] as String);
-      await Isolate.run(() => validateOfficialPack(
-          pack, films.map((f) => f.id).toSet(),
-          expectedRenderer: expectedRenderer));
+      final renderer = await Isolate.run(
+          () => validateOfficialPack(pack, films.map((f) => f.id).toSet()));
       final hash = sha256.convert(pack).toString();
       if (hash != json['hash']) return null;
       return OfficialFilmSnapshot(
-          films, DateTime.parse(json['updatedAt'] as String), hash);
+          films, DateTime.parse(json['updatedAt'] as String), hash,
+          rendererHash: renderer,
+          cameraCompatible: renderer == expectedRenderer);
     } catch (_) {
       return null;
     }
@@ -228,9 +236,10 @@ class OfficialFilmLibrary {
         body: jsonEncode(
             {'model': 'gr3', 'ids': films.map((f) => f.id).toList()}));
     final pack = await Isolate.run(() => officialPackFromZip(zip));
-    await Isolate.run(() => validateOfficialPack(
-        pack, films.map((f) => f.id).toSet(),
-        expectedRenderer: expectedRenderer));
+    // The website catalogue can advance independently of paired firmware.
+    // Validate every record, but expose compatibility separately for write UI.
+    final renderer = await Isolate.run(
+        () => validateOfficialPack(pack, films.map((f) => f.id).toSet()));
     final hash = sha256.convert(pack).toString(),
         at = DateTime.now().toUtc(),
         cache = await _cache;
@@ -249,6 +258,7 @@ class OfficialFilmLibrary {
     } finally {
       if (await staging.exists()) await staging.delete();
     }
-    return OfficialFilmSnapshot(films, at, hash);
+    return OfficialFilmSnapshot(films, at, hash,
+        rendererHash: renderer, cameraCompatible: renderer == expectedRenderer);
   }
 }

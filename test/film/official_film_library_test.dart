@@ -33,7 +33,102 @@ Uint8List samplePack() {
   return bytes;
 }
 
+Uint8List storedZip(Uint8List pack) {
+  final name = utf8.encode('SD/M10V/FILMS.M10');
+  final bytes = Uint8List(30 + name.length + pack.length);
+  final header = ByteData.sublistView(bytes);
+  header.setUint32(0, 0x04034b50, Endian.little);
+  header.setUint16(6, 0x800, Endian.little);
+  header.setUint32(14, filmCrc(pack), Endian.little);
+  header.setUint32(18, pack.length, Endian.little);
+  header.setUint32(22, pack.length, Endian.little);
+  header.setUint16(26, name.length, Endian.little);
+  bytes.setRange(30, 30 + name.length, name);
+  bytes.setRange(30 + name.length, bytes.length, pack);
+  return bytes;
+}
+
 void main() {
+  test('new website IDs remain browsable without becoming camera recipes', () {
+    final films = parseOfficialCatalog(jsonEncode({
+      'film_count': 1,
+      'films': [
+        {
+          'id': 326,
+          'name': 'Agfa Vista 200',
+          'group': 'C41',
+          'icon_url': '/gr3/film-icons/326.png'
+        }
+      ]
+    }));
+    expect(films.single.id, 326);
+    for (final id in [0, -1, 0x100000000]) {
+      expect(
+          () => OfficialFilm.parse({
+                'id': id,
+                'name': 'invalid',
+                'group': 'C41',
+                'icon_url': '/gr3/a.png'
+              }),
+          throwsFormatException);
+    }
+  });
+  test(
+      'new official renderer can sync for browsing without replacing camera recipes',
+      () async {
+    final dir = Directory.systemTemp.createTempSync('official-films-');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    var corrupt = false;
+    final library = OfficialFilmLibrary(
+      directory: () async => dir,
+      client: MockClient((request) async {
+        switch (request.url.path) {
+          case '/api/gr3/native-library/catalog':
+            return http.Response(
+                jsonEncode({
+                  'film_count': 1,
+                  'films': [
+                    {
+                      'id': 33,
+                      'name': '800T',
+                      'group': 'ECN2',
+                      'icon_url': '/gr3/film-icons/33.png'
+                    }
+                  ]
+                }),
+                200);
+          case '/api/status':
+            return http.Response('{"session_token":"fixture"}', 200);
+          case '/api/gr3/sd-library/export':
+            expect(request.method, 'POST');
+            expect(jsonDecode(request.body)['ids'], [33]);
+            final pack = samplePack();
+            if (corrupt) pack[4096 + 64] ^= 1;
+            return http.Response.bytes(storedZip(pack), 200);
+          default:
+            throw StateError('Unexpected target');
+        }
+      }),
+    );
+    // Production regression: rejecting a valid newer renderer hides the entire
+    // website catalogue. Browsing must work; camera compatibility stays explicit.
+    final snapshot = await library.sync(expectedRenderer: 'bb' * 32);
+    expect(snapshot.films.single.name, '800T');
+    expect(snapshot.rendererHash, 'aa' * 32);
+    expect(snapshot.cameraCompatible, isFalse);
+    final cached = await library.cached(expectedRenderer: 'bb' * 32);
+    expect(cached?.films.single.id, 33);
+    expect(cached?.cameraCompatible, isFalse);
+    expect(
+        (await library.cached(expectedRenderer: 'aa' * 32))?.cameraCompatible,
+        isTrue);
+    expect((await library.cached())?.cameraCompatible, isFalse);
+    corrupt = true;
+    await expectLater(
+        library.sync(expectedRenderer: 'bb' * 32), throwsFormatException);
+    expect((await library.cached(expectedRenderer: 'bb' * 32))?.sha256,
+        snapshot.sha256);
+  });
   test('valid SD records must match the pinned renderer on every record', () {
     final bytes = samplePack();
     expect(() => validateOfficialPack(bytes, {33}, expectedRenderer: 'aa' * 32),
