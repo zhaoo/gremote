@@ -104,6 +104,8 @@ class _FramePreviewState extends State<FramePreview> {
                         child: Image.file(File(detail.path),
                             key: ValueKey(detail.path),
                             fit: BoxFit.fill,
+                            errorBuilder: (_, __, ___) =>
+                                const SizedBox.shrink(),
                             filterQuality: FilterQuality.high)),
                   IgnorePointer(
                       child: CustomPaint(
@@ -147,7 +149,7 @@ class _FramePainter extends CustomPainter {
         Paint()..filterQuality = FilterQuality.medium,
       );
     }
-    if (overlays)
+    if (overlays) {
       for (final overlay in layout.overlays) {
         final r = overlay.rect;
         canvas
@@ -157,6 +159,7 @@ class _FramePainter extends CustomPainter {
         FramePainter.paintOverlay(canvas, overlay, scale: scale);
         canvas.restore();
       }
+    }
   }
 
   @override

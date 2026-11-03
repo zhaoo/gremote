@@ -46,6 +46,46 @@ class DarkroomStore {
   final Database _db;
   final DateTime Function() _clock;
 
+  static List<String> _ids(Object? raw) {
+    if (raw == null) return [];
+    final value = jsonDecode(raw as String);
+    if (value is! List || value.any((id) => id is! String)) {
+      throw const FormatException('invalid LUT collection');
+    }
+    return value.cast<String>().toSet().toList();
+  }
+
+  Future<(List<String>, Set<String>)> lutCollections() async {
+    final rows = await _db.query('app_kv',
+        where: 'key IN (?, ?)',
+        whereArgs: ['studio.lut.recent', 'studio.lut.favorites']);
+    final values = {for (final row in rows) row['key']: row['value']};
+    return (
+      _ids(values['studio.lut.recent']),
+      _ids(values['studio.lut.favorites']).toSet()
+    );
+  }
+
+  Future<void> _updateLutIds(String key, void Function(List<String>) update) =>
+      _db.transaction((txn) async {
+        final rows = await txn.query('app_kv',
+            where: 'key = ?', whereArgs: [key], limit: 1);
+        final ids = _ids(rows.isEmpty ? null : rows.single['value']);
+        update(ids);
+        await txn.insert('app_kv', {'key': key, 'value': jsonEncode(ids)},
+            conflictAlgorithm: ConflictAlgorithm.replace);
+      });
+  Future<void> toggleLutFavorite(String id) =>
+      _updateLutIds('studio.lut.favorites', (ids) {
+        if (!ids.remove(id)) ids.add(id);
+      });
+  Future<void> rememberLut(String id) =>
+      _updateLutIds('studio.lut.recent', (ids) {
+        ids.remove(id);
+        ids.insert(0, id);
+        if (ids.length > 24) ids.removeRange(24, ids.length);
+      });
+
   Future<EditDocument?> loadEdit(int mediaId) async {
     final rows = await _db.query('edit_documents',
         where: 'media_id = ?', whereArgs: [mediaId], limit: 1);

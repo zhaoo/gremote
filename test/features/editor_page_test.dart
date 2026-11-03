@@ -79,6 +79,45 @@ Future<void> openTab(WidgetTester tester, String label) async {
 }
 
 void main() {
+  testWidgets(
+      'studio preset selection stays draft until confirmed and records restore snapshots',
+      (tester) async {
+    final (_, container) = await pumpEditor(tester);
+    final before = container.read(editorProvider(3)).recipe;
+    await tester.tap(find.byKey(const ValueKey('studio-tab-0')));
+    await tester.pumpAndSettle();
+    final id = container.read(editorProvider(3)).luts.first.id;
+    await tester.tap(find.byKey(ValueKey('lut-$id')));
+    await tester.pumpAndSettle();
+    expect(container.read(editorProvider(3)).recipe.lutId, id);
+    await tester.tap(find.byKey(ValueKey('lut-$id')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('lut-strength')), findsOneWidget);
+    final name = container.read(editorProvider(3)).luts.first.name;
+    await tester.tap(find.text(name));
+    await tester.pumpAndSettle();
+    expect(find.byKey(ValueKey('lut-$id')), findsOneWidget);
+
+    expect(find.byKey(const ValueKey('studio-tab-1')), findsNothing);
+    await tester.tap(find.byTooltip('取消调整'));
+    await tester.pumpAndSettle();
+    expect(container.read(editorProvider(3)).recipe, before);
+    final controller = container.read(editorProvider(3).notifier);
+    controller.setEdits(before.edits.withValue(PhotoAdjustment.exposure, 1));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('studio-tab-2')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('打开时'));
+    await tester.pumpAndSettle();
+    expect(
+        container
+            .read(editorProvider(3))
+            .recipe
+            .edits
+            .value(PhotoAdjustment.exposure),
+        0);
+    expect(container.read(editorProvider(3)).canRedo, isTrue);
+  });
   testWidgets('tool grid opens adjustments and cancel restores the photo',
       (tester) async {
     final (_, container) = await pumpEditor(tester);
@@ -258,7 +297,7 @@ void main() {
       (tester) async {
     final (env, c) = await pumpEditor(tester);
     await openTab(tester, '基础');
-    await tester.tap(find.widgetWithText(ChoiceChip, '对比度'));
+    await tester.tap(find.text('对比度'));
     await tester.pumpAndSettle();
     await tester.drag(
         find.byKey(const ValueKey('frame-preview')), const Offset(50, 0));

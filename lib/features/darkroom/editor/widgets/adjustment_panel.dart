@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'precision_dialog.dart';
 
-import '../../../../app/widgets/workspace_motion.dart';
 import '../../../../app/theme/app_palette.dart';
 import '../../../../darkroom/model/photo_edits.dart';
 
@@ -31,6 +31,20 @@ class _AdjustmentPanelState extends State<AdjustmentPanel> {
     widget.onEnd();
   }
 
+  Future<void> _precise(PhotoAdjustment active) async {
+    final factor = active == PhotoAdjustment.exposure ? 1.0 : 100.0;
+    final result =
+        await showPrecisionDialog(context, title: active.label, fields: [
+      PrecisionField('数值', widget.edits.value(active) * factor,
+          active.min * factor, active.max * factor,
+          key: const ValueKey('precision-input'))
+    ]);
+    if (!mounted || result == null) return;
+    widget.onStart();
+    widget.onChanged(widget.edits.withValue(active, result.single / factor));
+    widget.onEnd();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.adjustments.isEmpty) return const SizedBox.shrink();
@@ -44,42 +58,50 @@ class _AdjustmentPanelState extends State<AdjustmentPanel> {
           GestureDetector(
               key: const ValueKey('adjustment-value'),
               behavior: HitTestBehavior.opaque,
+              onTap: () => _precise(active),
               onDoubleTap: () => _reset(active),
               child: Semantics(
                   label: '${active.label}，${active.display(value)}，双击恢复默认值',
                   excludeSemantics: true,
                   child: ConstrainedBox(
                       constraints: const BoxConstraints(minHeight: 44),
-                      child: Row(children: [
-                        Expanded(
-                            child: RichText(
-                                textScaler: MediaQuery.textScalerOf(context),
-                                text: TextSpan(
-                                    text: active.label,
-                                    style: DefaultTextStyle.of(context)
-                                        .style
-                                        .copyWith(
-                                            fontSize: 13,
-                                            color: context.palette.text)))),
-                        const SizedBox(width: 12),
-                        Text(active.display(value),
-                            style: TextStyle(
-                                fontFamily: 'GRemoteEditorial',
-                                fontFamilyFallback: const ['Georgia', 'serif'],
-                                fontSize: 26,
-                                color: context.palette.text)),
-                      ])))),
-          Slider(
-              semanticFormatterCallback: active.display,
-              value: value,
-              min: active.min,
-              max: active.max,
-              activeColor: context.palette.accent,
-              inactiveColor: context.palette.divider,
-              onChangeStart: (_) => widget.onStart(),
-              onChanged: (v) =>
-                  widget.onChanged(widget.edits.withValue(active, v)),
-              onChangeEnd: (_) => widget.onEnd()),
+                      child: Center(
+                          child: Text(active.display(value),
+                              style: TextStyle(
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.w400,
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures()
+                                  ],
+                                  color: context.palette.text)))))),
+          SizedBox(
+              height: 56,
+              child: Stack(alignment: Alignment.center, children: [
+                Positioned(
+                    left: 24,
+                    right: 24,
+                    top: 8,
+                    child: CustomPaint(
+                        size: const Size(double.infinity, 10),
+                        painter: _TicksPainter(context.palette.divider))),
+                SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                        trackHeight: 1.2,
+                        thumbShape: const _InstrumentThumb(),
+                        overlayShape:
+                            const RoundSliderOverlayShape(overlayRadius: 18)),
+                    child: Slider(
+                        semanticFormatterCallback: active.display,
+                        value: value,
+                        min: active.min,
+                        max: active.max,
+                        activeColor: context.palette.text,
+                        inactiveColor: context.palette.divider,
+                        onChangeStart: (_) => widget.onStart(),
+                        onChanged: (v) =>
+                            widget.onChanged(widget.edits.withValue(active, v)),
+                        onChangeEnd: (_) => widget.onEnd())),
+              ])),
           Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Row(
@@ -103,31 +125,76 @@ class _AdjustmentPanelState extends State<AdjustmentPanel> {
               alignment: WrapAlignment.center,
               children: [
                 for (final a in widget.adjustments)
-                  ChoiceChip(
-                      label: Text(a.label),
-                      selected: a == active,
-                      onSelected: (_) {
+                  TextButton(
+                      style: TextButton.styleFrom(
+                          minimumSize: const Size(48, 44),
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          foregroundColor: a == active
+                              ? context.palette.text
+                              : context.palette.muted,
+                          backgroundColor: a == active
+                              ? context.palette.divider.withOpacity(.45)
+                              : Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(3))),
+                      onPressed: () {
                         setState(() => _active = a);
                         widget.onActiveChanged?.call(a);
                       },
-                      showCheckmark: false,
-                      selectedColor: context.palette.divider,
-                      backgroundColor: context.palette.surface,
-                      labelStyle: TextStyle(
-                          fontSize: 12,
-                          color: a == active
-                              ? context.palette.text
-                              : context.palette.muted),
-                      visualDensity: VisualDensity.standard,
-                      materialTapTargetSize: MaterialTapTargetSize.padded,
-                      side: BorderSide.none,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6)),
-                      chipAnimationStyle: ChipAnimationStyle(
-                          selectAnimation: AnimationStyle(
-                              duration:
-                                  WorkspaceMotion.duration(context, 130)))),
+                      child:
+                          Text(a.label, style: const TextStyle(fontSize: 12))),
               ]),
         ]));
+  }
+}
+
+class _TicksPainter extends CustomPainter {
+  _TicksPainter(this.color);
+  final Color color;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1;
+    for (var i = 0; i <= 20; i++) {
+      final x = size.width * i / 20;
+      canvas.drawLine(
+          Offset(x, 0),
+          Offset(
+              x,
+              i == 10
+                  ? 10
+                  : i % 5 == 0
+                      ? 7
+                      : 4),
+          paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_TicksPainter old) => color != old.color;
+}
+
+class _InstrumentThumb extends SliderComponentShape {
+  const _InstrumentThumb();
+  @override
+  Size getPreferredSize(bool isEnabled, bool isDiscrete) => const Size(4, 24);
+  @override
+  void paint(PaintingContext context, Offset center,
+      {required Animation<double> activationAnimation,
+      required Animation<double> enableAnimation,
+      required bool isDiscrete,
+      required TextPainter labelPainter,
+      required RenderBox parentBox,
+      required SliderThemeData sliderTheme,
+      required TextDirection textDirection,
+      required double value,
+      required double textScaleFactor,
+      required Size sizeWithOverflow}) {
+    context.canvas.drawRRect(
+        RRect.fromRectAndRadius(
+            Rect.fromCenter(center: center, width: 3, height: 23),
+            const Radius.circular(1)),
+        Paint()..color = sliderTheme.thumbColor ?? Colors.white);
   }
 }

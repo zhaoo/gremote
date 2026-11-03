@@ -64,6 +64,9 @@ class EditorTools extends StatelessWidget {
       {required this.onSelected, required this.changed, super.key});
   final ValueChanged<EditorTool> onSelected;
   final bool Function(EditorTool) changed;
+  List<EditorTool> get _tools => EditorTool.values
+      .where((t) => t != EditorTool.presets && t != EditorTool.history)
+      .toList();
   @override
   Widget build(BuildContext context) => GridView.builder(
       key: const ValueKey('editor-tool-grid'),
@@ -74,9 +77,9 @@ class EditorTools extends StatelessWidget {
           crossAxisCount: 4,
           mainAxisExtent:
               MediaQuery.textScalerOf(context).scale(12) > 18 ? 92 : 74),
-      itemCount: EditorTool.values.length,
+      itemCount: _tools.length,
       itemBuilder: (context, index) {
-        final tool = EditorTool.values[index];
+        final tool = _tools[index];
         return Semantics(
             button: true,
             label: '打开${tool.label}',
@@ -87,7 +90,7 @@ class EditorTools extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Stack(clipBehavior: Clip.none, children: [
-                        Icon(tool.icon, size: 23),
+                        Icon(tool.icon, size: 21),
                         if (changed(tool))
                           Positioned(
                               right: -7,

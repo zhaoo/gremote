@@ -542,6 +542,14 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
     ++_toolEpoch;
     final crop = state.cropEditing;
     if (crop) _invalidatePreviews();
+    if (state.recipe.lutId != null) {
+      unawaited(ref
+          .read(darkroomStoreProvider)
+          .rememberLut(state.recipe.lutId!)
+          .catchError((Object e) {
+        if (_alive) _emit(state.copyWith(saveError: () => '最近使用记录未保存：$e'));
+      }));
+    }
     _toolStart = null;
     _toolUndo = null;
     _toolRedo = null;
@@ -583,6 +591,28 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
       _historyState();
       if (_toolStart == null) _persist(state.doc!);
     }
+  }
+
+  List<EditDocument> get history =>
+      List.unmodifiable([..._undo, if (state.doc != null) state.doc!]);
+  void restoreHistory(int index) {
+    if (state.exporting ||
+        _toolStart != null ||
+        index < 0 ||
+        index >= _undo.length) return;
+    final versions = history;
+    _invalidatePreviews();
+    _redo
+      ..clear()
+      ..addAll(versions.skip(index + 1).toList().reversed);
+    _undo
+      ..clear()
+      ..addAll(versions.take(index));
+    _emit(state.copyWith(
+        doc: versions[index].copyWith(updatedAt: DateTime.now())));
+    _historyState();
+    _persist(state.doc!);
+    unawaited(regrade());
   }
 
   void undo() {

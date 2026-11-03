@@ -146,8 +146,8 @@ void main() {
     expect(
         calls.where((v) => v != 'HapticFeedbackType.selectionClick'), isEmpty);
   },
-      variant:
-          const TargetPlatformVariant({TargetPlatform.android, TargetPlatform.iOS}));
+      variant: const TargetPlatformVariant(
+          {TargetPlatform.android, TargetPlatform.iOS}));
 
   testWidgets('light RGB channel labels have readable contrast',
       (tester) async {
@@ -160,17 +160,22 @@ void main() {
                 onStart: () {},
                 onEnd: () {}))));
     for (final name in ['R', 'G', 'B']) {
-      final chip =
-          tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, name));
-      expect(contrast(chip.labelStyle!.color!, chip.backgroundColor!),
-          greaterThanOrEqualTo(4.5),
+      Color background() {
+        final circle = tester.widget<Container>(find
+            .ancestor(of: find.text(name), matching: find.byType(Container))
+            .first);
+        final color = (circle.decoration! as BoxDecoration).color!;
+        return color.opacity == 0
+            ? GRemoteTheme.light.scaffoldBackgroundColor
+            : color;
+      }
+
+      Color foreground() => tester.widget<Text>(find.text(name)).style!.color!;
+      expect(contrast(foreground(), background()), greaterThanOrEqualTo(4.5),
           reason: name);
       await tester.tap(find.text(name));
       await tester.pumpAndSettle();
-      final selected =
-          tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, name));
-      expect(contrast(selected.labelStyle!.color!, selected.selectedColor!),
-          greaterThanOrEqualTo(4.5),
+      expect(contrast(foreground(), background()), greaterThanOrEqualTo(4.5),
           reason: 'selected $name');
     }
   });

@@ -20,6 +20,10 @@ class LutPicker extends ConsumerStatefulWidget {
   const LutPicker({
     required this.source,
     this.gpuSession,
+    this.grid = false,
+    this.showStrength = true,
+    this.onStrengthTap,
+    this.onSchemes,
     required this.edits,
     required this.entries,
     required this.selected,
@@ -34,6 +38,8 @@ class LutPicker extends ConsumerStatefulWidget {
 
   final PreviewImage? source;
   final GpuEditorSession? gpuSession;
+  final bool grid, showStrength;
+  final VoidCallback? onStrengthTap, onSchemes;
   final PhotoEdits edits;
   final List<LutEntry> entries;
   final String? selected;
@@ -56,6 +62,44 @@ class _ThumbnailRequest {
 }
 
 class _LutPickerState extends ConsumerState<LutPicker> {
+  String _collection = "全部";
+  List<String> _recent = [];
+  Set<String> _favorites = {};
+  @override
+  void initState() {
+    super.initState();
+    if (widget.grid) _loadCollections();
+  }
+
+  Future<void> _loadCollections() async {
+    try {
+      final (recent, favorites) =
+          await ref.read(darkroomStoreProvider).lutCollections();
+      if (mounted) {
+        setState(() {
+          _recent = recent;
+          _favorites = favorites;
+        });
+      }
+    } catch (_) {
+      /* Report a failed write if the user attempts to change a collection. */
+    }
+  }
+
+  Future<void> _favorite() async {
+    final id = widget.selected;
+    if (id == null) return;
+    try {
+      await ref.read(darkroomStoreProvider).toggleLutFavorite(id);
+      await _loadCollections();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text("收藏未保存，请重试")));
+      }
+    }
+  }
+
   final _cache = <String?, Future<PreviewImage?>>{};
   final _queue = Queue<_ThumbnailRequest>();
   int _generation = 0;
@@ -68,7 +112,7 @@ class _LutPickerState extends ConsumerState<LutPicker> {
     if (oldWidget.gpuSession != widget.gpuSession ||
         oldWidget.source != widget.source ||
         oldWidget.edits != widget.edits ||
-        oldWidget.strength != widget.strength) {
+        (!widget.grid && oldWidget.strength != widget.strength)) {
       _invalidate();
     }
   }
@@ -119,7 +163,7 @@ class _LutPickerState extends ConsumerState<LutPicker> {
     final request = _active = _queue.removeFirst();
     final source = widget.source;
     final edits = widget.edits;
-    final strength = widget.strength;
+    final strength = widget.grid ? 1.0 : widget.strength;
     final engine = ref.read(imagingEngineProvider);
     final library = ref.read(lutLibraryProvider);
     try {
@@ -163,130 +207,286 @@ class _LutPickerState extends ConsumerState<LutPicker> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 16, right: 8),
-            child: Row(children: [
-              const Expanded(child: Text('滤镜', style: TextStyle(fontSize: 13))),
-              IconButton(
-                key: const ValueKey('lut-import'),
-                tooltip: '导入 LUT',
-                onPressed: widget.onImport,
-                icon: const Icon(Icons.add_rounded, size: 21),
+  Widget _tile(LutEntry? entry, {bool grid = false}) {
+    final id = entry?.id;
+    final selected = widget.selected == id;
+    return SizedBox(
+      width: grid ? null : 82,
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: entry?.name ?? '原图',
+        child: InkWell(
+          key: ValueKey(id == null ? 'lut-original' : 'lut-$id'),
+          onTap: () => widget.onSelected(id),
+          borderRadius: BorderRadius.circular(grid ? 2 : 10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Column(children: [
+              Container(
+                height: grid ? 86 : 76,
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: context.palette.raised,
+                  borderRadius: BorderRadius.circular(grid ? 1 : 9),
+                  border: Border.all(
+                    color: selected
+                        ? context.palette.text
+                        : context.palette.divider,
+                    width: selected ? 1 : .5,
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(grid ? 0 : 5),
+                  child: FutureBuilder<PreviewImage?>(
+                    key: ValueKey((_generation, id)),
+                    future: _thumbnail(id),
+                    builder: (context, snapshot) {
+                      final image = snapshot.data;
+                      if (image == null) {
+                        return Center(
+                            child: Icon(
+                          Icons.image_outlined,
+                          size: 20,
+                          color: context.palette.muted,
+                        ));
+                      }
+                      final preview = FramePreview(
+                        layout: computeFrameLayout(
+                          photoWidth: image.width,
+                          photoHeight: image.height,
+                          style: FrameStyle.none,
+                          ratio: FrameRatio.original,
+                          content: const FrameContent(),
+                        ),
+                        image: image,
+                      );
+                      return grid
+                          ? ClipRect(
+                              child: FittedBox(
+                                  fit: BoxFit.cover,
+                                  child: SizedBox(
+                                      width: image.width.toDouble(),
+                                      height: image.height.toDouble(),
+                                      child: preview)))
+                          : preview;
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                entry?.name ?? '原图',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontSize: 11,
+                    color: selected
+                        ? context.palette.text
+                        : context.palette.muted),
               ),
             ]),
           ),
-          SizedBox(
-            height: 114,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              addAutomaticKeepAlives: false,
-              itemCount: widget.entries.length + 1,
-              itemBuilder: (context, index) {
-                final entry = index == 0 ? null : widget.entries[index - 1];
-                final id = entry?.id;
-                final selected = widget.selected == id;
-                return SizedBox(
-                  width: 82,
-                  child: Semantics(
-                    button: true,
-                    selected: selected,
-                    label: entry?.name ?? '原图',
-                    child: InkWell(
-                      key: ValueKey(id == null ? 'lut-original' : 'lut-$id'),
-                      onTap: () => widget.onSelected(id),
-                      borderRadius: BorderRadius.circular(10),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: Column(children: [
-                          Container(
-                            height: 76,
-                            padding: const EdgeInsets.all(3),
-                            decoration: BoxDecoration(
-                              color: context.palette.raised,
-                              borderRadius: BorderRadius.circular(9),
-                              border: Border.all(
-                                color: selected
-                                    ? context.palette.text
-                                    : context.palette.divider,
-                                width: selected ? 2 : 1,
-                              ),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(5),
-                              child: FutureBuilder<PreviewImage?>(
-                                key: ValueKey((_generation, id)),
-                                future: _thumbnail(id),
-                                builder: (context, snapshot) {
-                                  final image = snapshot.data;
-                                  if (image == null) {
-                                    return Center(
-                                        child: Icon(
-                                      Icons.image_outlined,
-                                      size: 20,
-                                      color: context.palette.muted,
-                                    ));
-                                  }
-                                  return FramePreview(
-                                    layout: computeFrameLayout(
-                                      photoWidth: image.width,
-                                      photoHeight: image.height,
-                                      style: FrameStyle.none,
-                                      ratio: FrameRatio.original,
-                                      content: const FrameContent(),
-                                    ),
-                                    image: image,
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 5),
-                          Text(
-                            entry?.name ?? '原图',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontSize: 11,
-                                color: selected
-                                    ? context.palette.text
-                                    : context.palette.muted),
-                          ),
-                        ]),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(children: [
-              Text('强度',
-                  style: TextStyle(fontSize: 12, color: context.palette.muted)),
+        ),
+      ),
+    );
+  }
+
+  Widget _grid() {
+    final all = <LutEntry?>[null, ...widget.entries];
+    final entries = all
+        .where((e) =>
+            _collection == '全部' ||
+            (e != null &&
+                (_collection == '最近'
+                    ? _recent.contains(e.id)
+                    : _favorites.contains(e.id))))
+        .toList();
+    if (_collection == '最近') {
+      entries.sort(
+          (a, b) => _recent.indexOf(a!.id).compareTo(_recent.indexOf(b!.id)));
+    }
+    final name = widget.entries
+            .where((e) => e.id == widget.selected)
+            .firstOrNull
+            ?.name ??
+        '原图';
+    if (widget.showStrength && widget.selected != null) {
+      return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Row(children: [
               Expanded(
-                  child: Slider(
+                  child: TextButton.icon(
+                      onPressed: widget.onStrengthTap,
+                      style: TextButton.styleFrom(
+                          alignment: Alignment.centerLeft,
+                          padding: EdgeInsets.zero),
+                      icon: const Icon(Icons.chevron_left, size: 18),
+                      label: Text(name,
+                          maxLines: 1, overflow: TextOverflow.ellipsis))),
+              IconButton(
+                  tooltip:
+                      _favorites.contains(widget.selected) ? '取消收藏' : '收藏预设',
+                  onPressed: _favorite,
+                  icon: Icon(
+                      _favorites.contains(widget.selected)
+                          ? Icons.bookmark
+                          : Icons.bookmark_outline,
+                      size: 18))
+            ]),
+            const SizedBox(height: 16),
+            Text('${(widget.strength * 100).round()}%',
+                style: const TextStyle(
+                    fontSize: 30,
+                    fontFeatures: [FontFeature.tabularFigures()])),
+            const SizedBox(height: 12),
+            SliderTheme(
+                data: SliderTheme.of(context).copyWith(trackHeight: 1.2),
+                child: Slider(
+                    key: const ValueKey('lut-strength'),
+                    value: widget.strength.clamp(0, 1),
+                    onChangeStart: (_) => widget.onStart(),
+                    onChanged: widget.onStrength,
+                    onChangeEnd: (_) => widget.onEnd())),
+          ]));
+    }
+    return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Row(children: [
+            for (final title in ['全部', '最近', '收藏'])
+              TextButton(
+                  onPressed: () => setState(() => _collection = title),
+                  style: TextButton.styleFrom(
+                      foregroundColor: _collection == title
+                          ? context.palette.text
+                          : context.palette.muted,
+                      minimumSize: const Size(48, 44),
+                      padding: const EdgeInsets.symmetric(horizontal: 8)),
+                  child: Text(title, style: const TextStyle(fontSize: 12))),
+            const Spacer(),
+            IconButton(
+                key: const ValueKey('lut-import'),
+                tooltip: '导入 LUT',
+                onPressed: widget.onImport,
+                icon: const Icon(Icons.add, size: 21))
+          ]),
+          if (entries.isEmpty)
+            Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(_collection == '收藏' ? '尚无收藏' : '尚无最近使用',
+                    style:
+                        TextStyle(color: context.palette.muted, fontSize: 12))),
+          GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 4,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  mainAxisExtent: 123),
+              itemCount: entries.length,
+              itemBuilder: (_, i) => _tile(entries[i], grid: true)),
+          Row(children: [
+            Expanded(
+                child: TextButton(
+                    onPressed:
+                        widget.selected == null ? null : widget.onStrengthTap,
+                    style: TextButton.styleFrom(
+                        alignment: Alignment.centerLeft,
+                        padding: EdgeInsets.zero),
+                    child: Text(name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 12)))),
+            if (widget.selected != null)
+              IconButton(
+                  tooltip:
+                      _favorites.contains(widget.selected) ? '取消收藏' : '收藏预设',
+                  onPressed: _favorite,
+                  icon: Icon(
+                      _favorites.contains(widget.selected)
+                          ? Icons.bookmark
+                          : Icons.bookmark_outline,
+                      size: 18)),
+            TextButton(
+                onPressed:
+                    widget.selected == null ? null : widget.onStrengthTap,
+                child: Text('${(widget.strength * 100).round()}%',
+                    style: const TextStyle(fontSize: 12))),
+            if (widget.onSchemes != null)
+              IconButton(
+                  tooltip: '我的方案',
+                  onPressed: widget.onSchemes,
+                  icon: const Icon(Icons.layers_outlined, size: 18)),
+          ]),
+          if (widget.showStrength)
+            Slider(
                 key: const ValueKey('lut-strength'),
                 value: widget.strength.clamp(0, 1),
-                semanticFormatterCallback: (value) =>
-                    '${(value * 100).round()}%',
                 onChangeStart: (_) => widget.onStart(),
                 onChanged: widget.onStrength,
-                onChangeEnd: (_) => widget.onEnd(),
-              )),
-              SizedBox(
-                  width: 34,
-                  child: Text('${(widget.strength * 100).round()}',
-                      textAlign: TextAlign.right,
-                      style: TextStyle(
-                          fontSize: 12, color: context.palette.muted))),
-            ]),
-          ),
-        ],
-      );
+                onChangeEnd: (_) => widget.onEnd()),
+        ]));
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.grid
+      ? _grid()
+      : Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 16, right: 8),
+              child: Row(children: [
+                const Expanded(
+                    child: Text('滤镜', style: TextStyle(fontSize: 13))),
+                IconButton(
+                  key: const ValueKey('lut-import'),
+                  tooltip: '导入 LUT',
+                  onPressed: widget.onImport,
+                  icon: const Icon(Icons.add_rounded, size: 21),
+                ),
+              ]),
+            ),
+            SizedBox(
+              height: 114,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                addAutomaticKeepAlives: false,
+                itemCount: widget.entries.length + 1,
+                itemBuilder: (context, index) {
+                  final entry = index == 0 ? null : widget.entries[index - 1];
+                  return _tile(entry);
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(children: [
+                Text('强度',
+                    style:
+                        TextStyle(fontSize: 12, color: context.palette.muted)),
+                Expanded(
+                    child: Slider(
+                  key: const ValueKey('lut-strength'),
+                  value: widget.strength.clamp(0, 1),
+                  semanticFormatterCallback: (value) =>
+                      '${(value * 100).round()}%',
+                  onChangeStart: (_) => widget.onStart(),
+                  onChanged: widget.onStrength,
+                  onChangeEnd: (_) => widget.onEnd(),
+                )),
+                SizedBox(
+                    width: 34,
+                    child: Text('${(widget.strength * 100).round()}',
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                            fontSize: 12, color: context.palette.muted))),
+              ]),
+            ),
+          ],
+        );
 }

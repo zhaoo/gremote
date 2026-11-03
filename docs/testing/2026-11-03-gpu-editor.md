@@ -86,3 +86,11 @@ Android editor opens a resident source session and displays a platform Texture. 
 After a zoom settles, a bounded, one-off Q100 JPEG detail patch is rendered from the original source through the same GPU graph, at most4MP. It is positioned in photo coordinates and invalidated on recipe changes. It is not a per-frame RGBA channel transfer or a claim that the1600px preview contains original detail. Q100 encoding adds its normal JPEG tolerance; actual zoom transitions and performance need device acceptance.
 
 Native memory trimming revokes/cleans sessions; resume reopens from the authoritative document. Channel tests prove FD cleanup on open failure and stale preparation/frame rejection. Existing editor and export transaction suites continue to pass. Android/JVM build and native harness compilation are offline evidence only.
+
+## Task 7 source checkpoint — Studio interactions
+
+Implemented the approved preset/adjust/history navigation, fourteen tools, four-column current-photo LUT grid, persisted favorites/recent confirmations, draft apply/cancel and a dedicated preset-strength panel. Numeric tools use a thin ticked slider and precision dialog; double tap resets. Curves use local immediate control-point state, RGB circle selectors, exact coordinates and current-channel reset. iOS/reference histogram work moves to a throttled isolate; Android histogram remains native. Restoring an actual history snapshot preserves redo. Normal status text is removed; current errors stay actionable.
+
+Flutter widget checks cover preset cancellation and record restore, decimal exposure transactions, coordinate editing/channel-only reset, narrow/large-font layouts and light-theme contrast. Rendered UI captures are in `dist/verification/studio-20261103/` (dark/light adjust/basic/curves/presets). These are Flutter host rendering with a CPU-reference image and host fonts substituted for test Ahem; **not phone captures or GPU-output evidence**. The reference photo is the bundled home_header.jpg, not a user album image.
+
+The full source suite at this checkpoint:610 Flutter tests pass,3 conditional tests skip; analyzer clean. Camera firmware/SD/protocol remain untouched.

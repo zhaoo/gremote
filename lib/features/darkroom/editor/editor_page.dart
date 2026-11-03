@@ -57,6 +57,8 @@ class _EditorPageState extends ConsumerState<EditorPage>
   var _allowPop = false;
   var _leaving = false;
   EditorTool? _tool;
+  int _tab = 1, _presetRevision = 0;
+  bool _presetDraft = false, _presetStrength = false;
   PhotoAdjustment? _activeAdjustment;
   double _photoDrag = 0;
   double _dragValue = 0;
@@ -83,6 +85,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
       _history();
       return;
     }
+    _controller.compareOriginal(false);
     _controller.beginTool(crop: tool == EditorTool.crop);
     setState(() {
       _tool = tool;
@@ -93,6 +96,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
   }
 
   void _finish({bool cancel = false}) {
+    _controller.compareOriginal(false);
     if (cancel) {
       _controller.cancelTool();
     } else {
@@ -100,13 +104,172 @@ class _EditorPageState extends ConsumerState<EditorPage>
     }
     setState(() {
       _tool = null;
+      _presetDraft = false;
+      _presetStrength = false;
+      _presetRevision++;
       _showOriginal = false;
       _zoom.value = Matrix4.identity();
     });
   }
 
+  void _selectPreset(String? id) {
+    _compare(false);
+    final selected = ref.read(editorProvider(widget.mediaId)).recipe.lutId;
+    if (_presetDraft && selected == id && id != null) {
+      setState(() => _presetStrength = true);
+      return;
+    }
+    if (!_presetDraft) _controller.beginTool();
+    setState(() {
+      _presetDraft = true;
+      _presetStrength = false;
+    });
+    unawaited(_controller.setLut(id));
+  }
+
+  Widget _studioPresets(EditorState s) => LutPicker(
+      key: ValueKey(('studio-presets', _presetRevision)),
+      source: s.base,
+      gpuSession: s.gpuSession,
+      edits: s.recipe.edits,
+      entries: s.luts,
+      selected: s.recipe.lutId,
+      strength: s.recipe.strength,
+      grid: true,
+      showStrength: _presetStrength,
+      onSelected: _selectPreset,
+      onStrength: _controller.setStrength,
+      onStart: _controller.beginGesture,
+      onEnd: _controller.endGesture,
+      onImport: _importLut,
+      onSchemes: _presets,
+      onStrengthTap: () {
+        if (s.recipe.lutId == null) return;
+        if (!_presetDraft) {
+          _controller.beginTool();
+        }
+        setState(() {
+          _presetDraft = true;
+          _presetStrength = !_presetStrength;
+        });
+      });
+  Widget _records(EditorState s) {
+    final history = _controller.history;
+    return Column(children: [
+      Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 8, 4),
+          child: Row(children: [
+            Text('编辑记录',
+                style: TextStyle(fontSize: 12, color: context.palette.muted)),
+            const Spacer(),
+            TextButton(
+                onPressed: _savePreset,
+                child: const Text('存为预设', style: TextStyle(fontSize: 12)))
+          ])),
+      for (var i = history.length - 1; i >= 0; i--)
+        ListTile(
+            dense: true,
+            leading: Icon(
+                i == history.length - 1
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_unchecked,
+                size: 16),
+            title: Text(
+                i == 0
+                    ? '打开时'
+                    : _recordLabel(history[i - 1].recipe, history[i].recipe),
+                style: const TextStyle(fontSize: 12)),
+            trailing: i == history.length - 1
+                ? Text('当前',
+                    style:
+                        TextStyle(fontSize: 11, color: context.palette.muted))
+                : null,
+            onTap: i == history.length - 1
+                ? null
+                : () => _controller.restoreHistory(i)),
+    ]);
+  }
+
+  String _recordLabel(ExportRecipe before, ExportRecipe after) {
+    if (before.lutId != after.lutId) {
+      return after.lutId == null
+          ? '移除 LUT'
+          : ref
+                  .read(editorProvider(widget.mediaId))
+                  .luts
+                  .where((e) => e.id == after.lutId)
+                  .firstOrNull
+                  ?.name ??
+              'LUT';
+    }
+    if (before.strength != after.strength) {
+      return 'LUT · ${(after.strength * 100).round()}%';
+    }
+    if (before.edits.crop != after.edits.crop) return '裁切';
+    if (before.edits.curves != after.edits.curves &&
+        List.generate(4, (i) => i)
+            .any((i) => before.edits.curves[i] != after.edits.curves[i])) {
+      return '曲线';
+    }
+    final changed = PhotoAdjustment.values
+        .where((a) => before.edits.value(a) != after.edits.value(a))
+        .toList();
+    if (changed.isNotEmpty) {
+      return changed
+          .take(2)
+          .map((a) => '${a.label} ${a.display(after.edits.value(a))}')
+          .join(' · ');
+    }
+    if (before.frame != after.frame || before.frameWidth != after.frameWidth) {
+      return '边框';
+    }
+    if (before.dateStamp != after.dateStamp) return '日期印记';
+    if (before.ratio != after.ratio) return '画幅';
+    return '设置';
+  }
+
+  Widget _mainNavigation() =>
+      Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+        for (var i = 0; i < 3; i++)
+          Expanded(
+              child: Semantics(
+                  selected: _tab == i,
+                  button: true,
+                  child: InkWell(
+                      key: ValueKey('studio-tab-$i'),
+                      onTap: () => setState(() => _tab = i),
+                      child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                                [
+                                  Icons.auto_awesome_mosaic_outlined,
+                                  Icons.tune,
+                                  Icons.history
+                                ][i],
+                                size: 18,
+                                color: _tab == i
+                                    ? context.palette.text
+                                    : context.palette.muted),
+                            const SizedBox(height: 5),
+                            Text(['预设', '调整', '记录'][i],
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: _tab == i
+                                        ? context.palette.text
+                                        : context.palette.muted,
+                                    fontWeight: _tab == i
+                                        ? FontWeight.w500
+                                        : FontWeight.w400))
+                          ])))),
+      ]);
+
   Future<void> _leave() async {
     if (_leaving || ref.read(editorProvider(widget.mediaId)).exporting) return;
+    if (_presetDraft) {
+      _finish(cancel: true);
+      return;
+    }
     if (_tool != null) {
       _finish();
       return;
@@ -151,8 +314,18 @@ class _EditorPageState extends ConsumerState<EditorPage>
     final landscape =
         MediaQuery.sizeOf(context).width > MediaQuery.sizeOf(context).height;
     final media = MediaQuery.sizeOf(context);
-    final height = (_tool == null ? media.height * .41 : media.height * .32)
-        .clamp(190.0, _tool == null ? 374.0 : 318.0);
+    final height = (_tool == EditorTool.curves
+            ? media.height * .44
+            : _tool == null
+                ? media.height * .41
+                : media.height * .32)
+        .clamp(
+            _tool == EditorTool.curves ? 290.0 : 190.0,
+            _tool == EditorTool.curves
+                ? 400.0
+                : _tool == null
+                    ? 374.0
+                    : 318.0);
     return PopScope(
         canPop: _allowPop,
         onPopInvokedWithResult: (didPop, result) {
@@ -170,7 +343,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
                 title: Text(s.item?.displayName ?? '照片编辑',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 14)),
+                    style: const TextStyle(fontSize: 12, letterSpacing: .7)),
                 actions: [
                   Tooltip(
                       message: '按住对比',
@@ -401,16 +574,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
                           }
                         }
                       },
-                child: Text(
-                    s.saveError ??
-                        s.error ??
-                        (s.rendering
-                            ? '预览中…'
-                            : s.saving
-                                ? '保存中…'
-                                : _tool == null
-                                    ? '已保存'
-                                    : '调整中'),
+                child: Text(s.saveError ?? s.error ?? '',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
@@ -438,25 +602,21 @@ class _EditorPageState extends ConsumerState<EditorPage>
               child: SingleChildScrollView(
                   key: ValueKey(tool),
                   child: AnimatedSwitcher(
-                      duration: WorkspaceMotion.duration(context, 140),
+                      duration: WorkspaceMotion.duration(context, 160),
                       child: tool == null
-                          ? EditorTools(
-                              key: const ValueKey('editor-tools'),
-                              onSelected: _open,
-                              changed: (t) => _changed(t, s))
+                          ? _tab == 0
+                              ? _studioPresets(s)
+                              : _tab == 2
+                                  ? _records(s)
+                                  : EditorTools(
+                                      key: const ValueKey('editor-tools'),
+                                      onSelected: _open,
+                                      changed: (t) => _changed(t, s))
                           : _panel(tool, s)))),
           SizedBox(
               height: 53,
-              child: tool == null
-                  ? Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                          TextButton(
-                              onPressed: _presets, child: const Text('预设')),
-                          const Text('工具', style: TextStyle(fontSize: 13)),
-                          TextButton(
-                              onPressed: _export, child: const Text('导出'))
-                        ])
+              child: tool == null && !_presetDraft
+                  ? _mainNavigation()
                   : Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -464,7 +624,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
                               tooltip: '取消调整',
                               onPressed: () => _finish(cancel: true),
                               icon: const Icon(Icons.close, size: 21)),
-                          Text(tool.label,
+                          Text(_presetDraft ? "预设" : tool!.label,
                               style: TextStyle(
                                   fontSize: 13, color: context.palette.muted)),
                           IconButton(
@@ -628,6 +788,10 @@ class _EditorPageState extends ConsumerState<EditorPage>
         _notice('LUT 文件不能超过 16 MiB');
         return;
       }
+      if (_tab == 0 && _tool == null && !_presetDraft) {
+        _controller.beginTool();
+        setState(() => _presetDraft = true);
+      }
       await _controller.importLut(file.name, await file.readAsBytes());
     } on Object catch (e) {
       if (mounted) _notice('导入失败：$e');
@@ -751,7 +915,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
   }
 
   Future<void> _export() async {
-    if (_tool != null) _finish();
+    if (_tool != null || _presetDraft) _finish();
     final messenger = ScaffoldMessenger.of(context);
     try {
       final outcome = await _controller.export();
