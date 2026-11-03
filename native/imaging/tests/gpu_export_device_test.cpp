@@ -26,3 +26,17 @@ TEST(GpuCancelledExportDoesNotLeaveAPartialJpeg) {
   try{session.Export(edits,nullptr,0,1,spec,nullptr,[&]{return ++checks>3;});}catch(const std::exception& e){cancelled=std::string(e.what())=="cancelled";}
   EXPECT_TRUE(cancelled);EXPECT_TRUE(!std::ifstream(spec.path).good());EXPECT_TRUE(!std::ifstream(spec.path+".part").good());
 }
+TEST(GpuSourceAndMaskPageBoundaryWithRotatedFloatGradient) {
+  gremote::Image source(2053,19,4);
+  for(int y=0;y<source.height;++y)for(int x=0;x<source.width;++x){auto* p=source.Row(y)+x*4;const int value=16+x*223/(source.width-1);p[0]=p[1]=p[2]=value;p[3]=255;}
+  gremote::gpu::GpuSession session(source);gremote::PhotoEdits edits;edits.values[0]=2;edits.values[1]=.35;edits.values[17]=.4;edits.values[20]=.2;edits.values[19]=.35;edits.values[34]=1;edits.values[35]=1;edits.values[37]=3;
+  const bool wholeSupported=session.capabilities().max_texture>=2053;
+  gremote::Image whole;
+  if(wholeSupported){session.Advance(1);session.Render(1,edits,nullptr,0,1,19,2053);whole=session.ReadFinal();}
+  gremote::gpu::ExportSpec spec;spec.photo_width=spec.canvas_width=19;spec.photo_height=spec.canvas_height=2053;spec.quality=100;spec.path="/data/local/tmp/gremote-page-boundary.jpg";
+  session.Export(edits,nullptr,0,1,spec,nullptr);
+  std::ifstream input(spec.path,std::ios::binary);std::vector<uint8_t> jpeg((std::istreambuf_iterator<char>(input)),{});gremote::Image decoded;
+  EXPECT_EQ(gremote::DecodeJpeg(jpeg.data(),jpeg.size(),1,&decoded),0);EXPECT_EQ(decoded.width,19);EXPECT_EQ(decoded.height,2053);
+  if(wholeSupported)for(size_t i=0;i<19*2053;++i)for(int c=0;c<3;++c)EXPECT_NEAR(decoded.pixels[i*3+c],whole.pixels[i*4+c],4);
+  std::remove(spec.path.c_str());
+}

@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../darkroom/darkroom_providers.dart';
+import '../imaging/imaging_licenses.dart';
 import '../storage/gremote_database.dart';
 import 'app.dart';
 import '../settings/preferences_repository.dart';
@@ -10,6 +11,7 @@ import '../settings/preferences_controller.dart';
 
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
+  registerImagingLicenses();
   await SystemChrome.setPreferredOrientations(const [
     DeviceOrientation.portraitUp,
   ]);

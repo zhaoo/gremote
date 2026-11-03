@@ -50,6 +50,7 @@ enum EditorTool {
   monochrome('黑白', Icons.contrast, [PhotoAdjustment.monochrome]),
   frame('边框', Icons.crop_square, []),
   stamp('日期印记', Icons.date_range_outlined, []),
+  processVersion('新版调色', Icons.auto_awesome_outlined, []),
   presets('预设', Icons.bookmark_border, []),
   history('编辑记录', Icons.history, []);
 
@@ -65,7 +66,10 @@ class EditorTools extends StatelessWidget {
   final ValueChanged<EditorTool> onSelected;
   final bool Function(EditorTool) changed;
   List<EditorTool> get _tools => EditorTool.values
-      .where((t) => t != EditorTool.presets && t != EditorTool.history)
+      .where((t) =>
+          t != EditorTool.presets &&
+          t != EditorTool.history &&
+          t != EditorTool.processVersion)
       .toList();
   @override
   Widget build(BuildContext context) => GridView.builder(

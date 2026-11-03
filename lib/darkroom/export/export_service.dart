@@ -194,6 +194,9 @@ class ExportService {
           sourceId: item.id,
           displayName: displayName,
           keepGps: recipe.keepGps,
+          outputSrgb: _engine is SrgbExportEngine &&
+              (_engine as SrgbExportEngine)
+                  .exportsSrgb(recipe.edits.processVersion),
           width: layout.canvasWidth,
           height: layout.canvasHeight,
         );

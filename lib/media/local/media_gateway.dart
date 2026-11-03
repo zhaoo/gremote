@@ -75,6 +75,7 @@ abstract interface class MediaGateway {
     required int sourceId,
     required String displayName,
     required bool keepGps,
+    bool outputSrgb = false,
     required int width,
     required int height,
   });

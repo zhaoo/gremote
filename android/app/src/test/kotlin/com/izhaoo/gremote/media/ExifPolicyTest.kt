@@ -80,4 +80,12 @@ class ExifPolicyTest {
         assertTrue(ExifPolicy.READ_TAGS.containsAll(ExifPolicy.KEPT_TAGS))
         assertTrue(ExifPolicy.READ_TAGS.containsAll(ExifPolicy.GPS_TAGS))
     }
+    @Test fun normalizedSrgbExportCannotBeReopenedAsAdobeRgbAndLegacyStaysUnchanged() {
+        val adobe=source + (ExifInterface.TAG_COLOR_SPACE to "2")
+        val output=ExifPolicy.filter(adobe,false,6000,4000,outputSrgb=true)
+        assertEquals("1",output[ExifInterface.TAG_COLOR_SPACE])
+        assertFalse(SourceColorPolicy.isAdobeRgb(output[ExifInterface.TAG_COLOR_SPACE]?.toIntOrNull() ?: 1,null))
+        assertEquals("2",ExifPolicy.filter(adobe,false,6000,4000,outputSrgb=false)[ExifInterface.TAG_COLOR_SPACE])
+    }
+
 }

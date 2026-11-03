@@ -31,7 +31,8 @@ class GatedEditStore extends DarkroomStore {
 Future<(TestDarkroom, ProviderContainer)> pumpEditor(WidgetTester tester,
     {bool locationAccess = true,
     Size size = const Size(390, 844),
-    Future<void>? saveGate}) async {
+    Future<void>? saveGate,
+    ExportRecipe? initialRecipe}) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
@@ -44,6 +45,10 @@ Future<(TestDarkroom, ProviderContainer)> pumpEditor(WidgetTester tester,
     ),
   );
   addTearDown(env.close);
+  if (initialRecipe != null) {
+    await env.store.saveEdit(EditDocument(
+        mediaId: 3, recipe: initialRecipe, updatedAt: DateTime(2026)));
+  }
   final container = ProviderContainer(overrides: [
     ...env.overrides,
     if (saveGate != null)
@@ -79,6 +84,40 @@ Future<void> openTab(WidgetTester tester, String label) async {
 }
 
 void main() {
+  testWidgets(
+      'legacy version menu previews upgrade and cancel preserves original parameters',
+      (tester) async {
+    final before = ExportRecipe(
+        frame: FrameStyle.none,
+        edits: const PhotoEdits()
+            .copyWith(processVersion: 1)
+            .withValue(PhotoAdjustment.exposure, .7));
+    final (_, container) = await pumpEditor(tester, initialRecipe: before);
+    await tester.tap(find.byTooltip('更多'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(PopupMenuItem<String>, '新版调色'));
+    await tester.pumpAndSettle();
+    expect(container.read(editorProvider(3)).recipe.edits.processVersion, 2);
+    expect(
+        tester
+            .widget<IconButton>(find
+                .ancestor(
+                    of: find.byTooltip('重置当前工具'),
+                    matching: find.byType(IconButton))
+                .first)
+            .onPressed,
+        isNull);
+    expect(
+        container
+            .read(editorProvider(3))
+            .recipe
+            .edits
+            .value(PhotoAdjustment.exposure),
+        .7);
+    await tester.tap(find.byTooltip('取消调整'));
+    await tester.pumpAndSettle();
+    expect(container.read(editorProvider(3)).recipe, before);
+  });
   testWidgets(
       'studio preset selection stays draft until confirmed and records restore snapshots',
       (tester) async {

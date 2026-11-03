@@ -32,6 +32,37 @@ void main() {
     await env.close();
   });
 
+  test(
+      'legacy upgrade previews without losing parameters and confirms as one undo step',
+      () async {
+    editor.setEdits(const PhotoEdits()
+        .copyWith(processVersion: 1)
+        .withValue(PhotoAdjustment.exposure, .35));
+    await editor.flushPreview();
+    await editor.flushEdits();
+    final before = c.read(editorProvider(3)).recipe;
+    final history = editor.history.length;
+    editor.beginProcessUpgrade();
+    expect(c.read(editorProvider(3)).recipe.edits.processVersion, 2);
+    editor.cancelTool();
+    await editor.flushPreview();
+    expect(c.read(editorProvider(3)).recipe, before);
+    expect(editor.history.length, history);
+    editor.beginProcessUpgrade();
+    editor.setEdits(
+        c.read(editorProvider(3)).recipe.edits.copyWith(processVersion: 1));
+    editor.setEdits(
+        c.read(editorProvider(3)).recipe.edits.copyWith(processVersion: 2));
+    editor.commitTool();
+    await editor.flushPreview();
+    expect(editor.history.length, history + 1);
+    expect(
+        c.read(editorProvider(3)).recipe.edits.value(PhotoAdjustment.exposure),
+        .35);
+    editor.undo();
+    await editor.flushPreview();
+    expect(c.read(editorProvider(3)).recipe, before);
+  });
   test('tool cancel restores document and discards draft history', () async {
     final before = c.read(editorProvider(3)).recipe;
     editor.beginTool();

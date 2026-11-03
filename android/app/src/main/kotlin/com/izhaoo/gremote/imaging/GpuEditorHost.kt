@@ -1,6 +1,7 @@
 package com.izhaoo.gremote.imaging
 
 import androidx.exifinterface.media.ExifInterface
+import com.izhaoo.gremote.media.SourceColorPolicy
 import kotlin.math.roundToInt
 import android.os.Handler
 import android.os.HandlerThread
@@ -237,7 +238,7 @@ class GpuEditorHost(messenger: BinaryMessenger, private val textures: TextureReg
                 try {
                     if (closed) throw IllegalStateException("cancelled")
                     val exif = ExifInterface(descriptor.fileDescriptor)
-                    val adobe = exif.getAttributeInt(ExifInterface.TAG_COLOR_SPACE, 1) == 2 || exif.getAttribute("InteroperabilityIndex") == "R03"
+                    val adobe = SourceColorPolicy.isAdobeRgb(exif.getAttributeInt(ExifInterface.TAG_COLOR_SPACE, 1), exif.getAttribute("InteroperabilityIndex"))
                     GpuNativeBridge.exportJpeg(jobId, id, descriptor.detachFd(), orientation, adobe, args["viewport"] == true, parameters, cube, strength, geometry, images, rectangles, path)
                     main.post { result.success(null) }
                 } catch (failure: Throwable) {
@@ -264,7 +265,7 @@ class GpuEditorHost(messenger: BinaryMessenger, private val textures: TextureReg
                 var id = 0L
                 try {
                     val exif = ExifInterface(descriptor.fileDescriptor)
-                    val adobe = exif.getAttributeInt(ExifInterface.TAG_COLOR_SPACE, 1) == 2 || exif.getAttribute("InteroperabilityIndex") == "R03"
+                    val adobe = SourceColorPolicy.isAdobeRgb(exif.getAttributeInt(ExifInterface.TAG_COLOR_SPACE, 1), exif.getAttribute("InteroperabilityIndex"))
                     id = GpuNativeBridge.create(descriptor.detachFd(), orientation, maxEdge, version, adobe)
                     nativeHandles.add(id)
                     val info = JSONObject(GpuNativeBridge.info(id))

@@ -108,6 +108,11 @@ class ImagingCancelToken {
   }
 }
 
+/// Declares the color contract of rendered JPEG bytes to metadata publication.
+abstract interface class SrgbExportEngine {
+  bool exportsSrgb(int processVersion);
+}
+
 abstract interface class ImagingEngine {
   /// Returns the LUT grid size.
   Future<int> validateLut(Uint8List cube);

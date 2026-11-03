@@ -60,6 +60,7 @@ class GRemoteMediaHostApi(private val activity: Activity) : MediaHostApi {
         keepGps: Boolean,
         width: Long,
         height: Long,
+        outputSrgb: Boolean,
         callback: (Result<String>) -> Unit,
     ) {
         val withGps = keepGps && permissions.hasLocationAccess()
@@ -70,6 +71,7 @@ class GRemoteMediaHostApi(private val activity: Activity) : MediaHostApi {
                 source = source,
                 displayName = displayName,
                 keepGps = withGps,
+                outputSrgb = outputSrgb,
                 width = width.toInt(),
                 height = height.toInt(),
             ).toString()

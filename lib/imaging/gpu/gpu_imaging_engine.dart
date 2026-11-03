@@ -6,7 +6,9 @@ import 'gpu_editor.dart';
 
 /// Android editor/export backend. Small legacy consumers retain their explicit
 /// reference methods; edited preview and export use resident GPU sessions.
-class GpuImagingEngine implements ImagingEngine {
+class GpuImagingEngine implements ImagingEngine, SrgbExportEngine {
+  @override
+  bool exportsSrgb(int processVersion) => processVersion == 2;
   GpuImagingEngine(this.gpu, this.reference);
   final GpuEditor gpu;
   final ImagingEngine reference;

@@ -331,9 +331,9 @@ class _CurvePanelState extends State<CurvePanel> {
               if (selected != null)
                 TextButton(
                     key: const ValueKey('curve-coordinates'),
-                    onPressed: selected == null ? null : _coordinates,
+                    onPressed: _coordinates,
                     child: Text(
-                        selected != null && selected < _curve.points.length
+                        selected < _curve.points.length
                             ? '输入 ${(_curve.points[selected].x * 255).round()}    输出 ${(_curve.points[selected].y * 255).round()}'
                             : '输入 —    输出 —',
                         style: TextStyle(

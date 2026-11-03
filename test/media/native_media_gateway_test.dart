@@ -34,8 +34,14 @@ class _FakeHostApi extends MediaHostApi {
   }
 
   @override
-  Future<String> publishExport(String tempPath, int sourceId,
-          String displayName, bool keepGps, int width, int height) async =>
+  Future<String> publishExport(
+          String tempPath,
+          int sourceId,
+          String displayName,
+          bool keepGps,
+          int width,
+          int height,
+          bool outputSrgb) async =>
       throw PlatformException(code: 'storageFull', message: 'No space');
 }
 

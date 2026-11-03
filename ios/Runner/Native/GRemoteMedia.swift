@@ -130,7 +130,7 @@ final class GRemoteMedia: MediaHostApi {
       }
     }
   }
-  func publishExport(tempPath: String, sourceId: Int64, displayName: String, keepGps: Bool, width: Int64, height: Int64, completion: @escaping (Result<String, Error>) -> Void) {
+  func publishExport(tempPath: String, sourceId: Int64, displayName: String, keepGps: Bool, width: Int64, height: Int64, outputSrgb: Bool, completion: @escaping (Result<String, Error>) -> Void) {
     // The exported JPEG is a newly rendered file. Carry only explicit shooting facts.
     data(sourceId) { result in
       do {
@@ -150,6 +150,7 @@ final class GRemoteMedia: MediaHostApi {
         let tiff = originalProps[kCGImagePropertyTIFFDictionary as String] as? [String:Any] ?? [:]
         let exifKeys = [kCGImagePropertyExifExposureTime,kCGImagePropertyExifFNumber,kCGImagePropertyExifISOSpeedRatings,kCGImagePropertyExifFocalLength,kCGImagePropertyExifFocalLenIn35mmFilm,kCGImagePropertyExifDateTimeOriginal,kCGImagePropertyExifDateTimeDigitized]
         var keptExif: [String:Any] = [:]; for key in exifKeys { keptExif[key as String] = exif[key as String] }
+        if outputSrgb { keptExif[kCGImagePropertyExifColorSpace as String] = 1 }
         keptExif[kCGImagePropertyExifPixelXDimension as String] = width; keptExif[kCGImagePropertyExifPixelYDimension as String] = height
         var props: [String:Any] = [kCGImagePropertyOrientation as String:1,kCGImagePropertyExifDictionary as String:keptExif,kCGImagePropertyTIFFDictionary as String:[kCGImagePropertyTIFFMake as String:tiff[kCGImagePropertyTIFFMake as String] ?? "",kCGImagePropertyTIFFModel as String:tiff[kCGImagePropertyTIFFModel as String] ?? "",kCGImagePropertyTIFFSoftware as String:"GRemote"]]
         if keepGps && self.location.allowed { props[kCGImagePropertyGPSDictionary as String] = originalProps[kCGImagePropertyGPSDictionary as String] }

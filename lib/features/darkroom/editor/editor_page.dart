@@ -86,7 +86,11 @@ class _EditorPageState extends ConsumerState<EditorPage>
       return;
     }
     _controller.compareOriginal(false);
-    _controller.beginTool(crop: tool == EditorTool.crop);
+    if (tool == EditorTool.processVersion) {
+      _controller.beginProcessUpgrade();
+    } else {
+      _controller.beginTool(crop: tool == EditorTool.crop);
+    }
     setState(() {
       _tool = tool;
       _activeAdjustment = tool.adjustments.firstOrNull;
@@ -191,6 +195,9 @@ class _EditorPageState extends ConsumerState<EditorPage>
   }
 
   String _recordLabel(ExportRecipe before, ExportRecipe after) {
+    if (before.edits.processVersion != after.edits.processVersion) {
+      return after.edits.processVersion == 2 ? '新版调色' : '原有调色';
+    }
     if (before.lutId != after.lutId) {
       return after.lutId == null
           ? '移除 LUT'
@@ -371,6 +378,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
                       onSelected: _more,
                       itemBuilder: (_) => [
                             for (final label in [
+                              if (s.recipe.edits.processVersion == 1) '新版调色',
                               '存为方案',
                               '信息',
                               '画幅',
@@ -387,7 +395,9 @@ class _EditorPageState extends ConsumerState<EditorPage>
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 10)),
                           onPressed: s.doc == null ||
-                                  s.base == null ||
+                                  (s.base == null &&
+                                      (s.gpuFrame == null ||
+                                          s.gpuSession?.closed != false)) ||
                                   s.exporting ||
                                   _leaving
                               ? null
@@ -586,7 +596,11 @@ class _EditorPageState extends ConsumerState<EditorPage>
         IconButton(
             tooltip: '重置当前工具',
             icon: const Icon(Icons.restart_alt, size: 19),
-            onPressed: _tool == null || s.exporting ? null : _resetTool),
+            onPressed: _tool == null ||
+                    _tool == EditorTool.processVersion ||
+                    s.exporting
+                ? null
+                : _resetTool),
         const SizedBox(width: 12)
       ]));
 
@@ -668,6 +682,19 @@ class _EditorPageState extends ConsumerState<EditorPage>
       ]);
     }
     switch (tool) {
+      case EditorTool.processVersion:
+        return SizedBox(
+            height: 220,
+            child: ChoicePanel<int>(
+                values: const [1, 2],
+                selected: s.recipe.edits.processVersion,
+                label: (v) => v == 1 ? '原有调色' : '新版调色',
+                onSelected: (v) => _controller.setEdits(ref
+                    .read(editorProvider(widget.mediaId))
+                    .recipe
+                    .edits
+                    .copyWith(processVersion: v)),
+                note: '保留现有参数，确认后可撤销'));
       case EditorTool.curves:
         return CurvePanel(
             edits: s.recipe.edits,
@@ -801,6 +828,10 @@ class _EditorPageState extends ConsumerState<EditorPage>
   void _notice(String text) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   Future<void> _more(String action) async {
+    if (action == '新版调色') {
+      _open(EditorTool.processVersion);
+      return;
+    }
     if (action == '存为方案') {
       await _savePreset();
       return;

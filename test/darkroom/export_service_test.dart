@@ -17,6 +17,11 @@ import 'package:gremote/media/local/media_gateway.dart';
 import '../support/fake_imaging_engine.dart';
 import '../support/fake_media_gateway.dart';
 
+class ManagedEngine extends FakeImagingEngine implements SrgbExportEngine {
+  @override
+  bool exportsSrgb(int processVersion) => processVersion == 2;
+}
+
 class FakeRasterizer implements OverlayRasterizer {
   Object? error;
   final layouts = <FrameLayout>[];
@@ -84,6 +89,27 @@ void main() {
 
   tearDown(() => temp.delete(recursive: true));
 
+  test(
+      'normalized backend passes V2 output color contract without changing legacy metadata',
+      () async {
+    final managed = ExportService(
+        engine: ManagedEngine(),
+        gateway: gateway,
+        rasterizer: rasterizer,
+        loadCube: (_) async => Uint8List(0),
+        tempDir: () async => temp);
+    await managed.export(
+        photo(3), doc(3, const ExportRecipe(frame: FrameStyle.none)));
+    expect(gateway.publishes.last.outputSrgb, isTrue);
+    await managed.export(
+        photo(3),
+        doc(
+            3,
+            ExportRecipe(
+                frame: FrameStyle.none,
+                edits: const PhotoEdits().copyWith(processVersion: 1))));
+    expect(gateway.publishes.last.outputSrgb, isFalse);
+  });
   test('names exports after the source and time', () {
     expect(exportFileName('R0001234.JPG', DateTime(2026, 10, 10, 8, 5, 9)),
         'gremote_R0001234_20261010-080509.jpg');

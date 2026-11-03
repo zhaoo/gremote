@@ -81,11 +81,12 @@ class NativeMediaGateway implements MediaGateway {
     required int sourceId,
     required String displayName,
     required bool keepGps,
+    bool outputSrgb = false,
     required int width,
     required int height,
   }) =>
       _guard(() => _api.publishExport(
-          tempPath, sourceId, displayName, keepGps, width, height));
+          tempPath, sourceId, displayName, keepGps, width, height, outputSrgb));
 
   @override
   Future<String> publishGenerated(

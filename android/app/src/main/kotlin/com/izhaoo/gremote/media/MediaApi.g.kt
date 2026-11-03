@@ -202,7 +202,7 @@ interface MediaHostApi {
   fun thumbnail(id: Long, edge: Long, callback: (Result<ByteArray?>) -> Unit)
   fun openReadFd(id: Long, callback: (Result<Long>) -> Unit)
   fun contentHash(id: Long, callback: (Result<String>) -> Unit)
-  fun publishExport(tempPath: String, sourceId: Long, displayName: String, keepGps: Boolean, width: Long, height: Long, callback: (Result<String>) -> Unit)
+  fun publishExport(tempPath: String, sourceId: Long, displayName: String, keepGps: Boolean, width: Long, height: Long, outputSrgb: Boolean, callback: (Result<String>) -> Unit)
   fun publishGenerated(tempPath: String, displayName: String, width: Long, height: Long, callback: (Result<String>) -> Unit)
   fun importPhoto(tempPath: String, displayName: String, callback: (Result<String>) -> Unit)
   fun shareRecipe(card: ByteArray)
@@ -393,7 +393,8 @@ interface MediaHostApi {
             val keepGpsArg = args[3] as Boolean
             val widthArg = args[4] as Long
             val heightArg = args[5] as Long
-            api.publishExport(tempPathArg, sourceIdArg, displayNameArg, keepGpsArg, widthArg, heightArg) { result: Result<String> ->
+            val outputSrgbArg = args[6] as Boolean
+            api.publishExport(tempPathArg, sourceIdArg, displayNameArg, keepGpsArg, widthArg, heightArg, outputSrgbArg) { result: Result<String> ->
               val error = result.exceptionOrNull()
               if (error != null) {
                 reply.reply(wrapError(error))

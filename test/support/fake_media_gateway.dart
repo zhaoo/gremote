@@ -5,12 +5,13 @@ import 'package:gremote/media/local/media_gateway.dart';
 
 class PublishCall {
   PublishCall(this.tempPath, this.sourceId, this.displayName, this.keepGps,
-      this.width, this.height);
+      this.width, this.height, this.outputSrgb);
 
   final String tempPath;
   final int sourceId;
   final String displayName;
   final bool keepGps;
+  final bool outputSrgb;
   final int width;
   final int height;
 }
@@ -47,7 +48,8 @@ class FakeMediaGateway implements MediaGateway {
   int _nextFd = 100;
 
   @override
-  Future<String> importPhoto(String tempPath, String displayName) async => 'content://media/external/images/media/999';
+  Future<String> importPhoto(String tempPath, String displayName) async =>
+      'content://media/external/images/media/999';
 
   @override
   Future<MediaAccess> access() async => mediaAccess;
@@ -96,12 +98,13 @@ class FakeMediaGateway implements MediaGateway {
     required int sourceId,
     required String displayName,
     required bool keepGps,
+    bool outputSrgb = false,
     required int width,
     required int height,
   }) async {
     if (publishError != null) throw publishError!;
-    publishes.add(
-        PublishCall(tempPath, sourceId, displayName, keepGps, width, height));
+    publishes.add(PublishCall(
+        tempPath, sourceId, displayName, keepGps, width, height, outputSrgb));
     return 'content://media/external/images/media/${9000 + publishes.length}';
   }
 

@@ -48,7 +48,9 @@ class NativeExifSummary {
 
 @ConfigurePigeon(PigeonOptions(
   dartOut: 'lib/platform/media_api.g.dart',
-  kotlinOut: 'android/app/src/main/kotlin/com/izhaoo/gremote/media/MediaApi.g.kt',
+  swiftOut: 'ios/Runner/MediaApi.g.swift',
+  kotlinOut:
+      'android/app/src/main/kotlin/com/izhaoo/gremote/media/MediaApi.g.kt',
   kotlinOptions: KotlinOptions(package: 'com.izhaoo.gremote.media'),
 ))
 @HostApi()
@@ -86,10 +88,12 @@ abstract class MediaHostApi {
     bool keepGps,
     int width,
     int height,
+    bool outputSrgb,
   );
 
   @async
-  String publishGenerated(String tempPath, String displayName, int width, int height);
+  String publishGenerated(
+      String tempPath, String displayName, int width, int height);
 
   @async
   String importPhoto(String tempPath, String displayName);

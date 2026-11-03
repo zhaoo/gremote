@@ -11,6 +11,24 @@ import Foundation
   #error("Unsupported platform.")
 #endif
 
+/// Error class for passing custom error details to Dart side.
+final class PigeonError: Error {
+  let code: String
+  let message: String?
+  let details: Any?
+
+  init(code: String, message: String?, details: Any?) {
+    self.code = code
+    self.message = message
+    self.details = details
+  }
+
+  var localizedDescription: String {
+    return
+      "PigeonError(code: \(code), message: \(message ?? "<nil>"), details: \(details ?? "<nil>")"
+      }
+}
+
 private func wrapResult(_ result: Any?) -> [Any?] {
   return [result]
 }
@@ -61,6 +79,7 @@ struct NativeMediaEntry {
   var dateTaken: Int64? = nil
   var width: Int64
   var height: Int64
+  var appAlbum: Bool? = nil
 
 
   // swift-format-ignore: AlwaysUseLowerCamelCase
@@ -72,6 +91,7 @@ struct NativeMediaEntry {
     let dateTaken: Int64? = nilOrValue(pigeonVar_list[4])
     let width = pigeonVar_list[5] as! Int64
     let height = pigeonVar_list[6] as! Int64
+    let appAlbum: Bool? = nilOrValue(pigeonVar_list[7])
 
     return NativeMediaEntry(
       id: id,
@@ -80,7 +100,8 @@ struct NativeMediaEntry {
       dateModified: dateModified,
       dateTaken: dateTaken,
       width: width,
-      height: height
+      height: height,
+      appAlbum: appAlbum
     )
   }
   func toList() -> [Any?] {
@@ -92,6 +113,7 @@ struct NativeMediaEntry {
       dateTaken,
       width,
       height,
+      appAlbum,
     ]
   }
 }
@@ -226,8 +248,9 @@ protocol MediaHostApi {
   func thumbnail(id: Int64, edge: Int64, completion: @escaping (Result<FlutterStandardTypedData?, Error>) -> Void)
   func openReadFd(id: Int64, completion: @escaping (Result<Int64, Error>) -> Void)
   func contentHash(id: Int64, completion: @escaping (Result<String, Error>) -> Void)
-  func publishExport(tempPath: String, sourceId: Int64, displayName: String, keepGps: Bool, width: Int64, height: Int64, completion: @escaping (Result<String, Error>) -> Void)
+  func publishExport(tempPath: String, sourceId: Int64, displayName: String, keepGps: Bool, width: Int64, height: Int64, outputSrgb: Bool, completion: @escaping (Result<String, Error>) -> Void)
   func publishGenerated(tempPath: String, displayName: String, width: Int64, height: Int64, completion: @escaping (Result<String, Error>) -> Void)
+  func importPhoto(tempPath: String, displayName: String, completion: @escaping (Result<String, Error>) -> Void)
   func shareRecipe(card: FlutterStandardTypedData) throws
   func share(uri: String) throws
 }
@@ -388,7 +411,8 @@ class MediaHostApiSetup {
         let keepGpsArg = args[3] as! Bool
         let widthArg = args[4] as! Int64
         let heightArg = args[5] as! Int64
-        api.publishExport(tempPath: tempPathArg, sourceId: sourceIdArg, displayName: displayNameArg, keepGps: keepGpsArg, width: widthArg, height: heightArg) { result in
+        let outputSrgbArg = args[6] as! Bool
+        api.publishExport(tempPath: tempPathArg, sourceId: sourceIdArg, displayName: displayNameArg, keepGps: keepGpsArg, width: widthArg, height: heightArg, outputSrgb: outputSrgbArg) { result in
           switch result {
           case .success(let res):
             reply(wrapResult(res))
@@ -419,6 +443,24 @@ class MediaHostApiSetup {
       }
     } else {
       publishGeneratedChannel.setMessageHandler(nil)
+    }
+    let importPhotoChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.gremote.MediaHostApi.importPhoto\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      importPhotoChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let tempPathArg = args[0] as! String
+        let displayNameArg = args[1] as! String
+        api.importPhoto(tempPath: tempPathArg, displayName: displayNameArg) { result in
+          switch result {
+          case .success(let res):
+            reply(wrapResult(res))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      importPhotoChannel.setMessageHandler(nil)
     }
     let shareRecipeChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.gremote.MediaHostApi.shareRecipe\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {

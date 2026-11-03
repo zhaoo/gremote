@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Offline GLSL semantic check; not a physical GPU/driver test."""
 import os
+import re
 from pathlib import Path
 import subprocess
 import tempfile
@@ -15,6 +16,10 @@ with tempfile.TemporaryDirectory(prefix='gremote-glsl-') as directory:
     for source in files:
         if source.suffix not in ('.frag', '.comp'):
             continue
+        raw=source.read_text()
+        for qualifier,kind in re.findall(r'uniform\s+(?:(highp|mediump|lowp)\s+)?(sampler\w+)\s+',raw):
+            if qualifier!='highp' and not re.search(r'precision\s+highp\s+'+kind+r'\s*;',raw):
+                raise SystemExit(f'{source.name}: image sampler {kind} must explicitly use highp')
         # OpenGL SPIR-V requires ESSL310. Validate the same300-source constructs
         # with310 in a disposable copy; the runtime300 source is not rewritten.
         text = source.read_text().replace('#version 300 es', '#version 310 es', 1)

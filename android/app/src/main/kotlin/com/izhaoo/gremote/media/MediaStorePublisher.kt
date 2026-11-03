@@ -20,9 +20,10 @@ class MediaStorePublisher(context: Context) {
         keepGps: Boolean,
         width: Int,
         height: Int,
+        outputSrgb: Boolean = false,
     ): Uri {
         if (!temp.isFile) throw MediaException("invalidArgument", "Missing rendered file")
-        writeExif(temp, source, keepGps, width, height)
+        writeExif(temp, source, keepGps, width, height, outputSrgb)
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             insertPending(temp, displayName)
         } else {
@@ -54,14 +55,14 @@ class MediaStorePublisher(context: Context) {
             else insertLegacy(temp, safeName, directory)
     }
 
-    private fun writeExif(temp: File, source: Uri, keepGps: Boolean, width: Int, height: Int) {
+    private fun writeExif(temp: File, source: Uri, keepGps: Boolean, width: Int, height: Int, outputSrgb: Boolean) {
         val tags = resolver.openInputStream(source)?.use { stream ->
             val exif = ExifInterface(stream)
             ExifPolicy.READ_TAGS.mapNotNull { tag -> exif.getAttribute(tag)?.let { tag to it } }
                 .toMap()
         } ?: throw MediaException("openFailed", "Cannot read source EXIF")
         val out = ExifInterface(temp)
-        ExifPolicy.filter(tags, keepGps, width, height).forEach { (tag, value) ->
+        ExifPolicy.filter(tags, keepGps, width, height,outputSrgb).forEach { (tag, value) ->
             out.setAttribute(tag, value)
         }
         out.saveAttributes()

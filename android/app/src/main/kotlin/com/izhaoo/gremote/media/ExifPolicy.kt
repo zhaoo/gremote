@@ -68,6 +68,7 @@ object ExifPolicy {
         keepGps: Boolean,
         width: Int,
         height: Int,
+        outputSrgb: Boolean = false,
     ): Map<String, String> {
         val allowed = if (keepGps) READ_TAGS else KEPT_TAGS
         return source.filterKeys { it in allowed } + mapOf(
@@ -75,6 +76,6 @@ object ExifPolicy {
             ExifInterface.TAG_PIXEL_X_DIMENSION to width.toString(),
             ExifInterface.TAG_PIXEL_Y_DIMENSION to height.toString(),
             ExifInterface.TAG_SOFTWARE to "GRemote",
-        )
+        ) + if(outputSrgb) mapOf(ExifInterface.TAG_COLOR_SPACE to "1") else emptyMap()
     }
 }

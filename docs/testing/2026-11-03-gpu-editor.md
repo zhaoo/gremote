@@ -94,3 +94,38 @@ Implemented the approved preset/adjust/history navigation, fourteen tools, four-
 Flutter widget checks cover preset cancellation and record restore, decimal exposure transactions, coordinate editing/channel-only reset, narrow/large-font layouts and light-theme contrast. Rendered UI captures are in `dist/verification/studio-20261103/` (dark/light adjust/basic/curves/presets). These are Flutter host rendering with a CPU-reference image and host fonts substituted for test Ahem; **not phone captures or GPU-output evidence**. The reference photo is the bundled home_header.jpg, not a user album image.
 
 The full source suite at this checkpoint:610 Flutter tests pass,3 conditional tests skip; analyzer clean. Camera firmware/SD/protocol remain untouched.
+
+## Final independent review and fixes
+
+Fresh read-only review covered3db80db..6fad95c. One Critical and three Important findings were accepted and fixed in one pass:
+
+| Finding | Fix and regression |
+| --- | --- |
+| GPU editor had no CPU `base`, so its export button stayed disabled | Ready GPU session/frame now enables the actual button; GPU-only widget state test starts with `base == null` and triggers export. RED→GREEN. |
+| Adobe RGB source metadata survived onto normalized sRGB V2 output | Backend output contract reaches Pigeon/publication/EXIF policy; V2 explicitly writes sRGB, V1 retains prior policy. Dart output-contract and JVM metadata→reopen-decision tests RED→GREEN. |
+| Some float-image samplers defaulted to lowp | Explicit highp declarations, enforced by offline shader checker. All9 fragments compile. RED→GREEN. |
+| V1 edits lacked a controlled upgrade path | More→新版调色 preserves parameters and provides preview, cancel, confirm and one-step undo. Widget/workflow tests RED→GREEN; conversion cannot be split by the ordinary tool-reset action. |
+
+No deferred minor findings. A2053px source/mask page-boundary fixture with rotation, straightening, a float gradient and optical effects was added and cross-compiled; it has not run on a GPU.
+
+Review boundaries: physical GPU results remain unjudged by the user's decision; iOS GPU/HDR/wide-gamut output stay outside this round; the prior appearance review covers pre-base code; pinned skcms source/license/call boundaries were checked, without re-auditing upstream internals. iOS publication protocol was regenerated alongside Dart/Kotlin; Swift parse-only checks pass with `-parse-stdlib -nostdimport`, while no iOS build/device acceptance is claimed (the ordinary local parser invocation encountered duplicate SwiftBridging module maps).
+
+## Implementation decisions and costs
+
+1. Reuse develop in the selected checkout: no extra branch isolation.
+2. Keep CPU Basic V2 as a numerical reference checkpoint: it does not prove the full float GPU graph or iOS acceptance.
+3. Defer physical acceptance at the user's request: no driver, performance or real-photo quality conclusion.
+4. Retain the existing tetrahedral LUT interpolation: no switch to the previously misnamed trilinear behavior.
+5. Share the original source atlas between preview/export: more memory and first-load work, with explicit limits.
+6. Use one ES3 block-prefix implementation: more draws than an additional compute implementation; latency is unmeasured.
+7. Normalize ICC once at import to SDR sRGB8: import conversion cost, no HDR/wide-gamut editing claim.
+8. Use global scalar masks and small color tiles: explicit memory limits can reject oversized effect combinations.
+9. Integrate the Dart export adapter with its GPU service: earlier intermediate source commits were not a complete product backend.
+10. Coalesce drags while allowing one useful in-flight result: a same-tool preview can briefly trail its newest draft; discrete cancellation revokes immediately.
+11. Load detail patches after200ms idle with bounded Q100 JPEG tiles: delayed detail and normal JPEG tolerance.
+12. Keep platform/appearance/upstream review boundaries above: no repeated audit or unsupported acceptance claim.
+13. Keep local develop commits and checkout: this round does not push, merge, publish or install anything.
+
+## Physical acceptance still required
+
+No phone was available. Run the opt-in arm64 capability/session/color/effect/export fixtures on the actual Android GPU, then exercise original24MP photos,2048px page boundaries, background/surface/memory trimming, permissions/cancel, process-version conversion, export/reopen color, and deep/light/system themes. Measure profile/release first frame, drag/settled frame latency, sustained updates, temperature and memory; compare real-photo V1/V2 and preview/export results with the user. The compiled harness is `native/imaging/build/android-gpu-probe/gremote_gpu_session_tests`; **compilation is not execution**. Camera firmware/SD remain outside these checks.

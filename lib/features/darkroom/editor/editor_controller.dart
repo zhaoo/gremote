@@ -524,6 +524,15 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
     await _saving;
   }
 
+  void beginProcessUpgrade() {
+    if (state.exporting ||
+        state.doc == null ||
+        state.recipe.edits.processVersion != 1) return;
+    beginTool();
+    beginGesture();
+    setEdits(state.recipe.edits.copyWith(processVersion: 2));
+  }
+
   void beginTool({bool crop = false}) {
     if (state.exporting || state.doc == null) return;
     if (_toolStart != null) commitTool();
