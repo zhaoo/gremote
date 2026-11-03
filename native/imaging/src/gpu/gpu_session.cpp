@@ -1,37 +1,45 @@
 #include "gpu_session.h"
 #include "gremote_imaging.h"
+#include "gpu_shaders_generated.h"
+#include <cstring>
 #include <cmath>
+#include <algorithm>
 
 namespace gremote::gpu {
 namespace {
-bool Neutral(const PhotoEdits& edits) {
-  const auto& p=edits.values;
-  for(int i=1;i<=11;++i)if(p[i]!=0)return false;
-  for(int i:{14,17,20,23,27,28,30,31,34,35,36,37})if(p[i]!=0)return false;
-  if(p[32]!=1||p[33]!=1)return false;
-  for(int c=0;c<4;++c)for(int i=0;i<256;++i)if(std::abs(p[38+c*256+i]-i/255.f)>1e-7f)return false;
-  return true;
+bool PendingEffects(const PhotoEdits& edits) {
+  for(int i:{11,14,17,20,23,27,28})if(edits.values[i]!=0)return true;
+  return false;
 }
 }
 GpuSession::GpuSession(Image source,std::shared_ptr<GenerationGate> gate)
     :source_(std::move(source)),gate_(std::move(gate)) {
   const auto& caps=context_.capabilities();
   if(!gate_||source_.channels!=4||source_.width<=0||source_.height<=0||
-      source_.width>caps.max_texture||source_.height>caps.max_texture||
       int64_t(source_.width)*source_.height>8*1024*1024||
       source_.pixels.size()!=size_t(source_.width)*source_.height*4)throw GpuError("gpuInvalidSource");
-  glGenTextures(1,&source_texture_);glBindTexture(GL_TEXTURE_2D,source_texture_);
-  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
-  glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA8,source_.width,source_.height,0,GL_RGBA,GL_UNSIGNED_BYTE,source_.pixels.data());
-  copy_=CompileProgram(R"(#version 300 es
-    precision highp float;
-    uniform sampler2D source;uniform vec2 outputSize;uniform int flip;
-    out vec4 color;
-    void main(){vec2 uv=gl_FragCoord.xy/outputSize;if(flip==1)uv.y=1.-uv.y;color=texture(source,uv);}
-  )");
+  page_width_=std::min({source_.width,caps.max_texture,2048});
+  page_height_=std::min({source_.height,caps.max_texture,2048});
+  const int columns=(source_.width+page_width_-1)/page_width_,rows=(source_.height+page_height_-1)/page_height_;
+  GLint maximum_layers=0;glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS,&maximum_layers);
+  if(int64_t(columns)*rows>maximum_layers)throw GpuError("gpuSourceLayersUnsupported");
+  glGenTextures(1,&source_texture_);glBindTexture(GL_TEXTURE_2D_ARRAY,source_texture_);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+  glTexStorage3D(GL_TEXTURE_2D_ARRAY,1,GL_RGBA8,page_width_,page_height_,columns*rows);
+  glPixelStorei(GL_UNPACK_ROW_LENGTH,source_.width);
+  for(int y=0;y<rows;++y)for(int x=0;x<columns;++x){
+    const int left=x*page_width_,top=y*page_height_;
+    glTexSubImage3D(GL_TEXTURE_2D_ARRAY,0,0,0,y*columns+x,
+      std::min(page_width_,source_.width-left),std::min(page_height_,source_.height-top),1,
+      GL_RGBA,GL_UNSIGNED_BYTE,source_.Row(top)+left*4);
+  }
+  glPixelStorei(GL_UNPACK_ROW_LENGTH,0);CheckGl("gpuSourceUpload");
+  source_.pixels.clear();source_.pixels.shrink_to_fit();
+  pipeline_=std::make_unique<ColorPipeline>(caps);
+  copy_=CompileProgram(shaders::present);
   glGenVertexArrays(1,&vao_);CheckGl("gpuSourceUpload");
 }
 GpuSession::~GpuSession(){try{Close();}catch(...){}}
@@ -42,27 +50,55 @@ void GpuSession::Copy(GLuint source,int width,int height,bool flip){
   glUniform2f(glGetUniformLocation(copy_,"outputSize"),width,height);
   glUniform1i(glGetUniformLocation(copy_,"flip"),flip?1:0);glDrawArrays(GL_TRIANGLES,0,3);
 }
+std::shared_ptr<LutData> GpuSession::ParseLut(const uint8_t* bytes,size_t length){
+  auto result=std::make_shared<LutData>();
+  if(ParseCube(bytes,length,&result->lut)!=GREMOTE_OK)throw GpuError("gpuInvalidLut");
+  result->bytes.assign(bytes,bytes+length);result->serial=next_lut_serial_++;return result;
+}
+void GpuSession::PrepareLut(const std::string& key,const uint8_t* bytes,size_t length){
+  CheckOpen();if(!bytes||!length||length>16*1024*1024||key.empty()||key.size()>128)throw GpuError("gpuInvalidLutKey");
+  const auto found=luts_.find(key);
+  if(found!=luts_.end()){
+    if(found->second->bytes.size()!=length||std::memcmp(found->second->bytes.data(),bytes,length)!=0)throw GpuError("gpuLutKeyMismatch");
+    return;
+  }
+  auto lut=ParseLut(bytes,length);
+  luts_.emplace(key,std::move(lut));lut_order_.push_back(key);
+  while(lut_order_.size()>2){luts_.erase(lut_order_.front());lut_order_.pop_front();}
+}
+bool GpuSession::RenderPrepared(uint64_t generation,const PhotoEdits& edits,const std::string& key,float strength,int width,int height){
+  CheckOpen();if(!gate_->Accepts(generation))return false;
+  std::shared_ptr<LutData> lut;
+  if(!key.empty()){
+    const auto found=luts_.find(key);if(found==luts_.end())throw GpuError("gpuLutNotPrepared");lut=found->second;
+  }
+  return RenderColor(generation,edits,lut,strength,width,height);
+}
 bool GpuSession::Render(uint64_t generation,const PhotoEdits& edits,const uint8_t* cube,
     size_t cube_length,float strength,int width,int height){
-  CheckOpen();
-  PhotoEdits checked;
-  if(ParsePhotoEdits(edits.values.data(),kPhotoEditCount,&checked)!=GREMOTE_OK||
-      width<=0||height<=0||!std::isfinite(strength)||strength<0||strength>1||
-      (cube_length&&!cube))throw GpuError("gpuInvalidDescriptor");
-  if(!gate_->Accepts(generation))return false;
-  // This lifecycle milestone intentionally rejects effects until the shader
-  // graph is connected. It never silently substitutes a neutral photograph.
-  if(!Neutral(edits)||cube_length||width!=source_.width||height!=source_.height)
-    throw GpuError("gpuPipelinePending");
-  context_.MakeCurrent();
-  if(!linear_||linear_->width!=width||linear_->height!=height){
-    auto linear=std::make_unique<Target>(width,height);
-    auto final=std::make_unique<Target>(width,height,GL_RGBA8);
-    linear_=std::move(linear);final_=std::move(final);
+  CheckOpen();if(!gate_->Accepts(generation))return false;
+  std::shared_ptr<LutData> lut;
+  if(cube_length){
+    if(!cube)throw GpuError("gpuInvalidLut");
+    if(!inline_lut_||inline_lut_->bytes.size()!=cube_length||std::memcmp(inline_lut_->bytes.data(),cube,cube_length)!=0)
+      inline_lut_=ParseLut(cube,cube_length);
+    lut=inline_lut_;
   }
-  linear_->Bind();Copy(source_texture_,width,height,false);
-  final_->Bind();Copy(linear_->texture,width,height,false);CheckGl("gpuRender");
-  rendered_=generation;
+  return RenderColor(generation,edits,lut,strength,width,height);
+}
+bool GpuSession::RenderColor(uint64_t generation,const PhotoEdits& edits,const std::shared_ptr<LutData>& lut,
+    float strength,int width,int height){
+  PhotoEdits checked;
+  if(ParsePhotoEdits(edits.values.data(),kPhotoEditCount,&checked)!=GREMOTE_OK||width<=0||height<=0||
+      !std::isfinite(strength)||strength<0||strength>1)throw GpuError("gpuInvalidDescriptor");
+  if(PendingEffects(edits))throw GpuError("gpuPipelinePending");
+  context_.MakeCurrent();
+  PipelineInputs inputs;
+  inputs.source_serial=1;inputs.context_serial=1;inputs.lut_serial=lut?lut->serial:0;inputs.strength=strength;inputs.edits=edits;
+  inputs.region={source_.width,source_.height,0,0,page_width_,page_height_,1,width,height,0,0,width,height};
+  const auto photo=pipeline_->Render(source_texture_,inputs,lut?&lut->lut:nullptr);
+  if(!final_||final_->width!=width||final_->height!=height)final_=std::make_unique<Target>(width,height,GL_RGBA8);
+  final_->Bind();Copy(photo,width,height,false);CheckGl("gpuRender");rendered_=generation;
   return gate_->Accepts(generation);
 }
 void GpuSession::Attach(ANativeWindow* window,int width,int height){
@@ -88,11 +124,11 @@ void GpuSession::Close(){
   // context would be unsafe. Abandon them; EGL destroys the lost context.
   bool current=false;try{context_.MakeCurrent();current=true;}catch(...){}
   if(!current){
-    if(linear_)linear_->fbo=linear_->texture=0;
+    if(pipeline_)pipeline_->Abandon();
     if(final_)final_->fbo=final_->texture=0;
     source_texture_=copy_=vao_=0;
   }
-  linear_.reset();final_.reset();
+  pipeline_.reset();final_.reset();luts_.clear();inline_lut_.reset();
   if(source_texture_)glDeleteTextures(1,&source_texture_);
   if(copy_)glDeleteProgram(copy_);if(vao_)glDeleteVertexArrays(1,&vao_);
   source_texture_=copy_=vao_=0;

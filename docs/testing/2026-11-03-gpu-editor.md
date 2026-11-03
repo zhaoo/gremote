@@ -53,3 +53,14 @@
 - 共享 EGL display 的引用配对依据 [Android EGL 实现](https://android.googlesource.com/platform/frameworks/native/+/refs/heads/main/opengl/libs/EGL/egl_display.cpp)，避免关闭照片会话时终止 Flutter 自己的引用。实际窗口方向和驱动行为仍待设备验证。
 
 检查：generation 的 2 个 native 测试与已有测试合计 66 项通过；Kotlin 的 4 个调度和 2 个 Surface 生命周期测试 RED→GREEN，全量 JVM suite 结果见任务日志；Flutter 603 pass / 3 conditional skips，analyze 无问题。Android 原生库、JNI 符号和 GPU session device harness 交叉编译通过；设备 harness **未执行**，不得当作 GPU 往返 PASS。
+
+## Task 3：GPU 颜色图与阶段缓存（源代码完成，设备对照延后）
+
+- 几何采样、基础 V1/V2、LUT、RGB/独立曲线拆为驻留 passes。曲线表使用同一份 4×256 float 样本；只更新小表，不为每次拖动创建图像缓冲。
+- 旧 C++ LUT 实际使用四面体插值，已纠正文档的“三线性”描述，GPU 按实际行为保留；非仿射 cube 夹具可区分二者。Cube 使用 float32 数据和显式采样，支持 DOMAIN_MIN/MAX。
+- 缓存包含源/上下文代次、版本、完整几何、LUT 内容 serial/强度及所有上游参数。更改曲线从曲线阶段失效；源、分辨率、版本改变则重算全部。失败会撤销部分更新的缓存有效性。
+- 原生 LUT 准备与逐帧参数发送分开；最多保留 2 份准备数据。每次实际内容载入分配 serial，避免淘汰后复用旧名字造成错误缓存。
+- 源图使用有界 texture array 分页，超过单纹理尺寸也能取样；当前源加载器仍是预览版本，原始文件/ICC 加载在 Task 5 完成。为满足同尺寸预览/导出一致，后续两者复用同一原始源，不能一端先缩略解码、另一端全尺寸解码后假称输入相同。
+- 必需的 RGBA16F 以及可用时优先的 RGBA32F 均通过实际运行时 FBO/线性采样/回读探测选择；编译成功不表示本轮已在某台设备探测通过。
+
+检查：5 个 fragment shader 通过 NDK glslc 离线语义检查（OpenGL SPIR-V 需要临时将 ESSL300 声明改为310，运行时源保持300）。2 个阶段缓存测试 RED→GREEN，native host 合计68通过；JVM49通过；Flutter603通过/3条件跳过，analyze无问题。原生库与包含颜色对照/非仿射 cube/域/alpha 的设备 harness 交叉编译通过，**设备 harness 未执行**，尚无实际 GPU 像素误差结果。

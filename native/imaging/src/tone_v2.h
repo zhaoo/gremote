@@ -11,6 +11,11 @@ class ToneV2 {
   static ToneV2 Build(const PhotoEdits& edits);
   std::array<float, 3> Apply(std::array<float, 3> encoded) const;
   bool active() const { return active_; }
+  const std::array<float,10>& parameters() const {return p_;}
+  const std::array<float,3>& gains() const {return gains_;}
+  float exposure() const {return exposure_;}
+  float contrast() const {return contrast_;}
+  float peak() const {return peak_;}
 
  private:
   float Luminance(float source) const;

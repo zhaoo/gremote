@@ -63,19 +63,37 @@ Java_com_izhaoo_gremote_imaging_GpuNativeBridge_advance(JNIEnv*,jobject,jlong id
 }
 extern "C" JNIEXPORT void JNICALL
 Java_com_izhaoo_gremote_imaging_GpuNativeBridge_revoke(JNIEnv*,jobject,jlong id){if(auto gate=Gate(id))gate->Close();}
+extern "C" JNIEXPORT void JNICALL
+Java_com_izhaoo_gremote_imaging_GpuNativeBridge_prepareLut(JNIEnv* env,jobject,jlong id,jstring key,jbyteArray data){
+  try{
+    auto* session=Find(id);
+    if(!key||!data||env->GetStringLength(key)>128)throw GpuError("gpuInvalidLut");
+    const auto length=env->GetArrayLength(data);if(length<=0||length>16*1024*1024)throw GpuError("gpuLutTooLarge");
+    const char* text=env->GetStringUTFChars(key,nullptr);if(!text)return;
+    std::string name;
+    try{name=text;}catch(...){env->ReleaseStringUTFChars(key,text);throw;}
+    env->ReleaseStringUTFChars(key,text);
+    std::vector<uint8_t> bytes(size_t(length),0);
+    env->GetByteArrayRegion(data,0,length,reinterpret_cast<jbyte*>(bytes.data()));if(env->ExceptionCheck())return;
+    session->PrepareLut(name,bytes.data(),bytes.size());
+  }catch(const std::exception& e){Error(env,e.what());}
+}
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_izhaoo_gremote_imaging_GpuNativeBridge_render(JNIEnv* env,jobject,jlong id,jlong generation,
-    jfloatArray parameters,jbyteArray cube,jfloat strength,jint width,jint height){
+    jfloatArray parameters,jstring key,jfloat strength,jint width,jint height){
   try{
     auto* session=Find(id);
     if(!parameters||env->GetArrayLength(parameters)!=kPhotoEditCount)throw GpuError("gpuInvalidParameters");
     PhotoEdits edits;env->GetFloatArrayRegion(parameters,0,kPhotoEditCount,edits.values.data());
     if(env->ExceptionCheck())return false;
-    std::vector<uint8_t> lut;
-    if(cube){const auto length=env->GetArrayLength(cube);if(length>16*1024*1024)throw GpuError("gpuLutTooLarge");
-      lut.resize(size_t(length));env->GetByteArrayRegion(cube,0,length,reinterpret_cast<jbyte*>(lut.data()));}
-    if(env->ExceptionCheck())return false;
-    return session->Render(uint64_t(generation),edits,lut.data(),lut.size(),strength,width,height);
+    std::string name;
+    if(key){
+      if(env->GetStringLength(key)>128)throw GpuError("gpuInvalidLutKey");
+      const char* text=env->GetStringUTFChars(key,nullptr);if(!text)return false;
+      try{name=text;}catch(...){env->ReleaseStringUTFChars(key,text);throw;}
+      env->ReleaseStringUTFChars(key,text);
+    }
+    return session->RenderPrepared(uint64_t(generation),edits,name,strength,width,height);
   }catch(const std::exception& e){Error(env,e.what());return false;}
 }
 extern "C" JNIEXPORT void JNICALL

@@ -26,7 +26,7 @@ class GpuEditorHost(messenger: BinaryMessenger, private val textures: TextureReg
     init { channel.setMethodCallHandler(::handle) }
 
     private data class Request(val generation: Long, val parameters: FloatArray,
-        val cube: ByteArray?, val strength: Float, val width: Int, val height: Int)
+        val lutKey: String, val strength: Float, val width: Int, val height: Int)
     private data class SurfaceSpec(val surface: Surface, val width: Int, val height: Int)
 
     private inner class Session(val id: Long, val producer: TextureRegistry.SurfaceProducer,
@@ -56,7 +56,7 @@ class GpuEditorHost(messenger: BinaryMessenger, private val textures: TextureReg
         private val scheduler: GpuFrameScheduler<Request, Boolean> = GpuFrameScheduler(
             post = { worker.post(it) },
             render = { request -> GpuNativeBridge.render(id, request.generation,
-                request.parameters, request.cube, request.strength, request.width, request.height) },
+                request.parameters, request.lutKey, request.strength, request.width, request.height) },
             emit = { generation, rendered ->
                 if (rendered && !paused && hasSurface && !disposed) {
                     try {
@@ -145,6 +145,22 @@ class GpuEditorHost(messenger: BinaryMessenger, private val textures: TextureReg
             val args = call.arguments as? Map<*, *> ?: emptyMap<Any, Any>()
             when (call.method) {
                 "open" -> open(args, result)
+                "prepareLut" -> {
+                    val id = (args["sessionId"] as? Number)?.toLong()
+                    val session = sessions[id] ?: throw IllegalArgumentException("invalidSession")
+                    val key = args["key"] as? String ?: throw IllegalArgumentException("lutKey")
+                    val bytes = args["bytes"] as? ByteArray ?: throw IllegalArgumentException("lutBytes")
+                    require(key.isNotEmpty() && key.length <= 128 && bytes.size in 1..16*1024*1024)
+                    worker.post {
+                        try {
+                            if (session.disposed) throw IllegalStateException("gpuSessionClosed")
+                            GpuNativeBridge.prepareLut(session.id, key, bytes)
+                            main.post { result.success(null) }
+                        } catch (failure: Throwable) {
+                            main.post { result.error("gpuLutFailed", "无法读取 LUT", failure.message) }
+                        }
+                    }
+                }
                 "update" -> {
                     val id = (args["sessionId"] as? Number)?.toLong()
                     val session = sessions[id] ?: throw IllegalArgumentException("invalidSession")
@@ -153,12 +169,12 @@ class GpuEditorHost(messenger: BinaryMessenger, private val textures: TextureReg
                     val strength = (args["strength"] as? Number)?.toFloat() ?: 1f
                     val width = (args["width"] as? Number)?.toInt() ?: 0
                     val height = (args["height"] as? Number)?.toInt() ?: 0
-                    val cube = args["cube"] as? ByteArray
+                    val lutKey = args["lutKey"] as? String ?: ""
                     require(parameters.size == 1062 && parameters.all { it.isFinite() })
                     require(generation > 0 && strength.isFinite() && strength in 0f..1f)
                     require(width > 0 && height > 0 && width.toLong() * height <= 8L * 1024 * 1024)
-                    require(cube == null || cube.size <= 16 * 1024 * 1024)
-                    result.success(session.update(Request(generation, parameters.copyOf(), cube?.copyOf(), strength, width, height)))
+                    require(lutKey.length <= 128)
+                    result.success(session.update(Request(generation, parameters.copyOf(), lutKey, strength, width, height)))
                 }
                 "invalidate" -> {
                     val session = sessions[(args["sessionId"] as? Number)?.toLong()]

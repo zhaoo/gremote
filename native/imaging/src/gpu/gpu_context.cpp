@@ -50,7 +50,7 @@ GLuint Shader(GLenum type,const char* source) {
 std::string Capabilities::Json() const {
   return "{\"vendor\":"+Quote(vendor)+",\"renderer\":"+Quote(renderer)+
     ",\"version\":"+Quote(version)+",\"maxTextureSize\":"+std::to_string(max_texture)+
-    ",\"maxRenderbufferSize\":"+std::to_string(max_target)+",\"halfFloatTarget\":"+(half_float?"true":"false")+"}";
+    ",\"maxRenderbufferSize\":"+std::to_string(max_target)+",\"halfFloatTarget\":"+(half_float?"true":"false")+",\"fullFloatTarget\":"+(full_float?"true":"false")+"}";
 }
 GLuint CompileProgram(const char* fragment) {
   constexpr auto vertex=R"(#version 300 es
@@ -84,7 +84,9 @@ Target::Target(int w,int h,GLint format):width(w),height(h) {
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D,0,format,w,h,0,GL_RGBA,format==GL_RGBA16F?GL_HALF_FLOAT:GL_UNSIGNED_BYTE,nullptr);
+    const GLenum pixel_format=(format==GL_R16F||format==GL_R32F)?GL_RED:GL_RGBA;
+    const GLenum pixel_type=format==GL_RGBA8?GL_UNSIGNED_BYTE:((format==GL_RGBA16F||format==GL_R16F)?GL_HALF_FLOAT:GL_FLOAT);
+    glTexImage2D(GL_TEXTURE_2D,0,format,w,h,0,pixel_format,pixel_type,nullptr);
     glGenFramebuffers(1,&fbo); glBindFramebuffer(GL_FRAMEBUFFER,fbo);
     glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,texture,0);
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER)!=GL_FRAMEBUFFER_COMPLETE) throw GpuError("gpuFramebufferUnsupported");
@@ -181,6 +183,15 @@ void GpuContext::ValidateFloatTarget(){
       if(std::abs(int(pixels[i*4+c])-expected[c])>1)throw GpuError("gpuFloatHeadroomUnavailable");
     }
     caps_.half_float=true;
+    try {
+      Target full(4,4,GL_RGBA32F);full.Bind();glUseProgram(write);glDrawArrays(GL_TRIANGLES,0,3);
+      output.Bind();glUseProgram(present);glActiveTexture(GL_TEXTURE0);glBindTexture(GL_TEXTURE_2D,full.texture);
+      glUniform1i(glGetUniformLocation(present,"source"),0);glDrawArrays(GL_TRIANGLES,0,3);
+      glReadPixels(0,0,4,4,GL_RGBA,GL_UNSIGNED_BYTE,pixels.data());CheckGl("gpuFullFloatReadback");
+      bool valid=true;
+      for(int i=0;i<16;++i)for(int c=0;c<4;++c){constexpr int expected[]={128,128,64,255};valid&=std::abs(int(pixels[i*4+c])-expected[c])<=1;}
+      caps_.full_float=valid;
+    }catch(const GpuError&){while(glGetError()!=GL_NO_ERROR){}}
   } catch(...) {if(vao)glDeleteVertexArrays(1,&vao);if(write)glDeleteProgram(write);if(present)glDeleteProgram(present);throw;}
   glDeleteVertexArrays(1,&vao);glDeleteProgram(write);glDeleteProgram(present);
 }

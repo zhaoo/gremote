@@ -13,7 +13,7 @@ class GpuError : public std::runtime_error {
 };
 struct Capabilities {
   int max_texture=0, max_target=0;
-  bool half_float=false;
+  bool half_float=false,full_float=false;
   std::string vendor, renderer, version;
   std::string Json() const;
 };
