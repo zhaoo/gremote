@@ -14,6 +14,7 @@ import '../features/film_workbench/film_workbench_page.dart';
 import '../features/library/batch_export_page.dart';
 import '../features/library/library_page.dart';
 import '../features/settings/protocol_probe_page.dart';
+import '../features/settings/app_settings_page.dart';
 import '../features/shoot/shoot_page.dart';
 import 'theme/app_colors.dart';
 
@@ -69,6 +70,7 @@ final appRouter = GoRouter(
         builder: (_, state) => FilmWorkbenchPage(
             initialSection:
                 int.tryParse(state.uri.queryParameters['section'] ?? '') ?? 0)),
+    GoRoute(path: '/settings', builder: (_, __) => const AppSettingsPage()),
     GoRoute(path: '/probe', builder: (_, __) => const ProtocolProbePage()),
     GoRoute(
       path: '/edit/:mediaId',

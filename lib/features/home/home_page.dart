@@ -37,12 +37,14 @@ class HomePage extends ConsumerWidget {
                       child: Align(
                           alignment: Alignment.centerLeft, child: HomeBrand())),
                   PopupMenuButton<String>(
-                    tooltip: '更多连接选项',
+                    tooltip: '更多',
                     icon: const Icon(Icons.more_horiz),
                     onSelected: (value) {
                       if (value == 'wifi') {
                         _showManualWifi(context, controller);
-                      } else {
+                      } else if (value == 'settings') {
+                        context.push('/settings');
+                      } else if (value == 'diagnostics') {
                         _showDiagnostics(
                             context, state, ref.read(diagnosticStoreProvider));
                       }
@@ -50,6 +52,7 @@ class HomePage extends ConsumerWidget {
                     itemBuilder: (_) => const [
                       PopupMenuItem(value: 'wifi', child: Text('手动连接 Wi-Fi')),
                       PopupMenuItem(value: 'diagnostics', child: Text('诊断信息')),
+                      PopupMenuItem(value: 'settings', child: Text('设置')),
                     ],
                   ),
                 ]),

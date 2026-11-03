@@ -30,8 +30,10 @@ class PreferencesState {
     this.preferences = const AppPreferences(),
     this.saving = false,
     this.error,
+    this.loadFailed = false,
   });
   final AppPreferences preferences;
   final bool saving;
   final Object? error;
+  final bool loadFailed;
 }

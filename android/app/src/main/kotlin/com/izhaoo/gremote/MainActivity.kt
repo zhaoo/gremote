@@ -17,6 +17,7 @@ import com.izhaoo.gremote.media.MediaHostApi
 import com.izhaoo.gremote.media.CameraImportHistory
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private var companionFileResult: ((Result<ByteArray?>) -> Unit)? = null
@@ -28,10 +29,33 @@ class MainActivity : FlutterActivity() {
     private var deviceApi: GRemoteDeviceHostApi? = null
     private var mediaApi: GRemoteMediaHostApi? = null
     private var importHistory: CameraImportHistory? = null
+    private var appInfoChannel: MethodChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         val messenger = flutterEngine.dartExecutor.binaryMessenger
+        appInfoChannel = MethodChannel(messenger, "gremote/app_info").also { channel ->
+            channel.setMethodCallHandler { call, result ->
+                if (call.method != "read") {
+                    result.notImplemented()
+                } else {
+                    try {
+                        @Suppress("DEPRECATION")
+                        val info = packageManager.getPackageInfo(packageName, 0)
+                        @Suppress("DEPRECATION")
+                        val buildNumber = if (android.os.Build.VERSION.SDK_INT >= 28)
+                            info.longVersionCode.toString() else info.versionCode.toString()
+                        result.success(mapOf(
+                            "appName" to applicationInfo.loadLabel(packageManager).toString(),
+                            "version" to info.versionName,
+                            "buildNumber" to buildNumber,
+                        ))
+                    } catch (_: Exception) {
+                        result.error("appInfoUnavailable", "无法读取应用版本", null)
+                    }
+                }
+            }
+        }
         companionReadScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         companionFileReader = CompanionFileReader(companionReadScope!!)
         wifiScanController = WifiScanController(this, messenger)
@@ -106,6 +130,8 @@ class MainActivity : FlutterActivity() {
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
         val messenger = flutterEngine.dartExecutor.binaryMessenger
+        appInfoChannel?.setMethodCallHandler(null)
+        appInfoChannel = null
         location?.close()
         location = null
         wifiScanController?.close()

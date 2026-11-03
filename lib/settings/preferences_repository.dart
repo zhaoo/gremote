@@ -37,7 +37,7 @@ class PreferencesRepository {
     try {
       return PreferencesState(preferences: await load());
     } catch (error) {
-      return PreferencesState(error: error);
+      return PreferencesState(error: error, loadFailed: true);
     }
   }
 }

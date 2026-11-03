@@ -66,6 +66,22 @@ void main() {
     expect(controller.state.error, isNull);
   });
 
+  test('startup read failure retries loading without overwriting a saved theme',
+      () async {
+    await PreferencesRepository(db).save(
+        const AppPreferences(theme: ThemePreference.light, haptics: false));
+    final repository = _ReadFailsOnce(db);
+    final initial = await repository.hydrate();
+    expect(initial.error, isNotNull);
+    final controller = AppPreferencesController(repository, initial);
+    addTearDown(controller.dispose);
+    await controller.retry();
+    expect(controller.state.preferences.theme, ThemePreference.light);
+    expect(controller.state.preferences.haptics, isFalse);
+    expect(
+        (await PreferencesRepository(db).load()).theme, ThemePreference.light);
+  });
+
   test('failed transaction is visible, preserves unrelated keys and can retry',
       () async {
     await db.insert('app_kv', {'key': 'camera.pending', 'value': 'untouched'});
@@ -100,5 +116,18 @@ class _DelayedRepository extends PreferencesRepository {
   Future<void> save(AppPreferences preferences) async {
     await gate;
     await super.save(preferences);
+  }
+}
+
+class _ReadFailsOnce extends PreferencesRepository {
+  _ReadFailsOnce(super.db);
+  bool first = true;
+  @override
+  Future<AppPreferences> load() async {
+    if (first) {
+      first = false;
+      throw StateError('read unavailable');
+    }
+    return super.load();
   }
 }

@@ -25,7 +25,16 @@ class AppPreferencesController extends StateNotifier<PreferencesState> {
       _save(state.preferences.copyWith(theme: value));
   Future<void> setHaptics(bool value) =>
       _save(state.preferences.copyWith(haptics: value));
-  Future<void> retry() => _save(state.preferences);
+  Future<void> retry() {
+    if (!state.loadFailed) return _save(state.preferences);
+    final revision = ++_revision;
+    state = PreferencesState(
+        preferences: state.preferences, saving: true, loadFailed: true);
+    return _tail = _tail.then((_) async {
+      final loaded = await _repository.hydrate();
+      if (mounted && revision == _revision) state = loaded;
+    });
+  }
 
   Future<void> _save(AppPreferences preferences) {
     final revision = ++_revision;

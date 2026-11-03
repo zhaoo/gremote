@@ -30,7 +30,18 @@ import UIKit
       wifiChannel.setMethodCallHandler { _,result in
         result(FlutterError(code:"wifiScanUnsupported",message:"iOS 不允许扫描附近 Wi-Fi，请在系统设置连接相机网络",details:nil))
       }
-      channels = [locationChannel,wifiChannel]
+      let appInfoChannel = FlutterMethodChannel(name:"gremote/app_info",binaryMessenger:messenger)
+      appInfoChannel.setMethodCallHandler { call,result in
+        guard call.method == "read" else { result(FlutterMethodNotImplemented); return }
+        let info = Bundle.main.infoDictionary ?? [:]
+        guard let version = info["CFBundleShortVersionString"] as? String,
+              let build = info["CFBundleVersion"] as? String else {
+          result(FlutterError(code:"appInfoUnavailable",message:"无法读取应用版本",details:nil)); return
+        }
+        result(["appName": info["CFBundleDisplayName"] as? String ?? "GRemote",
+                "version": version, "buildNumber": build])
+      }
+      channels = [locationChannel,wifiChannel,appInfoChannel]
       let events = FlutterEventChannel(name:"gremote/location/fixes",binaryMessenger:messenger)
       events.setStreamHandler(location); locationEvents = events
     }
