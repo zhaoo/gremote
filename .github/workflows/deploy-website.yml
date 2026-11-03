@@ -2,7 +2,13 @@ name: Deploy GRemote website
 on:
   workflow_dispatch:
   push:
-    tags: [site-*]
+    branches: ['develop']
+    tags: ['site-*']
+    paths:
+      - 'website/**'
+      - 'deploy/**'
+      - '.github/workflows/deploy-website.yml'
+      - 'tests/test_site_deploy.py'
 permissions:
   contents: read
 concurrency:

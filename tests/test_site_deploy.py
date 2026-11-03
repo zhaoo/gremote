@@ -1,7 +1,10 @@
+import ast
+from fnmatch import fnmatchcase
 import importlib.util
 import io
 import json
 from pathlib import Path
+import re
 import tarfile
 import tempfile
 import unittest
@@ -31,6 +34,37 @@ class SiteDeployTests(unittest.TestCase):
                 info = tarfile.TarInfo(name); info.size = len(data)
                 tar.addfile(info, io.BytesIO(data))
         return archive
+
+    def test_workflow_trigger_contract(self):
+        workflow = SCRIPT.parents[1] / '.github/workflows/deploy-website.yml'
+        source = workflow.read_text()
+        # Check the small trigger declaration without adding a YAML dependency to CI.
+        trigger = re.search(r'^on:\n((?:[ \t]+.*\n|\n)+)', source, re.MULTILINE)
+        self.assertIsNotNone(trigger)
+        self.assertRegex(trigger.group(1), r'(?m)^  workflow_dispatch:')
+        push = re.search(r'^  push:\n((?:    .*\n)+)', trigger.group(1), re.MULTILINE)
+        self.assertIsNotNone(push)
+        branches = re.search(r'^    branches: (\[[^\n]+\])$', push.group(1), re.MULTILINE)
+        tags = re.search(r'^    tags: (\[[^\n]+\])$', push.group(1), re.MULTILINE)
+        self.assertIsNotNone(branches, 'develop pushes must trigger deployment')
+        self.assertIsNotNone(tags, 'site-* remains an explicit release trigger')
+        self.assertEqual(ast.literal_eval(branches.group(1)), ['develop'])
+        self.assertEqual(ast.literal_eval(tags.group(1)), ['site-*'])
+        self.assertRegex(push.group(1), r'(?m)^    paths:$')
+        paths = re.findall(r"^      - ['\"]([^'\"]+)['\"]$", push.group(1), re.MULTILINE)
+        self.assertEqual(set(paths), {'website/**', 'deploy/**',
+                                     '.github/workflows/deploy-website.yml',
+                                     'tests/test_site_deploy.py'})
+        for changed in ('website/index.html', 'website/assets/camera.png',
+                        'deploy/publish_site.py', '.github/workflows/deploy-website.yml',
+                        'tests/test_site_deploy.py'):
+            with self.subTest(site_change=changed):
+                self.assertTrue(any(fnmatchcase(changed, pattern) for pattern in paths))
+        for changed in ('lib/main.dart', 'pubspec.yaml', 'android/app/build.gradle',
+                        'docs/releases/v1.2.0.md'):
+            with self.subTest(app_change=changed):
+                self.assertFalse(any(fnmatchcase(changed, pattern) for pattern in paths))
+        self.assertIn("if: github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/tags/site-')", source)
 
     def test_deploy_and_rollback(self):
         site = self.root / 'site'

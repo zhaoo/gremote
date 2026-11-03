@@ -8,7 +8,15 @@
 
 服务器安装：root 持有 `/usr/local/lib/gremote-deploy/publish_site.py` 与 `receive_ssh.py`，部署密钥仅绑定 `restrict,command="/usr/bin/python3 /usr/local/lib/gremote-deploy/receive_ssh.py"`。拒绝 shell、转发及任意命令。不得复用 M10V 发布密钥。
 
-GitHub 手动触发 `Deploy GRemote website`，选择 develop。需要 Secret `GREMOTE_DEPLOY_SSH_KEY`、变量 `GREMOTE_DEPLOY_HOST` 与 `GREMOTE_DEPLOY_KNOWN_HOSTS`。部署成功须同时看到本次 SHA 的 DEPLOY_OK 和公网 HTTPS version.json 一致。工作流尚不在默认分支时，在 develop 提交上创建并推送 `site-*` 标签触发发布；普通 develop 推送不发布，不修改默认分支。
+`Deploy GRemote website` 支持以下入口：
+
+- 向 `develop` 推送，并且变更包含 `website/**`、`deploy/**`、`.github/workflows/deploy-website.yml` 或 `tests/test_site_deploy.py` 时，自动测试并发布对应提交。
+- 推送 `site-*` 标签，保留显式发布入口。GitHub 的路径筛选不限制标签推送。
+- 手动触发 workflow，选择 `develop`；其他普通分支由 job 条件拒绝。
+
+只修改 App 源码、APK 版本或 App 发布说明的 `develop` 推送不触发官网部署。混合提交只要包含上述官网路径，就会部署该提交中的官网。
+
+需要 Secret `GREMOTE_DEPLOY_SSH_KEY`、变量 `GREMOTE_DEPLOY_HOST` 与 `GREMOTE_DEPLOY_KNOWN_HOSTS`。继续使用现有受限 SSH 入口与独立密钥，无需更换密钥。部署成功须同时看到本次 SHA 的 `DEPLOY_OK`、Actions 终态成功，以及公网 HTTPS `version.json` 的提交一致。并发发布串行执行，不取消正在发布的版本。
 
 归档仅包含以下普通文件，不含目录项或版本文件（version.json 由服务器生成）：
 
@@ -32,3 +40,11 @@ Nginx 初始配置在 nginx.conf；正式部署后单独配置 ACME、TLS 与续
 - 专用密钥已安装；任意命令测试被受限入口拒绝。
 - 实测回滚至前版 `5a82fc827a1dfde7980d16778ad490ccc8980b52`，再恢复当前版本。
 - 用户完成域名加白后，正式 HTTPS 页面浏览器验收通过：1280px 桌面与 360px 手机均无横向溢出，图片、手机菜单、锚点及说明展开正常。
+
+
+2026-11-04：批准的官网视觉稿与 Android v1.2.0 下载入口已发布，提交 `d5afa3f219125b7d997581d1a391ecc2a9499f6d`。
+
+- [Actions 41669541915](https://github.com/zhaoo/gremote/actions/runs/41669541915) 终态成功；公网 [version.json](https://gremote.izhaoo.com/version.json) 精确返回上述 SHA。
+- 实际公网浏览器检查覆盖 1440px 桌面、390px 手机与 320px 窄屏，无横向溢出或坏图；手机菜单、M10V 互链、功能页签与发布记录正常。
+- v1.2.0 APK 下载实际返回 HTTP 200，文件大小 29,011,014 字节。网页检查不代表 APK 或相机真机验收。
+- 上述成功记录发生在自动 `develop` 触发规则接入前；新规则需通过后续符合路径条件的 `develop` 推送验证 Actions 终态与公网 SHA。
