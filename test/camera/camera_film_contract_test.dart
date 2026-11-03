@@ -72,6 +72,29 @@ Map<String, dynamic> cameraCapabilitiesFixture() => {
       'readOnlyParameters': cameraContract['readOnlyParameters']
     };
 void main() {
+  test('latest C41 camera recipes use the camera contract bound', () {
+    expect(cameraContract['maximumFilmId'], 326);
+    for (var id = 322; id <= 326; id++) {
+      final recipe = CameraFilmRecipe.fromJson({
+        'schemaVersion': 1,
+        'filmId': id,
+        'catalogHash': cameraCatalogHash,
+        'rendererHash': cameraRendererHash,
+        'parameters': {'grain': 1},
+        'name': 'C41'
+      });
+      expect(recipe.filmId, id);
+    }
+    expect(
+        () => CameraFilmRecipe.fromJson({
+              'schemaVersion': 1,
+              'filmId': 327,
+              'catalogHash': cameraCatalogHash,
+              'rendererHash': cameraRendererHash,
+              'parameters': <String, int>{}
+            }),
+        throwsFormatException);
+  });
   late CameraFilmCatalog camera;
   late FilmCatalog legacy;
   setUp(() {

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "rendererHash": "80a4d357be06ff0e9510a20bef1035dc3e848ec585bd5d5cdee466c3980506a4",
+  "rendererHash": "7595208a0cf061d661fd90ab0b8233fd0cf5d5090a2209dff38c9c47a7f21995",
   "entries": [
     {
       "id": 33,
@@ -1537,6 +1537,351 @@
       "name": "NC500",
       "group": "C41",
       "icon": "assets/films/camera-icons/313.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 322,
+      "name": "Harman Phoenix 200",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/322.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 323,
+      "name": "Kodak ColorPlus 200",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/323.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 324,
+      "name": "Fujifilm Natura 1600",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/324.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 325,
+      "name": "Lomo Redscale XR",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/325.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 326,
+      "name": "Agfa Vista 200",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/326.png",
       "parameters": {
         "grain": {
           "min": 0,
@@ -3504,5 +3849,5 @@
       "approximation": true
     }
   ],
-  "hash": "653acf3c1b04db0ea2dd10114a1306b78bb4b584534945be8f9de9da25ebab4a"
+  "hash": "5d3ec9b649a410b0ec988d09d7107872ce8fa67520a9502fc6ef840318d8f9fb"
 }

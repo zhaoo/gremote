@@ -49,7 +49,8 @@ class CameraFilmRecipe implements FilmRecipe {
     need(json['catalogHash'] == cameraCatalogHash &&
         json['rendererHash'] == cameraRendererHash);
     final id = json['filmId'];
-    need(id is int && id >= 0 && id <= 321);
+    need(
+        id is int && id >= 0 && id <= (cameraContract['maximumFilmId'] as int));
     final custom = json['customHash'];
     need(custom == null ||
         custom is String && RegExp(r'^[a-f0-9]{64}$').hasMatch(custom));

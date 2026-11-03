@@ -94,7 +94,11 @@ finally:
  Server.tearDownClass()
 """
         ],
-        workingDirectory: root);
+        workingDirectory: root,
+        environment: {
+          'M10V_TEST_CATALOG_HASH': cameraCatalogHash,
+          'M10V_TEST_RENDERER_HASH': cameraRendererHash,
+        });
     final diagnostics = StringBuffer();
     wrapper.stderr.transform(utf8.decoder).listen(diagnostics.write);
     _Loopback? wire;
@@ -133,7 +137,7 @@ finally:
       try {
         await sync.prepareLoad(
             slot: 9,
-            recipe: catalog.recipe(321, parameters: {'grain': 2}),
+            recipe: catalog.recipe(326, parameters: {'grain': 2}),
             activate: true);
         expect(sync.state.readOnly, false);
         await sync.confirm();
@@ -141,7 +145,7 @@ finally:
             reason:
                 '${sync.state.message} ${wire.responses.where((r) => r.contains('operations')).join('\n')}');
         final loaded = await client.state();
-        expect(loaded.slots[5]['filmId'], 321);
+        expect(loaded.slots[5]['filmId'], 326);
         expect(loaded.slots[5]['parameters'], containsPair('grain', 2));
         expect(loaded.activeSlot, 5);
         expect(loaded.wire['journalSequence'],
@@ -151,7 +155,7 @@ finally:
         expect(jsonDecode(wire.operationBodies.last)['patch'], isEmpty);
         await sync.prepareLoad(
             slot: 0,
-            recipe: catalog.recipe(321, parameters: {'grain': 3}),
+            recipe: catalog.recipe(326, parameters: {'grain': 3}),
             activate: false);
         expect(sync.preparedSlot, 5);
         await sync.confirm();
@@ -159,7 +163,7 @@ finally:
             reason:
                 '${sync.state.message} ${wire.responses.where((r) => r.contains('operations')).join('\n')}');
         final revised = await client.state();
-        expect(revised.slots.where((s) => s['filmId'] == 321).length, 1);
+        expect(revised.slots.where((s) => s['filmId'] == 326).length, 1);
         expect(revised.slots[5]['parameters'], containsPair('grain', 3));
         expect(revised.slots.take(5).toList(), before.slots.take(5).toList());
         for (final body in wire.operationBodies) {

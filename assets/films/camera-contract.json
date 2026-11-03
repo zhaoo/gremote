@@ -169,7 +169,7 @@
     "bytes": 184,
     "crcOffset": 180
   },
-  "maximumFilmId": 321,
+  "maximumFilmId": 326,
   "readOnlyParameters": [
     "grainSize",
     "leakGain",

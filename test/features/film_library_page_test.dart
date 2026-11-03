@@ -13,7 +13,7 @@ import 'package:gremote/features/film_workbench/workbench_providers.dart';
 import 'package:gremote/film/catalog/official_film_library.dart';
 
 void main() {
-  for (final scenario in [(false, 33), (true, 33), (true, 326)]) {
+  for (final scenario in [(false, 33), (true, 33), (true, 326), (true, 327)]) {
     final (compatible, id) = scenario;
     testWidgets(
         'official detail install gate respects renderer compatibility $compatible, film $id',
@@ -48,7 +48,7 @@ void main() {
           tester
               .widget<FilmLibraryTile>(find.byType(FilmLibraryTile))
               .available,
-          compatible && id == 33);
+          compatible && (id == 33 || id == 326));
       await tester.tap(find.text('800T'));
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(find.text('装入相机'), 200,
@@ -56,7 +56,7 @@ void main() {
       await tester.pumpAndSettle();
       final button = tester
           .widget<FilledButton>(find.widgetWithText(FilledButton, '装入相机'));
-      expect(button.onPressed != null, compatible && id == 33);
+      expect(button.onPressed != null, compatible && (id == 33 || id == 326));
       if (!compatible) {
         expect(find.text('胶卷版本与当前机身不匹配'), findsWidgets);
       }
