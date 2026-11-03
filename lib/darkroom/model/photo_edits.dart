@@ -257,14 +257,20 @@ class ToneCurve {
 
 @immutable
 class PhotoEdits {
-  const PhotoEdits()
-      : _values = const {},
+  const PhotoEdits({this.processVersion = 2})
+      : assert(processVersion == 1 || processVersion == 2),
+        _values = const {},
         crop = const CropEdit(),
         seed = 7331,
         curves = const [ToneCurve(), ToneCurve(), ToneCurve(), ToneCurve()];
-  const PhotoEdits._(this._values, this.crop, this.seed, this.curves);
+  const PhotoEdits._(
+      this._values, this.crop, this.seed, this.curves, this.processVersion);
   factory PhotoEdits.fromJson(Object? json) {
     final j = json is Map ? json : const {};
+    final version = j['processVersion'] ?? 1;
+    if (version is! int || (version != 1 && version != 2)) {
+      throw const FormatException('不支持的编辑版本');
+    }
     final v = j['values'] is Map ? j['values'] as Map : const {};
     final c = j['curves'] is List ? j['curves'] as List : const [];
     return PhotoEdits._(
@@ -277,27 +283,46 @@ class PhotoEdits {
         List.unmodifiable(List.generate(
             4,
             (i) =>
-                i < c.length ? ToneCurve.fromJson(c[i]) : const ToneCurve())));
+                i < c.length ? ToneCurve.fromJson(c[i]) : const ToneCurve())),
+        version);
   }
+  final int processVersion;
   final Map<PhotoAdjustment, double> _values;
   final CropEdit crop;
   final int seed;
   final List<ToneCurve> curves;
   double value(PhotoAdjustment a) => _values[a] ?? a.initial;
   PhotoEdits withValue(PhotoAdjustment a, double v) => PhotoEdits._(
-      Map.unmodifiable({..._values, a: a.normalized(v)}), crop, seed, curves);
-  PhotoEdits copyWith({CropEdit? crop, int? seed, List<ToneCurve>? curves}) =>
-      PhotoEdits._(
-          _values,
-          crop == null ? this.crop : CropEdit.fromJson(crop.toJson()),
-          (seed ?? this.seed).clamp(1, 16777215),
-          curves == null
-              ? this.curves
-              : List.unmodifiable(List.generate(4,
-                  (i) => i < curves.length ? curves[i] : const ToneCurve())));
+      Map.unmodifiable({..._values, a: a.normalized(v)}),
+      crop,
+      seed,
+      curves,
+      processVersion);
+  PhotoEdits copyWith(
+      {CropEdit? crop,
+      int? seed,
+      List<ToneCurve>? curves,
+      int? processVersion}) {
+    final version = processVersion ?? this.processVersion;
+    if (version != 1 && version != 2) {
+      throw ArgumentError.value(version, 'processVersion');
+    }
+    return PhotoEdits._(
+      _values,
+      crop == null ? this.crop : CropEdit.fromJson(crop.toJson()),
+      (seed ?? this.seed).clamp(1, 16777215),
+      curves == null
+          ? this.curves
+          : List.unmodifiable(List.generate(
+              4, (i) => i < curves.length ? curves[i] : const ToneCurve())),
+      version,
+    );
+  }
+
   PhotoEdits withCurve(int channel, ToneCurve curve) => copyWith(
       curves: [for (var i = 0; i < 4; i++) i == channel ? curve : curves[i]]);
   Map<String, Object?> toJson() => {
+        'processVersion': processVersion,
         'values': {for (final a in PhotoAdjustment.values) a.name: value(a)},
         'crop': crop.toJson(),
         'seed': seed,
@@ -305,7 +330,7 @@ class PhotoEdits {
       };
   Float32List get nativeParameters {
     final p = Float32List(1062);
-    p[0] = 1;
+    p[0] = processVersion.toDouble();
     for (final a in PhotoAdjustment.values) {
       p[a.indexInNative] = value(a);
     }
@@ -329,11 +354,16 @@ class PhotoEdits {
   @override
   bool operator ==(Object other) =>
       other is PhotoEdits &&
+      processVersion == other.processVersion &&
       crop == other.crop &&
       seed == other.seed &&
       const ListEquality<ToneCurve>().equals(curves, other.curves) &&
       PhotoAdjustment.values.every((a) => value(a) == other.value(a));
   @override
-  int get hashCode => Object.hash(crop, seed, Object.hashAll(curves),
+  int get hashCode => Object.hash(
+      processVersion,
+      crop,
+      seed,
+      Object.hashAll(curves),
       Object.hashAll(PhotoAdjustment.values.map(value)));
 }

@@ -5,7 +5,7 @@ import 'package:gremote/darkroom/model/photo_edits.dart';
 void main() {
   test('old recipe restores a neutral editable original', () {
     final recipe = ExportRecipe.fromJson(const {'frame': 'none'});
-    expect(recipe.edits, const PhotoEdits());
+    expect(recipe.edits, const PhotoEdits(processVersion: 1));
     expect(recipe.edits.crop.outputSize(6000, 4000), (6000, 4000));
     final p = recipe.edits.nativeParameters;
     expect(p.length, 1062);
@@ -17,6 +17,28 @@ void main() {
       expect(p[38 + channel * 256], 0);
       expect(p[38 + channel * 256 + 255], 1);
     }
+  });
+
+  test(
+      'new edits use V2 while old documents and presets keep V1 interpretation',
+      () {
+    const fresh = PhotoEdits();
+    expect(fresh.processVersion, 2);
+    expect(fresh.nativeParameters[0], 2);
+    final legacy = PhotoEdits.fromJson(const {
+      'values': {'exposure': 1}
+    });
+    expect(legacy.processVersion, 1);
+    expect(legacy.nativeParameters[0], 1);
+    expect(legacy.withValue(PhotoAdjustment.contrast, .2).processVersion, 1);
+    expect(legacy.copyWith(seed: 42).processVersion, 1);
+    final upgraded = legacy.copyWith(processVersion: 2);
+    expect(upgraded, isNot(legacy));
+    expect(upgraded.value(PhotoAdjustment.exposure), 1);
+    expect(PhotoEdits.fromJson(upgraded.toJson()), upgraded);
+    expect(ExportRecipe.fromJson(const {}).edits.processVersion, 1);
+    expect(() => PhotoEdits.fromJson(const {'processVersion': 3}),
+        throwsFormatException);
   });
 
   test('all edits survive save and cannot retain invalid numeric values', () {

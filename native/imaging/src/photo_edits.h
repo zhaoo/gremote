@@ -11,7 +11,7 @@ struct PhotoEdits {
   PhotoEdits();
 };
 // Null/count zero is the legacy identity recipe. All other inputs are strict
-// v1.
+// v1/v2; unknown future versions are rejected.
 int ParsePhotoEdits(const float *parameters, int count, PhotoEdits *out);
 // Source is already EXIF-oriented. Both C preview and JPEG export use this
 // core.

@@ -64,7 +64,8 @@ set(GREMOTE_CORE_SOURCES
   src/generated_jpeg.cpp
   src/frame_compositor.cpp
   src/api.cpp
-  src/photo_edits.cpp)
+  src/photo_edits.cpp
+  src/tone_v2.cpp)
 list(APPEND GREMOTE_CORE_SOURCES
   src/m10v_preview.cpp
   vendor/m10v/m10v_library.c
@@ -108,7 +109,8 @@ if(NOT ANDROID AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
     tests/orientation_resize_test.cpp
     tests/jpeg_io_test.cpp
     tests/compositor_api_test.cpp
-    tests/photo_edits_test.cpp)
+    tests/photo_edits_test.cpp
+    tests/tone_v2_test.cpp)
   target_sources(gremote_imaging_tests PRIVATE tests/m10v_preview_test.cpp)
   target_link_libraries(gremote_imaging_tests PRIVATE gremote_core)
   add_test(NAME gremote_imaging_tests COMMAND gremote_imaging_tests)

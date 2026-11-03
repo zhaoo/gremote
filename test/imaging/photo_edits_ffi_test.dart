@@ -130,12 +130,27 @@ void main() {
     expect(error / (36 * 30 * 3), lessThan(5));
   });
 
+  test('V2 wire format uses linear-light EV and preserves alpha', () async {
+    final source = PreviewImage(
+        width: 1, height: 1, rgba: Uint8List.fromList([128, 128, 128, 173]));
+    final edited = await engine.renderPhoto(source,
+        adjustments: neutralEdits()
+          ..[0] = 2
+          ..[1] = 1,
+        width: 1,
+        height: 1);
+    expect(edited.rgba[0], closeTo(176, 1));
+    expect(edited.rgba[1], edited.rgba[0]);
+    expect(edited.rgba[2], edited.rgba[0]);
+    expect(edited.rgba[3], 173);
+  });
+
   test('native failures leave later renders usable', () async {
     final source = PreviewImage(
         width: 1, height: 1, rgba: Uint8List.fromList([64, 80, 96, 255]));
     await expectLater(
         engine.renderPhoto(source,
-            adjustments: neutralEdits()..[0] = 2, width: 1, height: 1),
+            adjustments: neutralEdits()..[0] = 3, width: 1, height: 1),
         invalidArgument);
     await expectLater(
         engine.renderPhoto(source,

@@ -9,6 +9,7 @@
 #include "gremote_imaging.h"
 #include "orientation.h"
 #include "resize.h"
+#include "tone_v2.h"
 
 namespace gremote {
 namespace {
@@ -290,7 +291,7 @@ int ParsePhotoEdits(const float *parameters, int count, PhotoEdits *out) {
     if (!std::isfinite(parameters[i]))
       return GREMOTE_INVALID_ARGUMENT;
   const auto *p = parameters;
-  if (p[0] != 1 || p[1] < -3 || p[1] > 3)
+  if ((p[0] != 1 && p[0] != 2) || p[1] < -3 || p[1] > 3)
     return GREMOTE_INVALID_ARGUMENT;
   for (int i = 2; i <= 10; ++i)
     if (p[i] < -1 || p[i] > 1)
@@ -340,7 +341,17 @@ int RenderPhoto(const Image &source, const PhotoEdits &edits,
   photo = ResizeArea(photo, width, height);
   if (Cancelled(cancel))
     return GREMOTE_CANCELLED;
-  Basic(&photo, edits);
+  if (edits.values[0] == 2) {
+    const auto tone = ToneV2::Build(edits);
+    if (tone.active()) {
+      for (size_t i=0; i<photo.pixels.size(); i+=photo.channels) {
+        const auto rgb = tone.Apply({photo.pixels[i]/255.f, photo.pixels[i+1]/255.f, photo.pixels[i+2]/255.f});
+        for(int c=0; c<3; ++c) photo.pixels[i+c] = Byte(rgb[c]);
+      }
+    }
+  } else {
+    Basic(&photo, edits);
+  }
   if (lut)
     ApplyLut(photo.pixels.data(), photo.width, photo.height, photo.Stride(),
              photo.channels, *lut, lut_strength);

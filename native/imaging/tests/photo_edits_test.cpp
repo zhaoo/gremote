@@ -423,7 +423,7 @@ TEST(PhotoEditsRejectsAllMalformedRangesAndBufferDimensions) {
     p[index] = std::numeric_limits<float>::infinity();
     check(p);
   }
-  for (auto entry : std::vector<std::pair<int, float>>{{0, 2},
+  for (auto entry : std::vector<std::pair<int, float>>{{0, 3},
                                                        {1, -3.1f},
                                                        {1, 3.1f},
                                                        {2, 1.1f},
