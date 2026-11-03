@@ -56,3 +56,9 @@ App既有CompanionClient已串行并对busy以250ms间隔最多重读3次，基�
 最终验证：Flutter完整测试580通过、3项既有条件跳过；analyze无问题；arm64 Debug构建成功。未知ID卡片灰态回归先RED后GREEN，独立审查的Minor已修复。真实官网同步和缓存回读成功，手机App同步尚待USB恢复后安装验证。
 
 v14候选：dist/gremote-settings-sync-1.2.0-dev+14-arm64-debug.apk。SHA256：0187f78708a80c9e4fea5942b5cbf8aba82757267caceadfbc3273e6c2f3134f。最后ADB设备列表为空；v14未安装，手机仍以上一次确认的v13为准。
+
+## 后续设备结果（2026-11-03）
+
+v14经adb install -r返回Success，dumpsys确认versionCode14、versionName1.2.0-dev、lastUpdateTime=2026-11-03 01:23:51，App数据保留。重启后按同端点轮询，基础state200/fresh=true/busy=false/十槽；扩展capabilities在busy后bridgeUnavailable。用户只打开焦距页并退出后，再采集基础state与21项扩展均200、签名/构建一致、busy=false；焦距35/50、HDF0、border2。无POST、无机内参数写入。
+
+用户随后反馈“现在功能都没问题了，连接m10v的相机都能操控”，本次记录为用户实机验收反馈；没有把签名只读采集写成代理已做扩展写入/恢复测试。用户要求转回照片编辑，停止本轮相机联调；冷启动焦距缓存问题仍有源码和前后对照记录，未通过刷机修复。
