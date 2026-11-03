@@ -29,3 +29,30 @@ TEST(GpuPipelineSourceContextVersionAndResolutionRevokeAllCaches) {
   b=a;b.edits.values[29]=12;
   EXPECT_EQ(int(FirstDirty(a,b)),int(Stage::Texture));
 }
+
+#include "gpu/spatial_plan.h"
+TEST(GpuSpatialBudgetCountsAtlasPaddingAndRejectsOversizeBeforeAllocation) {
+  using namespace gremote::gpu;
+  const auto plan=SpatialPlan::Build(6000,4000,4096,256,3,320ull*1024*1024);
+  EXPECT_EQ(plan.page_width,2048);EXPECT_EQ(plan.columns,3);EXPECT_EQ(plan.rows,2);
+  EXPECT_EQ(plan.bytes,3ull*6*2048*2048*4);
+  bool rejected=false;
+  try{SpatialPlan::Build(20000,20000,4096,256,3,320ull*1024*1024);}catch(const std::exception&){rejected=true;}
+  EXPECT_TRUE(rejected);
+  rejected=false;
+  try{SpatialPlan::Build(6000,4000,4096,4,3,320ull*1024*1024);}catch(const std::exception&){rejected=true;}
+  EXPECT_TRUE(rejected);
+}
+TEST(GpuSpatialRadiusAndMaskCacheRespectSequentialHalationBloom) {
+  using namespace gremote::gpu;
+  PipelineInputs a;a.edits.values[17]=.4;a.edits.values[20]=.6;
+  auto b=a;b.edits.values[17]=.8;
+  auto dirty=DirtyMasks(a,b,false);
+  EXPECT_TRUE(!dirty.halo);EXPECT_TRUE(dirty.bloom);
+  b=a;b.edits.values[20]=.8;dirty=DirtyMasks(a,b,false);
+  EXPECT_TRUE(!dirty.halo);EXPECT_TRUE(!dirty.bloom);
+  b=a;b.edits.values[18]=.8;dirty=DirtyMasks(a,b,false);
+  EXPECT_TRUE(dirty.halo);EXPECT_TRUE(dirty.bloom);
+  dirty=DirtyMasks(a,a,true);EXPECT_TRUE(dirty.halo);EXPECT_TRUE(dirty.bloom);
+  EXPECT_EQ(GlowRadius(6000,4000,0),12);EXPECT_EQ(GlowRadius(6000,4000,1),372);
+}

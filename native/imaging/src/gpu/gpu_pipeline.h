@@ -1,5 +1,6 @@
 #pragma once
 #include "gpu_context.h"
+#include "gpu_effects.h"
 #include "pipeline_state.h"
 #include <array>
 #include <memory>
@@ -30,6 +31,7 @@ class ColorPipeline {
   void Lut(GLuint source,const PipelineInputs& inputs,const CubeLut& lut);
   void Curves(GLuint source,const PipelineInputs& inputs);
   Capabilities caps_;
+  std::unique_ptr<EffectsPipeline> effects_;
   std::optional<PipelineInputs> previous_;
   std::array<std::unique_ptr<Target>,4> targets_;
   std::array<GLuint,4> programs_{};

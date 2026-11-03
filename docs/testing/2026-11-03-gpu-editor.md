@@ -64,3 +64,9 @@
 - 必需的 RGBA16F 以及可用时优先的 RGBA32F 均通过实际运行时 FBO/线性采样/回读探测选择；编译成功不表示本轮已在某台设备探测通过。
 
 检查：5 个 fragment shader 通过 NDK glslc 离线语义检查（OpenGL SPIR-V 需要临时将 ESSL300 声明改为310，运行时源保持300）。2 个阶段缓存测试 RED→GREEN，native host 合计68通过；JVM49通过；Flutter603通过/3条件跳过，analyze无问题。原生库与包含颜色对照/非仿射 cube/域/alpha 的设备 harness 交叉编译通过，**设备 harness 未执行**，尚无实际 GPU 像素误差结果。
+
+## Task 4 source checkpoint — spatial and texture effects
+
+All effect controls now have Android shaders: signed vignette, deterministic two-scale grain, leak position/spread/hue, fade, monochrome, sequential halation and bloom. Masks use global coordinates in paged R32F arrays; three separable boxes use block-local128 prefix scans and compact group sums, never a two-dimensional radius kernel. Radius is normalized against the full output long edge. Gain-only changes retain the appropriate mask; curves invalidate downstream optics. V1 quantizes at its previous boundaries; V2 keeps float intermediates.
+
+Host tests cover padded storage limits and sequential mask dependencies. All seven GLSL fragments pass offline compilation; Android library and added effects device fixtures compile. The fixtures compare legacy pixels including narrow images, edge clamping, deterministic seeds, and cache invalidation, but **were not executed on a GPU**. FBO/driver compatibility, combined V2 real-photo quality and performance remain unverified. Full-image mask memory is checked before allocation; unsupported R32F FBOs fail explicitly.

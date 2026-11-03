@@ -6,12 +6,6 @@
 #include <algorithm>
 
 namespace gremote::gpu {
-namespace {
-bool PendingEffects(const PhotoEdits& edits) {
-  for(int i:{11,14,17,20,23,27,28})if(edits.values[i]!=0)return true;
-  return false;
-}
-}
 GpuSession::GpuSession(Image source,std::shared_ptr<GenerationGate> gate)
     :source_(std::move(source)),gate_(std::move(gate)) {
   const auto& caps=context_.capabilities();
@@ -91,7 +85,6 @@ bool GpuSession::RenderColor(uint64_t generation,const PhotoEdits& edits,const s
   PhotoEdits checked;
   if(ParsePhotoEdits(edits.values.data(),kPhotoEditCount,&checked)!=GREMOTE_OK||width<=0||height<=0||
       !std::isfinite(strength)||strength<0||strength>1)throw GpuError("gpuInvalidDescriptor");
-  if(PendingEffects(edits))throw GpuError("gpuPipelinePending");
   context_.MakeCurrent();
   PipelineInputs inputs;
   inputs.source_serial=1;inputs.context_serial=1;inputs.lut_serial=lut?lut->serial:0;inputs.strength=strength;inputs.edits=edits;

@@ -19,6 +19,7 @@ ColorPipeline::ColorPipeline(const Capabilities& caps):caps_(caps){
     programs_[1]=CompileProgram(shaders::tone);
     programs_[2]=CompileProgram(shaders::lut);
     programs_[3]=CompileProgram(shaders::curves);
+    effects_=std::make_unique<EffectsPipeline>(caps);
     glGenVertexArrays(1,&vao_);
   }catch(...){for(auto p:programs_)if(p)glDeleteProgram(p);throw;}
 }
@@ -30,6 +31,7 @@ ColorPipeline::~ColorPipeline(){
 }
 void ColorPipeline::Abandon(){
   for(auto& target:targets_)if(target)target->fbo=target->texture=0;
+  if(effects_)effects_->Abandon();
   programs_.fill(0);vao_=lut_texture_=curve_texture_=0;previous_.reset();
 }
 void ColorPipeline::TargetFor(int stage,int width,int height){
@@ -113,7 +115,9 @@ GLuint ColorPipeline::Render(GLuint source,const PipelineInputs& inputs,const Cu
     if(first<=1){if(ActiveTone(inputs.edits))Tone(outputs_[0],inputs);else{targets_[1].reset();outputs_[1]=outputs_[0];}}
     if(first<=2){if(lut&&inputs.strength>0)Lut(outputs_[1],inputs,*lut);else{targets_[2].reset();outputs_[2]=outputs_[1];}}
     if(first<=3){if(ActiveCurves(inputs.edits))Curves(outputs_[2],inputs);else{targets_[3].reset();outputs_[3]=outputs_[2];}}
-    previous_=inputs;return outputs_[3];
+    const auto final=effects_->Render(outputs_[3],inputs,first<=3);
+    const auto& effect_counts=effects_->counts();counts_[4]=effect_counts[0]+effect_counts[1];counts_[5]=effect_counts[2];
+    previous_=inputs;return final;
   }catch(...){previous_.reset();throw;}
 }
 }  // namespace gremote::gpu
