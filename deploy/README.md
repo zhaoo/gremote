@@ -13,7 +13,7 @@ GitHub 手动触发 `Deploy GRemote website`，选择 develop。需要 Secret `G
 归档仅包含以下普通文件，不含目录项或版本文件（version.json 由服务器生成）：
 
 ```sh
-COPYFILE_DISABLE=1 tar -czf /tmp/gremote-site.tar.gz -C website index.html style.css app.js releases.json assets/street.jpg assets/camera.png assets/editorial.ttf assets/icon.png assets/OFL.txt
+COPYFILE_DISABLE=1 tar -czf /tmp/gremote-site.tar.gz -C website index.html style.css app.js releases.json assets/street.jpg assets/camera.png assets/editorial.ttf assets/icon.png assets/OFL.txt assets/brand.png assets/editor-sample.jpg assets/film-33.png assets/film-66.png assets/film-70.png assets/film-71.png
 ```
 
 回滚：使用专用 SSH 密钥执行固定命令 `rollback`，或管理员 `sudo python3 /usr/local/lib/gremote-deploy/publish_site.py --rollback`。回查 version.json 并与 previous 对照。不要删除当前或 previous 引用的版本目录。

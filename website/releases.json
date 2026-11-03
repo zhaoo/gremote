@@ -1,5 +1,23 @@
 [
   {
+    "version": "1.2.0",
+    "build": 19,
+    "date": "2026-11-03",
+    "platform": "Android · 正式签名",
+    "title": "随身暗房与相机工作区。",
+    "changes": [
+      "更新首页、相册、遥控拍摄与相机工作区，支持深色、浅色与跟随系统外观。",
+      "完善 LUT、曲线、裁切、颗粒、漏光与边框；Android 接入 GPU 预览和分块原尺寸导出。",
+      "同步官网胶卷资料与可移植手机色彩，可选联动兼容 M10V 固件的装卷与扩展设置。"
+    ],
+    "evidence": "版本 1.2.0+19。正式构建、签名及包信息检查通过；正式 APK 尚未安装验收，GPU 画质、性能及驱动兼容性仍待设备验证。沿用 v1.0.1 正式签名；v1.0.0 与 debug 版不能直接覆盖。",
+    "url": "https://github.com/zhaoo/gremote/releases/tag/v1.2.0",
+    "download": "https://github.com/zhaoo/gremote/releases/download/v1.2.0/gremote-1.2.0-android-arm64.apk",
+    "checksums": "https://github.com/zhaoo/gremote/releases/download/v1.2.0/SHA256SUMS.txt",
+    "sha256": "140bbaf9d6ac4b0b6a91741e80c1965c7e22fccdd7532e2bff5ebcc8e9c7e8fd",
+    "bytes": 29011014
+  },
+  {
     "version": "1.0.1",
     "date": "2026-10-19",
     "platform": "Android · 正式签名",

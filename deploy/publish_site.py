@@ -16,6 +16,10 @@ import tempfile
 REQUIRED = {'index.html', 'style.css', 'app.js', 'releases.json',
             'assets/street.jpg', 'assets/camera.png', 'assets/editorial.ttf',
             'assets/icon.png', 'assets/OFL.txt'}
+# Approved editorial assets; older site archives remain deployable for rollback.
+OPTIONAL = {'assets/brand.png', 'assets/editor-sample.jpg', 'assets/film-33.png',
+            'assets/film-66.png', 'assets/film-70.png', 'assets/film-71.png'}
+ALLOWED = REQUIRED | OPTIONAL
 MAX_BYTES = 24 * 1024 * 1024
 
 @contextmanager
@@ -72,12 +76,12 @@ def publish(root, archive, commit):
             for member in members:
                 path = PurePosixPath(member.name)
                 if (path.is_absolute() or '..' in path.parts or str(path) != member.name
-                        or not member.isfile() or member.name not in REQUIRED
+                        or not member.isfile() or member.name not in ALLOWED
                         or member.name in names or member.size < 1):
                     raise ValueError('Unsafe or unexpected archive member: ' + member.name)
                 names.add(member.name)
                 size += member.size
-            if names != REQUIRED or size > MAX_BYTES:
+            if not REQUIRED.issubset(names) or size > MAX_BYTES:
                 raise ValueError('Incomplete or oversized site archive')
             with tempfile.TemporaryDirectory(prefix='.incoming-', dir=releases) as incoming:
                 staging = Path(incoming)

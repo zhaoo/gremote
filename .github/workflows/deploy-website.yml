@@ -33,7 +33,7 @@ jobs:
           trap 'rm -f "$key" "$hosts"' EXIT
           printf '%s\n' "$DEPLOY_KEY" > "$key"
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$hosts"
-          tar -czf "$RUNNER_TEMP/site.tar.gz" -C website index.html style.css app.js releases.json assets/street.jpg assets/camera.png assets/editorial.ttf assets/icon.png assets/OFL.txt
+          tar -czf "$RUNNER_TEMP/site.tar.gz" -C website index.html style.css app.js releases.json assets/street.jpg assets/camera.png assets/editorial.ttf assets/icon.png assets/OFL.txt assets/brand.png assets/editor-sample.jpg assets/film-33.png assets/film-66.png assets/film-70.png assets/film-71.png
           ssh -i "$key" -T -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$hosts" -o ConnectTimeout=15 "root@$DEPLOY_HOST" "deploy $GITHUB_SHA" < "$RUNNER_TEMP/site.tar.gz" | tee "$RUNNER_TEMP/deploy.log"
           grep -F "DEPLOY_OK commit=$GITHUB_SHA " "$RUNNER_TEMP/deploy.log"
       - name: Verify public HTTPS version
