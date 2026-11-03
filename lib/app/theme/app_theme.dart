@@ -43,6 +43,8 @@ abstract final class GRemoteTheme {
     );
 
     return base.copyWith(
+      // Decorative tooltips do not produce haptics; deliberate actions use AppHaptics.
+      tooltipTheme: const TooltipThemeData(enableFeedback: false),
       appBarTheme: AppBarTheme(
         backgroundColor: palette.background,
         foregroundColor: palette.text,

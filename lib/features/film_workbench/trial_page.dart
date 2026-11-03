@@ -349,7 +349,7 @@ class _TrialPageState extends ConsumerState<TrialPage>
             if (_processed)
               Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: SwitchListTile.adaptive(
+                  child: SwitchListTile(
                       contentPadding:
                           const EdgeInsets.symmetric(horizontal: 12),
                       title: const Text('重新试色', style: TextStyle(fontSize: 13)),

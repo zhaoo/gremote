@@ -276,7 +276,6 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     final items = _controller.selectedItems;
     final recipe = await showModalBottomSheet<ExportRecipe>(
       context: context,
-      backgroundColor: context.palette.surface,
       builder: (_) => RecipeSheet(count: items.length),
     );
     if (recipe == null || !mounted) return;

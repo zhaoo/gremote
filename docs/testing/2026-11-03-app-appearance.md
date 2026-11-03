@@ -19,3 +19,9 @@
 ## 待真机验收
 
 ADB 本轮尚无设备，未覆盖安装或声称实际手机外观已确认。iOS 元数据接入尚未做 Xcode 构建。GPU 修图仍按独立实施计划推进；这个外观 APK 不代表 GPU 后端或照片画质已验收。
+
+## 审查后结果
+
+独立审查发现 4 个 P2，均完成定向 RED→GREEN：读取失败时合并用户意图以保留未知字段；弹层背景交给动态主题；Tooltip/系统控件触感门控（包含 Android/iOS 开关拖动）；浅色 RGB 通道前景/曲线颜色对比度。无 Critical、无 deferred minor。
+
+最终完整 Flutter：601 passed，3 conditional skips；analyze 无问题；Android arm64 debug 构建成功，1.2.0-dev+15。APK：dist/gremote-appearance-1.2.0-dev+15-arm64-debug.apk。真机安装仍待 ADB 连接。GPU 图像处理不包含在此 APK 的完成声明中。

@@ -169,7 +169,6 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
       if (!mounted) return;
       final selected = await showModalBottomSheet<FilmRecipe>(
           context: context,
-          backgroundColor: context.palette.raised,
           sheetAnimationStyle: _filmSheetAnimation(context),
           builder: (context) => SafeArea(
               child: recipes.isEmpty
@@ -269,7 +268,6 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
       await showModalBottomSheet<void>(
           context: context,
           isScrollControlled: true,
-          backgroundColor: context.palette.raised,
           showDragHandle: true,
           sheetAnimationStyle: _filmSheetAnimation(context),
           builder: (context) => _LoadSheet(
@@ -288,7 +286,6 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
       PairingIdentity? identity) async {
     final action = await showModalBottomSheet<String>(
         context: context,
-        backgroundColor: context.palette.raised,
         showDragHandle: true,
         isScrollControlled: true,
         constraints:
@@ -542,7 +539,7 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
                               style: TextStyle(
                                   color: context.palette.muted, fontSize: 12))),
                   ]),
-                  SwitchListTile.adaptive(
+                  SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text('写入后使用',
                           style: TextStyle(

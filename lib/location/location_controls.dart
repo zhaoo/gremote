@@ -24,7 +24,7 @@ class _LocationControlsState extends ConsumerState<LocationControls> {
                 children: [
                   Text('位置记录', style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 10),
-                  SwitchListTile.adaptive(
+                  SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       title: const Text('仅联机拍摄时记录'),
                       subtitle: Text(state.error ??

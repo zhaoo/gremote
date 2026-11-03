@@ -83,7 +83,7 @@ class AppSettingsPage extends ConsumerWidget {
             const SizedBox(height: 38),
             const _GroupLabel('体验'),
             const SizedBox(height: 8),
-            SwitchListTile.adaptive(
+            SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('触感反馈', style: TextStyle(fontSize: 15)),
               value: state.preferences.haptics,

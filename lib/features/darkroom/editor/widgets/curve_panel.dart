@@ -34,6 +34,19 @@ class _CurvePanelState extends State<CurvePanel> {
     Color(0xff94d4a0),
     Color(0xff88aff2)
   ];
+  Color _channelColor(BuildContext context, int channel) {
+    if (channel == 0) return context.palette.text;
+    const light = [
+      Color(0xff222725),
+      Color(0xff9c4138),
+      Color(0xff437453),
+      Color(0xff456b91)
+    ];
+    return Theme.of(context).brightness == Brightness.light
+        ? light[channel]
+        : _colors[channel];
+  }
+
   ToneCurve get _curve => widget.edits.curves[_channel];
   @override
   void initState() {
@@ -171,15 +184,15 @@ class _CurvePanelState extends State<CurvePanel> {
                           selectAnimation: AnimationStyle(
                               duration:
                                   WorkspaceMotion.duration(context, 130))),
-                      selectedColor:
-                          i == 0 ? context.palette.accent : _colors[i],
+                      selectedColor: _channelColor(context, i),
                       backgroundColor: context.palette.raised,
                       labelStyle: TextStyle(
                           color: i == _channel
-                              ? (i == 0
-                                  ? context.palette.onAccent
-                                  : Colors.black)
-                              : (i == 0 ? context.palette.text : _colors[i]),
+                              ? (_channelColor(context, i).computeLuminance() >
+                                      .179
+                                  ? Colors.black
+                                  : Colors.white)
+                              : _channelColor(context, i),
                           fontSize: 12),
                       onSelected: (_) => setState(() {
                             _channel = i;
@@ -214,9 +227,7 @@ class _CurvePanelState extends State<CurvePanel> {
                         child: CustomPaint(
                             painter: _CurvePainter(
                                 _curve,
-                                _channel == 0
-                                    ? context.palette.text
-                                    : _colors[_channel],
+                                _channelColor(context, _channel),
                                 _selected,
                                 _histogram?[_channel],
                                 context.palette))));

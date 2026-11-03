@@ -587,7 +587,6 @@ class _ShootPageState extends ConsumerState<ShootPage> {
     if (!mounted) return;
     final program = await showModalBottomSheet<Program>(
       context: context,
-      backgroundColor: context.palette.surface,
       isScrollControlled: true,
       builder: (_) => ProgramSheet(
         kind: kind,
@@ -605,7 +604,6 @@ class _ShootPageState extends ConsumerState<ShootPage> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: context.palette.raised,
       sheetAnimationStyle: AnimationStyle(
           duration: WorkspaceMotion.duration(context, 250),
           reverseDuration: WorkspaceMotion.duration(context, 200)),
@@ -742,7 +740,6 @@ class _ShootPageState extends ConsumerState<ShootPage> {
   void _showTimerChoices(BuildContext settingsContext) {
     showModalBottomSheet<void>(
       context: settingsContext,
-      backgroundColor: context.palette.raised,
       sheetAnimationStyle: AnimationStyle(
           duration: WorkspaceMotion.duration(context, 250),
           reverseDuration: WorkspaceMotion.duration(context, 200)),

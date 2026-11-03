@@ -186,7 +186,6 @@ class _QuickStatus extends ConsumerWidget {
           onTap: () => showModalBottomSheet<void>(
               context: context,
               isScrollControlled: true,
-              backgroundColor: context.palette.surface,
               builder: (_) => const LocationControls())),
     ]);
   }

@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../app/theme/app_colors.dart';
+import '../../settings/preferences_controller.dart';
 import '../../app/widgets/workspace_motion.dart';
 import '../../camera/connection/connection_controller.dart';
 import '../../camera/gateway/ble_gateway.dart';
@@ -554,6 +555,8 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
           ? null
           : () => _selectionMode ? _toggle(files) : _showFileSheet(files),
       onLongPress: _downloading ? null : () => _toggle(files),
+      enableFeedback: ref
+          .watch(appPreferencesProvider.select((s) => s.preferences.haptics)),
       child: AnimatedContainer(
         duration: WorkspaceMotion.duration(context, 180),
         curve: Curves.easeOutCubic,
@@ -661,7 +664,6 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
   void _showFileSheet(List<CameraFile> files) {
     showModalBottomSheet<void>(
         context: context,
-        backgroundColor: context.palette.surface,
         builder: (sheetContext) => SafeArea(
                 child: Padding(
               padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),

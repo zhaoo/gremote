@@ -82,6 +82,34 @@ void main() {
         (await PreferencesRepository(db).load()).theme, ThemePreference.light);
   });
 
+  test('changing haptics after startup read failure preserves saved appearance',
+      () async {
+    await PreferencesRepository(db).save(
+        const AppPreferences(theme: ThemePreference.light, haptics: false));
+    final repository = _ReadFailsOnce(db);
+    final controller =
+        AppPreferencesController(repository, await repository.hydrate());
+    addTearDown(controller.dispose);
+    await controller.setHaptics(true);
+    expect((await repository.load()).theme, ThemePreference.light);
+    expect(controller.state.preferences.theme, ThemePreference.light);
+  });
+
+  test('pending theme survives failed save followed by another preference',
+      () async {
+    final controller = AppPreferencesController(
+        PreferencesRepository(db), const PreferencesState());
+    addTearDown(controller.dispose);
+    await db.execute(
+        "CREATE TRIGGER reject_settings BEFORE INSERT ON app_kv WHEN NEW.key LIKE 'settings.%' BEGIN SELECT RAISE(ABORT, 'disk unavailable'); END");
+    await controller.setTheme(ThemePreference.light);
+    await db.execute('DROP TRIGGER reject_settings');
+    await controller.setHaptics(false);
+    final saved = await PreferencesRepository(db).load();
+    expect(saved.theme, ThemePreference.light);
+    expect(saved.haptics, isFalse);
+  });
+
   test('failed transaction is visible, preserves unrelated keys and can retry',
       () async {
     await db.insert('app_kv', {'key': 'camera.pending', 'value': 'untouched'});
