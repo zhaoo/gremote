@@ -33,3 +33,11 @@
 - 初始 RED：Dart 无版本字段；native V2 解析失败、+1EV 得到 255 而非 176。
 - GREEN：64 native tests（ctest 汇总 1 executable），Dart 模型与 FFI 专项通过；完整 Flutter 603 passed / 3 conditional skips。
 - 待手机提供实际 GPU 信息、真实 GR JPEG、原尺寸导出与画质 A/B。当前 ADB 无设备，尚无 GPU PASS、帧率/延迟/内存或真机画质结论。
+
+## GPU 硬件预检准备
+
+`bash scripts/build_gpu_probe_android.sh` 已交叉编译 arm64 Android ELF。它只创建 EGL pbuffer、编译 ES3 shader，并实际向 RGBA16F 写入红色 2.0，再经采样/缩放读回 RGBA8；红色应约 128，若中间提前截断则约 64。探针不会读照片或调用相机接口。
+
+输出包含 ES 版本、GPU renderer、最大纹理/目标尺寸和半浮点绘制回读结果。编译成功不能代替执行成功；本轮 ADB 无设备，尚未运行。即便 adb-native-probe 通过，也要在后续 App 会话内再核对驱动、SurfaceProducer 和资源生命周期，不能把独立进程能力等同于 App 已完成 GPU 接入。
+
+同时已成功交叉编译包含 ToneV2 的 Android arm64 `gremote_imaging` 原生库。这不更新前述外观 APK，不代表 GPU session、shader 图、分块导出或新版 Studio 交互已完成。

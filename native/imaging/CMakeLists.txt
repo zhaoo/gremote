@@ -115,3 +115,11 @@ if(NOT ANDROID AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
   target_link_libraries(gremote_imaging_tests PRIVATE gremote_core)
   add_test(NAME gremote_imaging_tests COMMAND gremote_imaging_tests)
 endif()
+
+# Opt-in standalone diagnostic. Normal app builds still compile only the library.
+option(GREMOTE_BUILD_GPU_PROBE "Build synthetic Android GPU capability probe" OFF)
+if(ANDROID AND GREMOTE_BUILD_GPU_PROBE)
+  add_executable(gremote_gpu_probe tests/gpu_capabilities_probe.cpp)
+  target_compile_options(gremote_gpu_probe PRIVATE -Wall -Wextra -Werror)
+  target_link_libraries(gremote_gpu_probe PRIVATE EGL GLESv3)
+endif()
