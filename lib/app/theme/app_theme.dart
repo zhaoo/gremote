@@ -1,70 +1,89 @@
 import 'package:flutter/material.dart';
 
-import 'app_colors.dart';
+import 'app_palette.dart';
 import 'app_type.dart';
 
 abstract final class GRemoteTheme {
-  static ThemeData get dark {
-    const scheme = ColorScheme.dark(
-      primary: GRemoteColors.gold,
-      onPrimary: GRemoteColors.night,
-      secondaryContainer: GRemoteColors.gold,
-      onSecondaryContainer: GRemoteColors.night,
-      surface: GRemoteColors.navy,
-      onSurface: GRemoteColors.text,
-      outline: GRemoteColors.divider,
-      error: GRemoteColors.danger,
+  static ThemeData get dark => _build(AppPalette.dark, Brightness.dark);
+  static ThemeData get light => _build(AppPalette.light, Brightness.light);
+
+  static ThemeData _build(AppPalette palette, Brightness brightness) {
+    final scheme = ColorScheme(
+      brightness: brightness,
+      onError: Colors.white,
+      surfaceTint: Colors.transparent,
+      surfaceContainerLowest: palette.background,
+      surfaceContainerLow: palette.raised,
+      surfaceContainer: palette.raised,
+      surfaceContainerHigh: palette.raised,
+      surfaceContainerHighest: palette.divider,
+      primaryContainer: palette.raised,
+      onPrimaryContainer: palette.text,
+      onSurfaceVariant: palette.muted,
+      outlineVariant: palette.divider,
+      secondary: palette.accent,
+      onSecondary: palette.onAccent,
+      primary: palette.accent,
+      onPrimary: palette.onAccent,
+      secondaryContainer: palette.accent,
+      onSecondaryContainer: palette.onAccent,
+      surface: palette.surface,
+      onSurface: palette.text,
+      outline: palette.divider,
+      error: palette.danger,
     );
 
     final base = ThemeData(
-      brightness: Brightness.dark,
+      brightness: brightness,
       colorScheme: scheme,
-      scaffoldBackgroundColor: GRemoteColors.night,
+      scaffoldBackgroundColor: palette.background,
       useMaterial3: true,
+      extensions: [palette],
       splashFactory: InkRipple.splashFactory,
     );
 
     return base.copyWith(
-      appBarTheme: const AppBarTheme(
-        backgroundColor: GRemoteColors.night,
-        foregroundColor: GRemoteColors.text,
+      appBarTheme: AppBarTheme(
+        backgroundColor: palette.background,
+        foregroundColor: palette.text,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
         titleSpacing: 20,
-        titleTextStyle: TextStyle(fontSize: 26, fontWeight: FontWeight.w500),
+        titleTextStyle: TextStyle(
+            color: palette.text, fontSize: 26, fontWeight: FontWeight.w500),
       ),
-      bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: GRemoteColors.raised,
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: palette.raised,
         surfaceTintColor: Colors.transparent,
         showDragHandle: true,
-        shape: RoundedRectangleBorder(
+        shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
       ),
-      tabBarTheme: const TabBarTheme(
-        indicator: BoxDecoration(),
+      tabBarTheme: TabBarTheme(
+        indicator: const BoxDecoration(),
         dividerColor: Colors.transparent,
-        labelColor: GRemoteColors.text,
-        unselectedLabelColor: GRemoteColors.muted,
-        labelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+        labelColor: palette.text,
+        unselectedLabelColor: palette.muted,
+        labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
       ),
       textTheme: base.textTheme.copyWith(
         displaySmall: GRemoteType.display.copyWith(
-          color: GRemoteColors.text,
+          color: palette.text,
           fontSize: 36,
         ),
         headlineSmall: GRemoteType.display.copyWith(
-          color: GRemoteColors.text,
+          color: palette.text,
           fontSize: 28,
         ),
-        bodyLarge: GRemoteType.body.copyWith(color: GRemoteColors.text),
-        bodyMedium: GRemoteType.body.copyWith(color: GRemoteColors.muted),
+        bodyLarge: GRemoteType.body.copyWith(color: palette.text),
+        bodyMedium: GRemoteType.body.copyWith(color: palette.muted),
         labelLarge: GRemoteType.body.copyWith(fontWeight: FontWeight.w500),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: GRemoteColors.gold,
-          foregroundColor: GRemoteColors.night,
+          backgroundColor: palette.accent,
+          foregroundColor: palette.onAccent,
           minimumSize: const Size.fromHeight(46),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(6),
@@ -72,15 +91,15 @@ abstract final class GRemoteTheme {
           textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
         ),
       ),
-      cardTheme: const CardTheme(
-        color: GRemoteColors.navy,
+      cardTheme: CardTheme(
+        color: palette.surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(14)),
-          side: BorderSide(color: GRemoteColors.divider),
+          borderRadius: const BorderRadius.all(Radius.circular(14)),
+          side: BorderSide(color: palette.divider),
         ),
       ),
-      dividerTheme: const DividerThemeData(color: GRemoteColors.divider),
+      dividerTheme: DividerThemeData(color: palette.divider),
     );
   }
 }

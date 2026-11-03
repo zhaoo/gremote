@@ -23,10 +23,10 @@ class WorkspaceReveal extends StatelessWidget {
     final duration = WorkspaceMotion.duration(context, 200);
     if (duration == Duration.zero) return content;
     return AnimatedSize(
-        duration: duration,
-        curve: Curves.easeOutCubic,
-        alignment: Alignment.topCenter,
-        child: content,
-      );
+      duration: duration,
+      curve: Curves.easeOutCubic,
+      alignment: Alignment.topCenter,
+      child: content,
+    );
   }
 }

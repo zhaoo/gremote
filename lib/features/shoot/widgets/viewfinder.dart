@@ -143,10 +143,10 @@ class _ShootViewfinderState extends State<ShootViewfinder> {
                           }
                         : null,
                 child: image == null
-                    ? const Center(
+                    ? Center(
                         child: Text('连接相机后显示取景画面',
                             style: TextStyle(
-                                color: GRemoteColors.muted, fontSize: 12)))
+                                color: AppPalette.dark.muted, fontSize: 12)))
                     : RawImage(
                         image: image,
                         fit: BoxFit.contain,
@@ -168,7 +168,7 @@ class _ShootViewfinderState extends State<ShootViewfinder> {
                                           ? const Color(0x99FFFFFF)
                                           : widget.focusFailed
                                               ? Colors.red
-                                              : GRemoteColors.gold,
+                                              : AppPalette.dark.accent,
                                       width: 1.2))))),
                 ),
               if (!widget.connected)
@@ -177,8 +177,8 @@ class _ShootViewfinderState extends State<ShootViewfinder> {
                     bottom: 12,
                     child: TextButton(
                         onPressed: widget.onConnect,
-                        child: const Text('前往连接',
-                            style: TextStyle(color: GRemoteColors.gold)))),
+                        child: Text('前往连接',
+                            style: TextStyle(color: AppPalette.dark.accent)))),
               widget.overlay,
             ]));
       });

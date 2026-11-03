@@ -70,8 +70,8 @@ class FilmLibraryTile extends StatelessWidget {
                             fontSize: 12,
                             height: 1.35,
                             color: available
-                                ? GRemoteColors.text
-                                : GRemoteColors.muted)),
+                                ? context.palette.text
+                                : context.palette.muted)),
                   ]),
             )),
       );

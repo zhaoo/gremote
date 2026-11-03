@@ -122,9 +122,10 @@ class _RollDetailPageState extends ConsumerState<RollDetailPage> {
     final rolls = ref.watch(filmRollsProvider),
         items = ref.watch(rollItemsProvider(widget.rollId));
     return Scaffold(
-        backgroundColor: workbenchBackground,
+        backgroundColor: context.palette.background,
         appBar: AppBar(
-            title: const Text('数字胶卷'), backgroundColor: workbenchBackground),
+            title: const Text('数字胶卷'),
+            backgroundColor: context.palette.background),
         body: rolls.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, _) => Center(child: Text('$error')),
@@ -145,24 +146,25 @@ class _RollDetailPageState extends ConsumerState<RollDetailPage> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(roll.name,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                               fontSize: 30,
                                               fontWeight: FontWeight.w700,
-                                              color: workbenchCream)),
+                                              color: context.palette.text)),
                                       const SizedBox(height: 12),
                                       Text(
                                           '${items.length} / ${roll.targetCount} 张 · ${roll.status == FilmRollStatus.open ? '拍摄中' : '已结束'}',
-                                          style: const TextStyle(
-                                              color: workbenchGold)),
+                                          style: TextStyle(
+                                              color: context.palette.accent)),
                                       const SizedBox(height: 24),
                                       if (items.isEmpty)
-                                        const Padding(
-                                            padding: EdgeInsets.symmetric(
+                                        Padding(
+                                            padding: const EdgeInsets.symmetric(
                                                 vertical: 32),
                                             child: Text(
                                                 '这一卷还没有照片。\n导入真实照片，开始整理今天的片段。',
                                                 style: TextStyle(
-                                                    color: workbenchMuted,
+                                                    color:
+                                                        context.palette.muted,
                                                     height: 1.8))),
                                       Wrap(
                                           spacing: 10,
@@ -194,12 +196,13 @@ class _RollDetailPageState extends ConsumerState<RollDetailPage> {
                                             padding:
                                                 const EdgeInsets.only(top: 12),
                                             child: Text(_error!,
-                                                style: const TextStyle(
-                                                    color: workbenchGold))),
+                                                style: TextStyle(
+                                                    color: context
+                                                        .palette.accent))),
                                       const SizedBox(height: 8),
-                                      const Text('点按星标加入精选 · 导入不改变原片色彩',
+                                      Text('点按星标加入精选 · 导入不改变原片色彩',
                                           style: TextStyle(
-                                              color: workbenchMuted,
+                                              color: context.palette.muted,
                                               fontSize: 11)),
                                     ]))),
                         SliverPadding(
@@ -211,7 +214,7 @@ class _RollDetailPageState extends ConsumerState<RollDetailPage> {
                                       thumb = ref
                                           .watch(rollThumbnailProvider(item));
                                   return Container(
-                                      color: workbenchSurface,
+                                      color: context.palette.raised,
                                       child: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
@@ -220,17 +223,17 @@ class _RollDetailPageState extends ConsumerState<RollDetailPage> {
                                                 child: SizedBox(
                                                     width: double.infinity,
                                                     child: thumb.when(
-                                                        loading: () => const Center(
+                                                        loading: () => Center(
                                                             child: Icon(Icons.photo_outlined,
-                                                                color:
-                                                                    workbenchMuted)),
-                                                        error: (_, __) => const Center(
-                                                            child: Icon(Icons
-                                                                .broken_image_outlined)),
+                                                                color: context
+                                                                    .palette
+                                                                    .muted)),
+                                                        error: (_, __) =>
+                                                            const Center(
+                                                                child: Icon(Icons
+                                                                    .broken_image_outlined)),
                                                         data: (bytes) => bytes == null
-                                                            ? const Center(
-                                                                child: Icon(Icons.hide_image_outlined,
-                                                                    color: workbenchMuted))
+                                                            ? Center(child: Icon(Icons.hide_image_outlined, color: context.palette.muted))
                                                             : Image.memory(bytes, fit: BoxFit.cover, cacheWidth: 384)))),
                                             Row(children: [
                                               Padding(
@@ -240,8 +243,9 @@ class _RollDetailPageState extends ConsumerState<RollDetailPage> {
                                                   child: Text(
                                                       '${i + 1}'
                                                           .padLeft(2, '0'),
-                                                      style: const TextStyle(
-                                                          color: workbenchGold,
+                                                      style: TextStyle(
+                                                          color: context
+                                                              .palette.accent,
                                                           fontSize: 11))),
                                               const Spacer(),
                                               IconButton(
@@ -265,7 +269,8 @@ class _RollDetailPageState extends ConsumerState<RollDetailPage> {
                                                           ? Icons.star_rounded
                                                           : Icons
                                                               .star_border_rounded,
-                                                      color: workbenchGold,
+                                                      color: context
+                                                          .palette.accent,
                                                       size: 20))
                                             ]),
                                             Padding(
@@ -285,8 +290,9 @@ class _RollDetailPageState extends ConsumerState<RollDetailPage> {
                                                         '配方未验证'
                                                     },
                                                     maxLines: 1,
-                                                    style: const TextStyle(
-                                                        color: workbenchMuted,
+                                                    style: TextStyle(
+                                                        color: context
+                                                            .palette.muted,
                                                         fontSize: 9))),
                                           ]));
                                 }, childCount: items.length),

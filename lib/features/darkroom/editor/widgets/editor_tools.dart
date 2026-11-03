@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../app/theme/app_palette.dart';
 import '../../../../darkroom/model/photo_edits.dart';
 
 enum EditorTool {
@@ -94,8 +95,8 @@ class EditorTools extends StatelessWidget {
                               child: Container(
                                   width: 4,
                                   height: 4,
-                                  decoration: const BoxDecoration(
-                                      color: Color(0xffe7e1cf),
+                                  decoration: BoxDecoration(
+                                      color: context.palette.accent,
                                       shape: BoxShape.circle)))
                       ]),
                       const SizedBox(height: 9),

@@ -93,9 +93,9 @@ class MediaTile extends ConsumerWidget {
           if (bytes != null)
             Image.memory(bytes, fit: BoxFit.cover, gaplessPlayback: true)
           else
-            const ColoredBox(
-              color: GRemoteColors.raised,
-              child: Icon(Icons.photo_outlined, color: GRemoteColors.divider),
+            ColoredBox(
+              color: context.palette.raised,
+              child: Icon(Icons.photo_outlined, color: context.palette.divider),
             ),
           if (tagMatch case final TagMatch match)
             Positioned(
@@ -110,20 +110,23 @@ class MediaTile extends ConsumerWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                   child: match.usable
-                      ? const Tooltip(message: '胶卷配方', child: Icon(
-                          Icons.tune, color: GRemoteColors.text, size: 16))
-                      : const Text('待确认', style: TextStyle(
-                          color: GRemoteColors.muted, fontSize: 11)),
+                      ? Tooltip(
+                          message: '胶卷配方',
+                          child: Icon(Icons.tune,
+                              color: AppPalette.dark.text, size: 16))
+                      : Text('待确认',
+                          style: TextStyle(
+                              color: AppPalette.dark.muted, fontSize: 11)),
                 ),
               ),
             ),
           if (selected) ...[
             const ColoredBox(color: Color(0x66000000)),
-            const Positioned(
+            Positioned(
               top: 6,
               right: 6,
-              child:
-                  Icon(Icons.check_circle, color: GRemoteColors.gold, size: 22),
+              child: Icon(Icons.check_circle,
+                  color: AppPalette.dark.accent, size: 22),
             ),
           ],
         ]),

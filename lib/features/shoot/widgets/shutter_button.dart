@@ -88,10 +88,11 @@ class _ShutterButtonState extends State<ShutterButton> {
             padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: const Color(0xFF111416),
+              color: context.palette.background,
               border: Border.all(
-                color:
-                    widget.enabled ? GRemoteColors.text : GRemoteColors.muted,
+                color: widget.enabled
+                    ? context.palette.text
+                    : context.palette.muted,
                 width: 2.5,
               ),
             ),
@@ -99,9 +100,9 @@ class _ShutterButtonState extends State<ShutterButton> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: widget.enabled
-                    ? (_pressed ? GRemoteColors.gold : GRemoteColors.text)
-                    : GRemoteColors.raised,
-                border: Border.all(color: GRemoteColors.divider),
+                    ? (_pressed ? context.palette.accent : context.palette.text)
+                    : context.palette.raised,
+                border: Border.all(color: context.palette.divider),
               ),
             ),
           ),

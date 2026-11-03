@@ -36,14 +36,14 @@ class ConnectionCard extends StatelessWidget {
         data: Theme.of(context).copyWith(
           filledButtonTheme: FilledButtonThemeData(
               style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFFE1E5E3),
-                  foregroundColor: const Color(0xFF181C1D),
+                  backgroundColor: context.palette.accent,
+                  foregroundColor: context.palette.onAccent,
                   minimumSize: const Size(0, 48),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(4)))),
           textButtonTheme: TextButtonThemeData(
               style:
-                  TextButton.styleFrom(foregroundColor: GRemoteColors.muted)),
+                  TextButton.styleFrom(foregroundColor: context.palette.muted)),
         ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(0, 0, 0, 20),
@@ -111,11 +111,11 @@ class ConnectionCard extends StatelessWidget {
               ),
           ])
         else ...[
-          const SizedBox(
+          SizedBox(
             height: 3,
             child: LinearProgressIndicator(
-              backgroundColor: GRemoteColors.divider,
-              color: GRemoteColors.gold,
+              backgroundColor: context.palette.divider,
+              color: context.palette.accent,
             ),
           ),
           if (onCancel != null) ...[
@@ -196,24 +196,23 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(children: [
-        const Expanded(
+        Expanded(
             child: Text('相机连接',
-                style: TextStyle(fontSize: 12, color: GRemoteColors.muted))),
+                style: TextStyle(fontSize: 12, color: context.palette.muted))),
         Container(
             width: 5,
             height: 5,
             decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: status == '连接中断'
-                    ? GRemoteColors.danger
+                    ? context.palette.danger
                     : status == '已连接'
-                        ? GRemoteColors.text
-                        : GRemoteColors.muted)),
+                        ? context.palette.text
+                        : context.palette.muted)),
         const SizedBox(width: 6),
         Flexible(
             child: Text(status,
-                style:
-                    const TextStyle(fontSize: 12, color: GRemoteColors.muted))),
+                style: TextStyle(fontSize: 12, color: context.palette.muted))),
       ]);
 }
 
@@ -230,11 +229,11 @@ class _CameraIdentity extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                       if (model.startsWith('RICOH '))
-                        const Text('RICOH',
+                        Text('RICOH',
                             style: TextStyle(
                                 fontSize: 11,
                                 letterSpacing: 1.9,
-                                color: GRemoteColors.muted)),
+                                color: context.palette.muted)),
                       const SizedBox(height: 5),
                       Text(model.replaceFirst(RegExp(r'^RICOH '), ''),
                           style: GRemoteType.display
@@ -265,7 +264,7 @@ class _CameraSummary extends StatelessWidget {
           Text(title, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 5),
           Text(detail,
-              style: const TextStyle(fontSize: 12, color: GRemoteColors.muted)),
+              style: TextStyle(fontSize: 12, color: context.palette.muted)),
         ],
       ]);
 }
@@ -294,8 +293,8 @@ class _ReadyContent extends StatelessWidget {
           spacing: 18,
           runSpacing: 8,
           children: [
-            const Text('Wi-Fi',
-                style: TextStyle(fontSize: 12, color: GRemoteColors.muted)),
+            Text('Wi-Fi',
+                style: TextStyle(fontSize: 12, color: context.palette.muted)),
             _Fact(
               label: '固件',
               value: snapshot.identity.firmware.isEmpty
@@ -309,13 +308,13 @@ class _ReadyContent extends StatelessWidget {
         ),
         if (state.wifiOnly && snapshot.identity.firmware.isEmpty) ...[
           const SizedBox(height: 14),
-          const Text('Wi-Fi 属性未提供固件版本；可用蓝牙连接核验',
-              style: TextStyle(color: GRemoteColors.goldSoft)),
+          Text('Wi-Fi 属性未提供固件版本；可用蓝牙连接核验',
+              style: TextStyle(color: context.palette.text)),
         ] else if (state.firmwareWarning) ...[
           const SizedBox(height: 14),
-          const Text(
+          Text(
             '固件未经真机验证',
-            style: TextStyle(color: GRemoteColors.goldSoft),
+            style: TextStyle(color: context.palette.text),
           ),
         ],
         const SizedBox(height: 18),
@@ -417,7 +416,7 @@ class _FailureContent extends StatelessWidget {
             child: TextButton(
               onPressed: onOpenDiagnostics,
               style: TextButton.styleFrom(
-                  foregroundColor: GRemoteColors.goldSoft,
+                  foregroundColor: context.palette.text,
                   padding: const EdgeInsets.symmetric(horizontal: 8)),
               child: const Text('查看连接诊断',
                   style: TextStyle(
@@ -461,7 +460,7 @@ class _Fact extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Text('$label $value',
-      style: const TextStyle(fontSize: 12, color: GRemoteColors.muted));
+      style: TextStyle(fontSize: 12, color: context.palette.muted));
 }
 
 class _ConnectionPresentation {

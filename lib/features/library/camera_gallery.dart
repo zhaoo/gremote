@@ -319,8 +319,8 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                                 _selectionMode
                                     ? '已选 $_selectedPhotos 张'
                                     : '相机照片',
-                                style: const TextStyle(
-                                    color: GRemoteColors.text,
+                                style: TextStyle(
+                                    color: context.palette.text,
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600)),
                             const SizedBox(height: 3),
@@ -328,8 +328,9 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                                 _selectionMode
                                     ? '选择要保存的照片'
                                     : '${groups.length} 张',
-                                style: const TextStyle(
-                                    color: GRemoteColors.muted, fontSize: 11)),
+                                style: TextStyle(
+                                    color: context.palette.muted,
+                                    fontSize: 11)),
                           ])))),
           if (_selectionMode)
             TextButton(
@@ -358,26 +359,25 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
             IconButton(
                 tooltip: '刷新相机图库',
                 onPressed: _loading || _downloading ? null : _refresh,
-                icon: const Icon(Icons.refresh_rounded,
-                    size: 22, color: GRemoteColors.gold)),
+                icon: Icon(Icons.refresh_rounded,
+                    size: 22, color: context.palette.accent)),
         ]),
       ),
       if (_loading)
-        const LinearProgressIndicator(minHeight: 2, color: GRemoteColors.gold),
+        LinearProgressIndicator(minHeight: 2, color: context.palette.accent),
       if (_result != null && !_downloading)
         Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
             child: Text(_result!,
-                style: const TextStyle(
-                    color: GRemoteColors.goldSoft, fontSize: 12))),
+                style: TextStyle(color: context.palette.text, fontSize: 12))),
       if (_error != null)
         Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
             child: Text(_error!,
                 style: TextStyle(
                     color: _error != null
-                        ? GRemoteColors.danger
-                        : GRemoteColors.goldSoft,
+                        ? context.palette.danger
+                        : context.palette.text,
                     fontSize: 12))),
       Expanded(
           child: entries.isEmpty && !_loading
@@ -408,23 +408,23 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
         top: false,
         child: Container(
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
-          decoration: const BoxDecoration(
-              color: GRemoteColors.navy,
-              border: Border(top: BorderSide(color: GRemoteColors.divider))),
+          decoration: BoxDecoration(
+              color: context.palette.surface,
+              border: Border(top: BorderSide(color: context.palette.divider))),
           child: _downloading
               ? Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                       Row(children: [
-                        const Expanded(
+                        Expanded(
                             child: Text('正在保存原图',
                                 style: TextStyle(
-                                    color: GRemoteColors.text,
+                                    color: context.palette.text,
                                     fontWeight: FontWeight.w600))),
                         Text('$_completed / $_total 个文件',
-                            style: const TextStyle(
-                                color: GRemoteColors.goldSoft, fontSize: 12)),
+                            style: TextStyle(
+                                color: context.palette.text, fontSize: 12)),
                       ]),
                       const SizedBox(height: 10),
                       Row(children: [
@@ -432,16 +432,17 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                             child: Text(_currentFile ?? '正在等待预览传输结束…',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    color: GRemoteColors.muted, fontSize: 12))),
+                                style: TextStyle(
+                                    color: context.palette.muted,
+                                    fontSize: 12))),
                         const SizedBox(width: 12),
                         Text(
                             fraction == null
                                 ? _bytes(_received)
                                 : '${(fraction * 100).floor()}%',
                             key: const Key('photo-byte-progress'),
-                            style: const TextStyle(
-                                color: GRemoteColors.goldSoft, fontSize: 12)),
+                            style: TextStyle(
+                                color: context.palette.text, fontSize: 12)),
                       ]),
                       const SizedBox(height: 10),
                       TweenAnimationBuilder<double>(
@@ -453,8 +454,8 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                                   key: const Key('photo-progress-bar'),
                                   minHeight: 4,
                                   value: fraction == null ? null : value,
-                                  color: GRemoteColors.gold,
-                                  backgroundColor: GRemoteColors.divider))),
+                                  color: context.palette.accent,
+                                  backgroundColor: context.palette.divider))),
                       const SizedBox(height: 8),
                       Row(children: [
                         Expanded(
@@ -462,8 +463,9 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                                 _expected > 0
                                     ? '${_bytes(_received)} / ${_bytes(_expected)}'
                                     : '已接收 ${_bytes(_received)} · 文件大小未知',
-                                style: const TextStyle(
-                                    color: GRemoteColors.muted, fontSize: 10))),
+                                style: TextStyle(
+                                    color: context.palette.muted,
+                                    fontSize: 10))),
                         TextButton(
                             onPressed: _stopAfterCurrent
                                 ? null
@@ -477,9 +479,9 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                       Row(children: [
-                        const Text('保存格式',
+                        Text('保存格式',
                             style: TextStyle(
-                                color: GRemoteColors.muted, fontSize: 12)),
+                                color: context.palette.muted, fontSize: 12)),
                         const SizedBox(width: 14),
                         Expanded(
                             child: SegmentedButton<String>(
@@ -508,8 +510,8 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                               Text('已选 $_selectedPhotos 张',
-                                  style: const TextStyle(
-                                      color: GRemoteColors.text,
+                                  style: TextStyle(
+                                      color: context.palette.text,
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600)),
                               const SizedBox(height: 3),
@@ -517,8 +519,8 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                                   files.isEmpty && _selectedPhotos > 0
                                       ? '所选照片没有此格式'
                                       : '${files.length} 个文件 · ${_format == 'RAW' ? 'DNG 原始文件' : _format == 'JPG' ? 'JPEG 原图' : '两种格式'}',
-                                  style: const TextStyle(
-                                      color: GRemoteColors.muted,
+                                  style: TextStyle(
+                                      color: context.palette.muted,
                                       fontSize: 10)),
                             ])),
                         const SizedBox(width: 12),
@@ -556,11 +558,12 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
         duration: WorkspaceMotion.duration(context, 180),
         curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
-            color: GRemoteColors.raised,
+            color: context.palette.raised,
             borderRadius: BorderRadius.zero,
             border: Border.all(
-                color:
-                    selected > 0 ? GRemoteColors.gold : GRemoteColors.divider)),
+                color: selected > 0
+                    ? context.palette.accent
+                    : context.palette.divider)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Expanded(
               child: ClipRRect(
@@ -573,10 +576,10 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                       return Image.memory(snapshot.data!,
                           fit: BoxFit.cover, gaplessPlayback: true);
                     }
-                    return const ColoredBox(
-                        color: GRemoteColors.navy,
+                    return ColoredBox(
+                        color: context.palette.surface,
                         child: Icon(Icons.photo_camera_back_outlined,
-                            color: GRemoteColors.muted, size: 34));
+                            color: context.palette.muted, size: 34));
                   }),
               if (_selectionMode)
                 Positioned(
@@ -589,19 +592,19 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                       decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: selected > 0
-                              ? GRemoteColors.gold
+                              ? context.palette.accent
                               : Colors.black45,
                           border: Border.all(
                               color: selected > 0
-                                  ? GRemoteColors.gold
+                                  ? context.palette.accent
                                   : Colors.white70,
                               width: 1.5)),
                       child: AnimatedSwitcher(
                           duration: WorkspaceMotion.duration(context, 150),
                           child: selected > 0
-                              ? const Icon(Icons.check_rounded,
-                                  key: ValueKey(true),
-                                  color: GRemoteColors.night,
+                              ? Icon(Icons.check_rounded,
+                                  key: const ValueKey(true),
+                                  color: context.palette.background,
                                   size: 18)
                               : const SizedBox(key: ValueKey(false))),
                     )),
@@ -615,17 +618,17 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                           .map((file) =>
                               '${file.file}: ${_failures[file.remoteId]}')
                           .join('\n'),
-                      child: const Chip(
-                          label: Text('保存失败'),
+                      child: Chip(
+                          label: const Text('保存失败'),
                           avatar: Icon(Icons.error_outline,
-                              size: 16, color: GRemoteColors.danger)),
+                              size: 16, color: context.palette.danger)),
                     )),
               if (saved == files.length)
-                const Positioned(
+                Positioned(
                     top: 10,
                     left: 10,
                     child: Icon(Icons.download_done_rounded,
-                        color: GRemoteColors.goldSoft)),
+                        color: context.palette.text)),
             ]),
           )),
           Padding(
@@ -635,8 +638,8 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
               Text(cover.baseName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      color: GRemoteColors.text,
+                  style: TextStyle(
+                      color: context.palette.text,
                       fontSize: 12,
                       fontWeight: FontWeight.w500)),
               const SizedBox(height: 3),
@@ -644,8 +647,8 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                   files
                       .map((f) => f.extension == 'DNG' ? 'RAW' : 'JPG')
                       .join(' + '),
-                  style: const TextStyle(
-                      color: GRemoteColors.muted,
+                  style: TextStyle(
+                      color: context.palette.muted,
                       fontSize: 9,
                       letterSpacing: 0.5)),
             ]),
@@ -658,7 +661,7 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
   void _showFileSheet(List<CameraFile> files) {
     showModalBottomSheet<void>(
         context: context,
-        backgroundColor: GRemoteColors.navy,
+        backgroundColor: context.palette.surface,
         builder: (sheetContext) => SafeArea(
                 child: Padding(
               padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
@@ -669,8 +672,8 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                     Text(files.first.baseName,
                         style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 6),
-                    const Text('选择要保存的原始文件',
-                        style: TextStyle(color: GRemoteColors.muted)),
+                    Text('选择要保存的原始文件',
+                        style: TextStyle(color: context.palette.muted)),
                     const SizedBox(height: 18),
                     for (final file in files)
                       ListTile(
@@ -679,7 +682,7 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                             file.extension == 'DNG'
                                 ? Icons.raw_on_outlined
                                 : Icons.image_outlined,
-                            color: GRemoteColors.gold),
+                            color: context.palette.accent),
                         title: Text(file.file),
                         subtitle: Text(
                             file.extension == 'DNG' ? 'RAW 原始文件' : 'JPEG 原图'),
@@ -722,13 +725,13 @@ class _GalleryEmpty extends StatelessWidget {
           child: Padding(
         padding: const EdgeInsets.all(28),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 44, color: GRemoteColors.goldSoft),
+          Icon(icon, size: 44, color: context.palette.text),
           const SizedBox(height: 16),
           Text(title, style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           Text(message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: GRemoteColors.muted)),
+              style: TextStyle(color: context.palette.muted)),
         ]),
       ));
 }

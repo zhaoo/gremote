@@ -28,16 +28,16 @@ class FeaturePlaceholder extends StatelessWidget {
               Row(children: [
                 Text(title, style: Theme.of(context).textTheme.headlineSmall),
                 const Spacer(),
-                const Text('GRemote',
+                Text('GRemote',
                     style: TextStyle(
-                        color: GRemoteColors.gold,
+                        color: context.palette.accent,
                         fontFamily: 'Georgia',
                         fontSize: 17)),
               ]),
               const SizedBox(height: 6),
               Text(kicker,
-                  style: const TextStyle(
-                      color: GRemoteColors.gold,
+                  style: TextStyle(
+                      color: context.palette.accent,
                       fontSize: 10,
                       letterSpacing: 2.2)),
               const SizedBox(height: 40),
@@ -45,17 +45,17 @@ class FeaturePlaceholder extends StatelessWidget {
                 child: Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: GRemoteColors.navy,
+                    color: context.palette.surface,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: GRemoteColors.divider),
+                    border: Border.all(color: context.palette.divider),
                   ),
                   child: Stack(children: [
-                    const Positioned(
+                    Positioned(
                       top: 20,
                       left: 20,
                       child: Text('GREMOTE / 001',
                           style: TextStyle(
-                              color: GRemoteColors.muted,
+                              color: context.palette.muted,
                               fontFamily: 'monospace',
                               fontSize: 10,
                               letterSpacing: 1.4)),
@@ -72,10 +72,11 @@ class FeaturePlaceholder extends StatelessWidget {
                                 height: 88,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: GRemoteColors.divider),
+                                  border: Border.all(
+                                      color: context.palette.divider),
                                 ),
                                 child: Icon(icon,
-                                    size: 34, color: GRemoteColors.goldSoft),
+                                    size: 34, color: context.palette.text),
                               ),
                               const SizedBox(height: 26),
                               Text(headline,
@@ -92,12 +93,12 @@ class FeaturePlaceholder extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const Positioned(
+                    Positioned(
                       bottom: 20,
                       right: 20,
                       child: Text('FRAME THE EVERYDAY',
                           style: TextStyle(
-                              color: GRemoteColors.muted,
+                              color: context.palette.muted,
                               fontSize: 9,
                               letterSpacing: 1.5)),
                     ),

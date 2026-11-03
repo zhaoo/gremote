@@ -276,7 +276,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     final items = _controller.selectedItems;
     final recipe = await showModalBottomSheet<ExportRecipe>(
       context: context,
-      backgroundColor: GRemoteColors.navy,
+      backgroundColor: context.palette.surface,
       builder: (_) => RecipeSheet(count: items.length),
     );
     if (recipe == null || !mounted) return;
@@ -323,11 +323,10 @@ class _LocalLibrary extends StatelessWidget {
           InkWell(
             onTap: controller.requestAccess,
             child: Container(
-              color: GRemoteColors.raised,
+              color: context.palette.raised,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: const Text('仅显示你允许的照片 · 继续添加',
-                  style:
-                      TextStyle(color: GRemoteColors.goldSoft, fontSize: 13)),
+              child: Text('仅显示你允许的照片 · 继续添加',
+                  style: TextStyle(color: context.palette.text, fontSize: 13)),
             ),
           ),
         if (scan != null)
@@ -337,13 +336,13 @@ class _LocalLibrary extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('正在读取 EXIF ${scan.done}/${scan.total}',
-                    style: const TextStyle(
-                        color: GRemoteColors.muted, fontSize: 12)),
+                    style:
+                        TextStyle(color: context.palette.muted, fontSize: 12)),
                 const SizedBox(height: 6),
                 LinearProgressIndicator(
                   value: scan.total == 0 ? 0 : scan.done / scan.total,
-                  color: GRemoteColors.gold,
-                  backgroundColor: GRemoteColors.divider,
+                  color: context.palette.accent,
+                  backgroundColor: context.palette.divider,
                 ),
               ],
             ),
@@ -352,8 +351,7 @@ class _LocalLibrary extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
             child: Text(state.error!,
-                style:
-                    const TextStyle(color: GRemoteColors.danger, fontSize: 12)),
+                style: TextStyle(color: context.palette.danger, fontSize: 12)),
           ),
         Expanded(
           child: state.items.isEmpty
@@ -388,8 +386,8 @@ class _AccessCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(28),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.photo_library_outlined,
-                size: 40, color: GRemoteColors.goldSoft),
+            Icon(Icons.photo_library_outlined,
+                size: 40, color: context.palette.text),
             const SizedBox(height: 18),
             Text('访问本机照片', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
@@ -424,15 +422,14 @@ class _SelectionBar extends StatelessWidget {
   Widget build(BuildContext context) => SafeArea(
         child: Container(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-          decoration: const BoxDecoration(
-            color: GRemoteColors.navy,
-            border: Border(top: BorderSide(color: GRemoteColors.divider)),
+          decoration: BoxDecoration(
+            color: context.palette.surface,
+            border: Border(top: BorderSide(color: context.palette.divider)),
           ),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Row(children: [
               TextButton(onPressed: onCancel, child: const Text('取消')),
-              Text('已选 $count',
-                  style: const TextStyle(color: GRemoteColors.muted)),
+              Text('已选 $count', style: TextStyle(color: context.palette.muted)),
               const Spacer(),
               if (showConfirm)
                 TextButton(

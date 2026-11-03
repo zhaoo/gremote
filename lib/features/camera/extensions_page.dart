@@ -70,8 +70,7 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
         Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
           Expanded(
             child: Text(_status(controller, connected),
-                style:
-                    const TextStyle(color: GRemoteColors.muted, fontSize: 12)),
+                style: TextStyle(color: context.palette.muted, fontSize: 12)),
           ),
           if (available)
             TextButton(
@@ -98,19 +97,18 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
             minLeadingWidth: 16,
             horizontalTitleGap: 12,
             minVerticalPadding: 16,
-            leading: Icon(group.value, color: GRemoteColors.text, size: 18),
+            leading: Icon(group.value, color: context.palette.text, size: 18),
             title: Text(group.key, style: const TextStyle(fontSize: 14)),
             subtitle: Padding(
               padding: const EdgeInsets.only(top: 5),
               child: Text(_summary(group.key, available ? controller : null),
-                  style: const TextStyle(
-                      color: GRemoteColors.muted, fontSize: 11)),
+                  style: TextStyle(color: context.palette.muted, fontSize: 11)),
             ),
             trailing: Icon(
                 _expandedGroup == group.key
                     ? Icons.keyboard_arrow_up
                     : Icons.chevron_right,
-                color: GRemoteColors.muted,
+                color: context.palette.muted,
                 size: 18),
             onTap: () => setState(() {
               _expandedGroup = _expandedGroup == group.key ? null : group.key;
@@ -128,10 +126,10 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
             ),
           const Divider(height: 1),
         ],
-        const Padding(
-          padding: EdgeInsets.only(top: 26),
+        Padding(
+          padding: const EdgeInsets.only(top: 26),
           child: Text('开关机画面暂不支持远程设置',
-              style: TextStyle(color: GRemoteColors.muted, fontSize: 11)),
+              style: TextStyle(color: context.palette.muted, fontSize: 11)),
         ),
       ],
     );
@@ -204,11 +202,12 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                     fontSize: 13,
-                    color:
-                        enabled ? GRemoteColors.text : GRemoteColors.muted))),
+                    color: enabled
+                        ? context.palette.text
+                        : context.palette.muted))),
         const SizedBox(width: 6),
         if (enabled)
-          const Icon(Icons.chevron_right, size: 18, color: GRemoteColors.muted),
+          Icon(Icons.chevron_right, size: 18, color: context.palette.muted),
       ]),
       onTap: enabled ? () => _choose(controller!, key, field) : null,
     );

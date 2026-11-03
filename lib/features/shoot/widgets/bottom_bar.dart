@@ -49,9 +49,9 @@ class ShootBottomBar extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: GRemoteColors.raised,
+                color: context.palette.raised,
                 shape: BoxShape.circle,
-                border: Border.all(color: GRemoteColors.divider),
+                border: Border.all(color: context.palette.divider),
               ),
               child: ClipOval(child: Consumer(builder: (context, ref, _) {
                 final id = ref.watch(libraryControllerProvider
@@ -60,8 +60,8 @@ class ShootBottomBar extends StatelessWidget {
                     ? null
                     : ref.watch(thumbnailProvider(id)).valueOrNull;
                 return bytes == null
-                    ? const Icon(Icons.photo_outlined,
-                        size: 22, color: GRemoteColors.muted)
+                    ? Icon(Icons.photo_outlined,
+                        size: 22, color: context.palette.muted)
                     : Image.memory(bytes,
                         fit: BoxFit.cover, gaplessPlayback: true);
               })),
@@ -76,14 +76,14 @@ class ShootBottomBar extends StatelessWidget {
                 height: 76,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 3),
+                  border: Border.all(color: context.palette.text, width: 3),
                 ),
                 child: Center(
                   child: Container(
                     width: 30,
                     height: 30,
                     decoration: BoxDecoration(
-                      color: GRemoteColors.danger,
+                      color: context.palette.danger,
                       borderRadius: BorderRadius.circular(5),
                     ),
                   ),
@@ -119,7 +119,7 @@ class ShootBottomBar extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                       padding: EdgeInsets.zero,
                       shape: const CircleBorder(),
-                      side: const BorderSide(color: GRemoteColors.divider)),
+                      side: BorderSide(color: context.palette.divider)),
                   child: const Text('AF',
                       semanticsLabel: '独立对焦', style: TextStyle(fontSize: 13)),
                 )),

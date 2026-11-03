@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/widgets/workspace_motion.dart';
+import '../../../../app/theme/app_palette.dart';
 import '../../../../darkroom/model/photo_edits.dart';
 
 /// Native parameter controls. A slider gesture is one document transaction.
@@ -59,22 +60,22 @@ class _AdjustmentPanelState extends State<AdjustmentPanel> {
                                         .style
                                         .copyWith(
                                             fontSize: 13,
-                                            color: const Color(0xffdddeda))))),
+                                            color: context.palette.text)))),
                         const SizedBox(width: 12),
                         Text(active.display(value),
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontFamily: 'GRemoteEditorial',
-                                fontFamilyFallback: ['Georgia', 'serif'],
+                                fontFamilyFallback: const ['Georgia', 'serif'],
                                 fontSize: 26,
-                                color: Color(0xfff0f0e9))),
+                                color: context.palette.text)),
                       ])))),
           Slider(
               semanticFormatterCallback: active.display,
               value: value,
               min: active.min,
               max: active.max,
-              activeColor: Colors.white,
-              inactiveColor: Colors.white24,
+              activeColor: context.palette.accent,
+              inactiveColor: context.palette.divider,
               onChangeStart: (_) => widget.onStart(),
               onChanged: (v) =>
                   widget.onChanged(widget.edits.withValue(active, v)),
@@ -85,15 +86,15 @@ class _AdjustmentPanelState extends State<AdjustmentPanel> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(active.display(active.min),
-                        style: const TextStyle(
-                            fontSize: 10, color: Colors.white38)),
+                        style: TextStyle(
+                            fontSize: 10, color: context.palette.muted)),
                     if (active.min < 0)
-                      const Text('0',
-                          style:
-                              TextStyle(fontSize: 10, color: Colors.white38)),
+                      Text('0',
+                          style: TextStyle(
+                              fontSize: 10, color: context.palette.muted)),
                     Text(active.display(active.max),
-                        style: const TextStyle(
-                            fontSize: 10, color: Colors.white38)),
+                        style: TextStyle(
+                            fontSize: 10, color: context.palette.muted)),
                   ])),
           const SizedBox(height: 14),
           Wrap(
@@ -110,13 +111,13 @@ class _AdjustmentPanelState extends State<AdjustmentPanel> {
                         widget.onActiveChanged?.call(a);
                       },
                       showCheckmark: false,
-                      selectedColor: const Color(0xff343a3c),
-                      backgroundColor: const Color(0xff202628),
+                      selectedColor: context.palette.divider,
+                      backgroundColor: context.palette.surface,
                       labelStyle: TextStyle(
                           fontSize: 12,
                           color: a == active
-                              ? const Color(0xfff0f0e9)
-                              : Colors.white54),
+                              ? context.palette.text
+                              : context.palette.muted),
                       visualDensity: VisualDensity.standard,
                       materialTapTargetSize: MaterialTapTargetSize.padded,
                       side: BorderSide.none,

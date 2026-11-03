@@ -193,12 +193,12 @@ class _LutPickerState extends ConsumerState<LutPicker> {
                             height: 76,
                             padding: const EdgeInsets.all(3),
                             decoration: BoxDecoration(
-                              color: GRemoteColors.raised,
+                              color: context.palette.raised,
                               borderRadius: BorderRadius.circular(9),
                               border: Border.all(
                                 color: selected
-                                    ? GRemoteColors.text
-                                    : GRemoteColors.divider,
+                                    ? context.palette.text
+                                    : context.palette.divider,
                                 width: selected ? 2 : 1,
                               ),
                             ),
@@ -210,11 +210,11 @@ class _LutPickerState extends ConsumerState<LutPicker> {
                                 builder: (context, snapshot) {
                                   final image = snapshot.data;
                                   if (image == null) {
-                                    return const Center(
+                                    return Center(
                                         child: Icon(
                                       Icons.image_outlined,
                                       size: 20,
-                                      color: GRemoteColors.muted,
+                                      color: context.palette.muted,
                                     ));
                                   }
                                   return FramePreview(
@@ -239,8 +239,8 @@ class _LutPickerState extends ConsumerState<LutPicker> {
                             style: TextStyle(
                                 fontSize: 11,
                                 color: selected
-                                    ? GRemoteColors.text
-                                    : GRemoteColors.muted),
+                                    ? context.palette.text
+                                    : context.palette.muted),
                           ),
                         ]),
                       ),
@@ -253,8 +253,8 @@ class _LutPickerState extends ConsumerState<LutPicker> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(children: [
-              const Text('强度',
-                  style: TextStyle(fontSize: 12, color: GRemoteColors.muted)),
+              Text('强度',
+                  style: TextStyle(fontSize: 12, color: context.palette.muted)),
               Expanded(
                   child: Slider(
                 key: const ValueKey('lut-strength'),
@@ -269,8 +269,8 @@ class _LutPickerState extends ConsumerState<LutPicker> {
                   width: 34,
                   child: Text('${(widget.strength * 100).round()}',
                       textAlign: TextAlign.right,
-                      style: const TextStyle(
-                          fontSize: 12, color: GRemoteColors.muted))),
+                      style: TextStyle(
+                          fontSize: 12, color: context.palette.muted))),
             ]),
           ),
         ],

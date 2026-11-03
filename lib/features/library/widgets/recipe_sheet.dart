@@ -31,8 +31,8 @@ class _RecipeSheetState extends ConsumerState<RecipeSheet> {
               Text('为 ${widget.count} 张照片选择出图方案',
                   style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 4),
-              const Text('标题与地点沿用每张照片已保存的编辑',
-                  style: TextStyle(color: GRemoteColors.muted, fontSize: 12)),
+              Text('标题与地点沿用每张照片已保存的编辑',
+                  style: TextStyle(color: context.palette.muted, fontSize: 12)),
               const SizedBox(height: 12),
               _option(context, '默认方案', describeRecipe(const ExportRecipe()),
                   const ExportRecipe()),
@@ -55,8 +55,8 @@ class _RecipeSheetState extends ConsumerState<RecipeSheet> {
         contentPadding: EdgeInsets.zero,
         title: Text(title),
         subtitle: Text(subtitle,
-            style: const TextStyle(color: GRemoteColors.muted, fontSize: 12)),
-        trailing: const Icon(Icons.chevron_right, color: GRemoteColors.muted),
+            style: TextStyle(color: context.palette.muted, fontSize: 12)),
+        trailing: Icon(Icons.chevron_right, color: context.palette.muted),
         onTap: () => Navigator.of(context).pop(recipe),
       );
 }

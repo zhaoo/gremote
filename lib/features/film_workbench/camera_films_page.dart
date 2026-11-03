@@ -169,14 +169,14 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
       if (!mounted) return;
       final selected = await showModalBottomSheet<FilmRecipe>(
           context: context,
-          backgroundColor: workbenchSurface,
+          backgroundColor: context.palette.raised,
           sheetAnimationStyle: _filmSheetAnimation(context),
           builder: (context) => SafeArea(
               child: recipes.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.all(24),
+                  ? Padding(
+                      padding: const EdgeInsets.all(24),
                       child: Text('还没有本地配方。开卷或保留冲突配方后会出现在这里。',
-                          style: TextStyle(color: workbenchMuted)))
+                          style: TextStyle(color: context.palette.muted)))
                   : ListView.builder(
                       itemCount: recipes.length,
                       itemBuilder: (context, index) {
@@ -186,10 +186,11 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
                                 recipe.name.isEmpty
                                     ? '配方 ${recipe.filmId}'
                                     : recipe.name,
-                                style: const TextStyle(color: workbenchCream)),
+                                style: TextStyle(color: context.palette.text)),
                             subtitle: Text(_parameters(recipe.parameters),
-                                style: const TextStyle(
-                                    color: workbenchMuted, fontSize: 11)),
+                                style: TextStyle(
+                                    color: context.palette.muted,
+                                    fontSize: 11)),
                             onTap: () => Navigator.pop(context, recipe));
                       })));
       if (selected != null && mounted) {
@@ -268,7 +269,7 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
       await showModalBottomSheet<void>(
           context: context,
           isScrollControlled: true,
-          backgroundColor: workbenchSurface,
+          backgroundColor: context.palette.raised,
           showDragHandle: true,
           sheetAnimationStyle: _filmSheetAnimation(context),
           builder: (context) => _LoadSheet(
@@ -287,7 +288,7 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
       PairingIdentity? identity) async {
     final action = await showModalBottomSheet<String>(
         context: context,
-        backgroundColor: workbenchSurface,
+        backgroundColor: context.palette.raised,
         showDragHandle: true,
         isScrollControlled: true,
         constraints:
@@ -439,21 +440,21 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
                           : state!.readOnly
                               ? '机身配置 · 只读'
                               : '机身 · ${snapshot.slots.length} 槽',
-                      style: const TextStyle(
-                          color: workbenchMuted, fontSize: 12))),
+                      style: TextStyle(
+                          color: context.palette.muted, fontSize: 12))),
               IconButton(
                   tooltip: '读取机身配置',
                   onPressed: controller == null || _picking
                       ? null
                       : () => unawaited(controller.refresh()),
-                  icon: const Icon(Icons.refresh,
-                      color: workbenchMuted, size: 20)),
+                  icon: Icon(Icons.refresh,
+                      color: context.palette.muted, size: 20)),
               IconButton(
                   tooltip: '更多胶卷操作',
                   onPressed: _preparing
                       ? null
                       : () => _more(controller, catalog, identity),
-                  icon: const Icon(Icons.more_horiz, color: workbenchMuted)),
+                  icon: Icon(Icons.more_horiz, color: context.palette.muted)),
             ])),
         Expanded(
             child: ListView(
@@ -475,13 +476,13 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
                                     SyncConnectionStatus.connecting
                                 ? '正在读取机身配置'
                                 : state?.message ?? '请连接相机 Wi-Fi 并在更多中导入配对文件。',
-                        style: const TextStyle(
-                            color: workbenchMuted, height: 1.5))),
+                        style: TextStyle(
+                            color: context.palette.muted, height: 1.5))),
               if (state?.stale == true && snapshot != null)
-                const Padding(
-                    padding: EdgeInsets.only(bottom: 12),
+                Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
                     child: Text('上次读取的配置，当前状态待核对',
-                        style: TextStyle(color: workbenchMuted))),
+                        style: TextStyle(color: context.palette.muted))),
               if (state?.pending == true)
                 Align(
                     alignment: Alignment.centerLeft,
@@ -509,13 +510,15 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
             ])),
         Container(
             padding: const EdgeInsets.fromLTRB(22, 12, 22, 12),
-            decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: Color(0xff343b3e)))),
+            decoration: BoxDecoration(
+                border:
+                    Border(top: BorderSide(color: context.palette.divider))),
             child: SafeArea(
                 top: false,
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Row(children: [
-                    _filmIcon(_definition(catalog, selected?.filmId), size: 36),
+                    _filmIcon(context, _definition(catalog, selected?.filmId),
+                        size: 36),
                     const SizedBox(width: 12),
                     Expanded(
                         child: Text(
@@ -526,8 +529,8 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
                                     : selected.name,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: workbenchCream,
+                            style: TextStyle(
+                                color: context.palette.text,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600))),
                     if (cameraCatalog != null && selected is CameraFilmRecipe)
@@ -535,15 +538,15 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
                           onPressed: _preparing
                               ? null
                               : () => _adjustCamera(cameraCatalog, selected),
-                          child: const Text('调整参数',
+                          child: Text('调整参数',
                               style: TextStyle(
-                                  color: workbenchMuted, fontSize: 12))),
+                                  color: context.palette.muted, fontSize: 12))),
                   ]),
                   SwitchListTile.adaptive(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('写入后使用',
-                          style:
-                              TextStyle(color: workbenchCream, fontSize: 14)),
+                      title: Text('写入后使用',
+                          style: TextStyle(
+                              color: context.palette.text, fontSize: 14)),
                       value: _activate,
                       onChanged: state?.pending == true || _preparing
                           ? null
@@ -555,8 +558,8 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
                       width: double.infinity,
                       child: FilledButton(
                           style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xffe5e8e3),
-                              foregroundColor: workbenchBackground,
+                              backgroundColor: context.palette.accent,
+                              foregroundColor: context.palette.onAccent,
                               padding:
                                   const EdgeInsets.symmetric(vertical: 14)),
                           onPressed: canPrepare
@@ -579,7 +582,7 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
     final film = _definition(catalog, id);
     final name = _filmName(catalog, id);
     return Material(
-        color: slot == _slot ? const Color(0xff2b3235) : Colors.transparent,
+        color: slot == _slot ? context.palette.raised : Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -588,34 +591,36 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
             child: Container(
                 constraints: const BoxConstraints(minHeight: 48),
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                     border: Border(
-                        bottom:
-                            BorderSide(color: Color(0xff343b3e), width: .5))),
+                        bottom: BorderSide(
+                            color: context.palette.divider, width: .5))),
                 child: Row(children: [
                   SizedBox(
                       width: 24,
                       child: Text((slot + 1).toString().padLeft(2, '0'),
-                          style: const TextStyle(
-                              color: workbenchMuted, fontSize: 11))),
-                  _filmIcon(film, size: 28),
+                          style: TextStyle(
+                              color: context.palette.muted, fontSize: 11))),
+                  _filmIcon(context, film, size: 28),
                   const SizedBox(width: 12),
                   Expanded(
                       child: Text(name,
                           style: TextStyle(
-                              color: id == 0 ? workbenchMuted : workbenchCream,
+                              color: id == 0
+                                  ? context.palette.muted
+                                  : context.palette.text,
                               fontSize: 13))),
                   if (snapshot.activeSlot == slot)
-                    const Padding(
-                        padding: EdgeInsets.only(left: 8),
+                    Padding(
+                        padding: const EdgeInsets.only(left: 8),
                         child: Text('机内使用中',
                             style: TextStyle(
-                                color: workbenchMuted, fontSize: 10))),
+                                color: context.palette.muted, fontSize: 10))),
                   if (_slot == slot)
-                    const Padding(
-                        padding: EdgeInsets.only(left: 8),
-                        child:
-                            Icon(Icons.check, size: 17, color: workbenchCream)),
+                    Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: Icon(Icons.check,
+                            size: 17, color: context.palette.text)),
                 ]))));
   }
 }
@@ -641,12 +646,16 @@ String _filmName(FilmCatalog? catalog, int id) => id == 0
     : _definition(catalog, id)?.name ??
         (id >= 79 && id <= 288 ? '自定义胶卷 $id' : '配方 $id');
 
-Widget _filmIcon(FilmDefinition? film, {required double size}) => film == null
-    ? SizedBox(
-        width: size,
-        height: size,
-        child: const Icon(Icons.crop_square, color: workbenchMuted, size: 18))
-    : Image.asset(film.icon, width: size, height: size, fit: BoxFit.contain);
+Widget _filmIcon(BuildContext context, FilmDefinition? film,
+        {required double size}) =>
+    film == null
+        ? SizedBox(
+            width: size,
+            height: size,
+            child:
+                Icon(Icons.crop_square, color: context.palette.muted, size: 18))
+        : Image.asset(film.icon,
+            width: size, height: size, fit: BoxFit.contain);
 
 String _parameters(Map<String, Object?> parameters) {
   const names = {
@@ -750,9 +759,9 @@ class _LoadSheetState extends State<_LoadSheet> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('确认装卷',
+                          Text('确认装卷',
                               style: TextStyle(
-                                  color: workbenchCream,
+                                  color: context.palette.text,
                                   fontSize: 20,
                                   fontWeight: FontWeight.w600)),
                           const SizedBox(height: 16),
@@ -764,6 +773,7 @@ class _LoadSheetState extends State<_LoadSheet> {
                                       children: [
                                 Row(children: [
                                   _filmIcon(
+                                      context,
                                       _definition(
                                           widget.catalog, recipe.filmId),
                                       size: 52),
@@ -778,8 +788,8 @@ class _LoadSheetState extends State<_LoadSheet> {
                                                 ? _filmName(widget.catalog,
                                                     recipe.filmId)
                                                 : recipe.name,
-                                            style: const TextStyle(
-                                                color: workbenchCream,
+                                            style: TextStyle(
+                                                color: context.palette.text,
                                                 fontSize: 22,
                                                 fontWeight: FontWeight.w600)),
                                         const SizedBox(height: 6),
@@ -789,8 +799,8 @@ class _LoadSheetState extends State<_LoadSheet> {
                                                 : load.activate
                                                     ? '写入后使用'
                                                     : '写入后不切换当前胶卷',
-                                            style: const TextStyle(
-                                                color: workbenchMuted,
+                                            style: TextStyle(
+                                                color: context.palette.muted,
                                                 fontSize: 12)),
                                       ])),
                                 ]),
@@ -799,21 +809,21 @@ class _LoadSheetState extends State<_LoadSheet> {
                                     width: double.infinity,
                                     padding: const EdgeInsets.all(14),
                                     decoration: BoxDecoration(
-                                        color: const Color(0xff2b3235),
+                                        color: context.palette.raised,
                                         borderRadius: BorderRadius.circular(8)),
                                     child: Wrap(
                                         alignment: WrapAlignment.spaceBetween,
                                         spacing: 12,
                                         runSpacing: 6,
                                         children: [
-                                          const Text('目标槽位',
+                                          Text('目标槽位',
                                               style: TextStyle(
-                                                  color: workbenchMuted,
+                                                  color: context.palette.muted,
                                                   fontSize: 12)),
                                           Text(
                                               '${(slot + 1).toString().padLeft(2, '0')} · ${_filmName(widget.catalog, targetId)}',
-                                              style: const TextStyle(
-                                                  color: workbenchCream,
+                                              style: TextStyle(
+                                                  color: context.palette.text,
                                                   fontSize: 12)),
                                         ])),
                                 if (targetId != 0 &&
@@ -824,15 +834,15 @@ class _LoadSheetState extends State<_LoadSheet> {
                                       padding: const EdgeInsets.only(top: 12),
                                       child: Text(
                                           '将覆盖：${_filmName(widget.catalog, targetId)}',
-                                          style: const TextStyle(
-                                              color: workbenchCream,
+                                          style: TextStyle(
+                                              color: context.palette.text,
                                               fontSize: 13))),
                                 if (currentLoad != null && !samePreparation)
-                                  const Padding(
-                                      padding: EdgeInsets.only(top: 12),
+                                  Padding(
+                                      padding: const EdgeInsets.only(top: 12),
                                       child: Text('准备内容已变化，请返回后重新确认',
                                           style: TextStyle(
-                                              color: workbenchCream))),
+                                              color: context.palette.text))),
                                 if (state.operationStatus !=
                                         SyncOperationStatus.draft ||
                                     state.readOnly ||
@@ -841,8 +851,8 @@ class _LoadSheetState extends State<_LoadSheet> {
                                       padding: const EdgeInsets.symmetric(
                                           vertical: 12),
                                       child: Text(state.message,
-                                          style: const TextStyle(
-                                              color: workbenchCream,
+                                          style: TextStyle(
+                                              color: context.palette.text,
                                               height: 1.5))),
                                 // Conflicts remain visible even when optional parameter details are folded.
                                 for (final conflict in state.merge?.conflicts ??
@@ -855,8 +865,9 @@ class _LoadSheetState extends State<_LoadSheet> {
                                               CrossAxisAlignment.start,
                                           children: [
                                             Text(_fieldLabel(conflict.path),
-                                                style: const TextStyle(
-                                                    color: workbenchCream)),
+                                                style: TextStyle(
+                                                    color:
+                                                        context.palette.text)),
                                             const SizedBox(height: 8),
                                             Wrap(
                                                 spacing: 6,
@@ -903,7 +914,7 @@ class _LoadSheetState extends State<_LoadSheet> {
                                     onPressed: () =>
                                         setState(() => _details = !_details),
                                     style: TextButton.styleFrom(
-                                        foregroundColor: workbenchMuted,
+                                        foregroundColor: context.palette.muted,
                                         padding: EdgeInsets.zero),
                                     iconAlignment: IconAlignment.end,
                                     icon: Icon(
@@ -923,8 +934,9 @@ class _LoadSheetState extends State<_LoadSheet> {
                                                 CrossAxisAlignment.start,
                                             children: [
                                               Text(_parameters(parameters),
-                                                  style: const TextStyle(
-                                                      color: workbenchMuted,
+                                                  style: TextStyle(
+                                                      color:
+                                                          context.palette.muted,
                                                       fontSize: 12,
                                                       height: 1.6)),
                                               if (state.merge != null)
@@ -937,9 +949,10 @@ class _LoadSheetState extends State<_LoadSheet> {
                                                           const EdgeInsets.only(
                                                               top: 8),
                                                       child: Text(change,
-                                                          style: const TextStyle(
-                                                              color:
-                                                                  workbenchMuted,
+                                                          style: TextStyle(
+                                                              color: context
+                                                                  .palette
+                                                                  .muted,
                                                               fontSize: 12))),
                                             ]))),
                                 if ({
@@ -947,19 +960,20 @@ class _LoadSheetState extends State<_LoadSheet> {
                                   SyncOperationStatus.applying,
                                   SyncOperationStatus.verifying
                                 }.contains(state.operationStatus))
-                                  const Padding(
-                                      padding:
-                                          EdgeInsets.symmetric(vertical: 12),
+                                  Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 12),
                                       child: LinearProgressIndicator(
-                                          minHeight: 3, color: workbenchMuted)),
+                                          minHeight: 3,
+                                          color: context.palette.muted)),
                               ]))),
                           const SizedBox(height: 12),
                           SizedBox(
                               width: double.infinity,
                               child: FilledButton(
                                   style: FilledButton.styleFrom(
-                                      backgroundColor: const Color(0xffe5e8e3),
-                                      foregroundColor: workbenchBackground,
+                                      backgroundColor: context.palette.accent,
+                                      foregroundColor: context.palette.onAccent,
                                       padding: const EdgeInsets.symmetric(
                                           vertical: 14)),
                                   onPressed: canConfirm ? _confirm : null,

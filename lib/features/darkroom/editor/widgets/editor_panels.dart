@@ -9,7 +9,8 @@ import '../../../../darkroom/model/edit_document.dart';
 import '../../../../darkroom/model/export_recipe.dart';
 import '../editor_controller.dart';
 
-const _hint = TextStyle(color: GRemoteColors.muted, fontSize: 12);
+TextStyle _hint(BuildContext context) =>
+    TextStyle(color: context.palette.muted, fontSize: 12);
 
 class FrameStylePanel extends StatelessWidget {
   const FrameStylePanel(
@@ -47,8 +48,9 @@ class FrameStylePanel extends StatelessWidget {
                   child: SizedBox(
                     width: (constraints.maxWidth - 10) / 2,
                     child: Material(
-                      color:
-                          selected ? GRemoteColors.raised : GRemoteColors.navy,
+                      color: selected
+                          ? context.palette.raised
+                          : context.palette.surface,
                       borderRadius: BorderRadius.circular(12),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(12),
@@ -59,8 +61,8 @@ class FrameStylePanel extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                                 color: selected
-                                    ? GRemoteColors.gold
-                                    : GRemoteColors.divider),
+                                    ? context.palette.accent
+                                    : context.palette.divider),
                           ),
                           child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -73,8 +75,9 @@ class FrameStylePanel extends StatelessWidget {
                                           painter: _FrameSwatch(style))),
                                   const Spacer(),
                                   if (selected)
-                                    const Icon(Icons.check_circle_rounded,
-                                        color: GRemoteColors.gold, size: 17),
+                                    Icon(Icons.check_circle_rounded,
+                                        color: context.palette.accent,
+                                        size: 17),
                                 ]),
                                 const SizedBox(height: 7),
                                 Text(style.label,
@@ -85,8 +88,8 @@ class FrameStylePanel extends StatelessWidget {
                                 Text(_description(style),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                        color: GRemoteColors.muted,
+                                    style: TextStyle(
+                                        color: context.palette.muted,
                                         fontSize: 10)),
                               ]),
                         ),
@@ -170,7 +173,7 @@ class LutPanel extends StatelessWidget {
         ),
         if (recipe.lutId != null) ...[
           const SizedBox(height: 12),
-          Text('强度 ${(recipe.strength * 100).round()}%', style: _hint),
+          Text('强度 ${(recipe.strength * 100).round()}%', style: _hint(context)),
           Slider(
             value: recipe.strength,
             onChanged: controller.setStrength,
@@ -218,7 +221,7 @@ class ChoicePanel<T> extends StatelessWidget {
           ]),
           if (note != null) ...[
             const SizedBox(height: 12),
-            Text(note!, style: _hint),
+            Text(note!, style: _hint(context)),
           ],
         ],
       );
@@ -323,7 +326,7 @@ class ExportPanel extends StatelessWidget {
                 : hasGps
                     ? '导出副本将包含拍摄位置'
                     : '原图没有 GPS 信息',
-            style: _hint,
+            style: _hint(context),
           ),
           value: canKeepGps && recipe.keepGps,
           onChanged: canKeepGps ? controller.setKeepGps : null,

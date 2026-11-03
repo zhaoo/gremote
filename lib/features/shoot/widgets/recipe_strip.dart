@@ -32,12 +32,12 @@ class RecipeStrip extends StatelessWidget {
             for (final recipe in recipes) _item(recipe),
             InkWell(
               onTap: onAdd,
-              child: const SizedBox(
+              child: SizedBox(
                 width: 74,
                 child: Center(
                   child: Text('＋ 新建',
-                      style:
-                          TextStyle(color: GRemoteColors.gold, fontSize: 11)),
+                      style: TextStyle(
+                          color: AppPalette.dark.accent, fontSize: 11)),
                 ),
               ),
             ),
@@ -61,7 +61,8 @@ class RecipeStrip extends StatelessWidget {
                 colors: [Color(0xFF605341), Color(0xFF222923)],
               ),
               border: Border.all(
-                color: selected ? GRemoteColors.gold : GRemoteColors.divider,
+                color:
+                    selected ? AppPalette.dark.accent : AppPalette.dark.divider,
               ),
             ),
             child: Center(
@@ -75,7 +76,7 @@ class RecipeStrip extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: selected ? GRemoteColors.gold : GRemoteColors.text,
+                color: selected ? AppPalette.dark.accent : AppPalette.dark.text,
                 fontSize: 10,
               )),
         ]),

@@ -98,22 +98,32 @@ class GRemoteShell extends StatelessWidget {
               top: false,
               child: Container(
                 height: 76,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF171A1D),
+                decoration: BoxDecoration(
+                  color: context.palette.background,
                 ),
                 child: Column(
                   children: [
                     Expanded(
                       child: Row(
                         children: [
-                          _destination(0, '首页', Icons.home_outlined, Icons.home,
+                          _destination(context, 0, '首页', Icons.home_outlined,
+                              Icons.home, motionDuration),
+                          _destination(
+                              context,
+                              1,
+                              '相册',
+                              Icons.photo_library_outlined,
+                              Icons.photo_library,
                               motionDuration),
-                          _destination(1, '相册', Icons.photo_library_outlined,
-                              Icons.photo_library, motionDuration),
-                          _destination(2, '相机', Icons.camera_outlined,
+                          _destination(context, 2, '相机', Icons.camera_outlined,
                               Icons.camera, motionDuration),
-                          _destination(3, '拍摄', Icons.camera_alt_outlined,
-                              Icons.camera_alt, motionDuration),
+                          _destination(
+                              context,
+                              3,
+                              '拍摄',
+                              Icons.camera_alt_outlined,
+                              Icons.camera_alt,
+                              motionDuration),
                         ],
                       ),
                     ),
@@ -124,8 +134,8 @@ class GRemoteShell extends StatelessWidget {
     );
   }
 
-  Widget _destination(int index, String label, IconData icon,
-      IconData activeIcon, Duration motionDuration) {
+  Widget _destination(BuildContext context, int index, String label,
+      IconData icon, IconData activeIcon, Duration motionDuration) {
     final selected = navigationShell.currentIndex == index;
     return Expanded(
       child: Semantics(
@@ -149,7 +159,9 @@ class GRemoteShell extends StatelessWidget {
                 duration: motionDuration,
                 child: Icon(selected ? activeIcon : icon,
                     size: 23,
-                    color: selected ? GRemoteColors.text : GRemoteColors.muted),
+                    color: selected
+                        ? context.palette.text
+                        : context.palette.muted),
               ),
               const SizedBox(height: 5),
               Text(label,
@@ -157,7 +169,8 @@ class GRemoteShell extends StatelessWidget {
                     fontSize: 11,
                     letterSpacing: 1,
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-                    color: selected ? GRemoteColors.text : GRemoteColors.muted,
+                    color:
+                        selected ? context.palette.text : context.palette.muted,
                   )),
             ],
           ),

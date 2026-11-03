@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../../../app/theme/app_palette.dart';
 import '../../../../darkroom/model/photo_edits.dart';
 import '../../../../app/widgets/workspace_motion.dart';
 
@@ -92,10 +93,10 @@ class _CropPanelState extends State<CropPanel> {
                       labelStyle: TextStyle(
                           fontSize: 12,
                           color: selected == ratio.key
-                              ? Colors.black
-                              : Colors.white70),
-                      selectedColor: Colors.white,
-                      backgroundColor: const Color(0xff292929),
+                              ? context.palette.onAccent
+                              : context.palette.muted),
+                      selectedColor: context.palette.accent,
+                      backgroundColor: context.palette.raised,
                       visualDensity: VisualDensity.compact,
                       chipAnimationStyle: ChipAnimationStyle(
                           selectAnimation: AnimationStyle(
@@ -130,13 +131,13 @@ class _CropPanelState extends State<CropPanel> {
                 onPressed: () => _apply(c.copyWith(flipY: !c.flipY))),
           ]),
           Text('校正  ${c.angle > 0 ? '+' : ''}${c.angle.toStringAsFixed(1)}°',
-              style: const TextStyle(fontSize: 13, color: Colors.white70)),
+              style: TextStyle(fontSize: 13, color: context.palette.muted)),
           Slider(
               value: c.angle,
               min: -45,
               max: 45,
               label: '${c.angle.toStringAsFixed(1)}°',
-              activeColor: Colors.white,
+              activeColor: context.palette.accent,
               semanticFormatterCallback: (v) => '${v.toStringAsFixed(1)}度',
               onChangeStart: (_) => widget.onStart(),
               onChanged: (v) => widget.onChanged(c.copyWith(angle: v)),

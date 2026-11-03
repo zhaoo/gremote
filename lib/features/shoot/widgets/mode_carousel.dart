@@ -28,8 +28,9 @@ class ModeCarousel extends StatelessWidget {
                   onPressed: locked ? null : () => onChanged(item),
                   style: TextButton.styleFrom(
                     padding: EdgeInsets.zero,
-                    foregroundColor:
-                        item == mode ? GRemoteColors.gold : GRemoteColors.muted,
+                    foregroundColor: item == mode
+                        ? context.palette.accent
+                        : context.palette.muted,
                   ),
                   child: Text(item.label,
                       style: TextStyle(

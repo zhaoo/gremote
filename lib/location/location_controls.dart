@@ -48,15 +48,15 @@ class _LocationControlsState extends ConsumerState<LocationControls> {
                                 if (mounted) setState(() => _busy = false);
                               }
                             }),
-                  const Text('将手机位置关联到联机拍摄记录。退出拍摄或切到后台即停止定位，原始照片不会被改写。',
+                  Text('将手机位置关联到联机拍摄记录。退出拍摄或切到后台即停止定位，原始照片不会被改写。',
                       style: TextStyle(
-                          color: GRemoteColors.muted,
+                          color: context.palette.muted,
                           fontSize: 12,
                           height: 1.6)),
                   const SizedBox(height: 18),
-                  const Text('最近拍摄位置',
-                      style: TextStyle(
-                          color: GRemoteColors.goldSoft, fontSize: 13)),
+                  Text('最近拍摄位置',
+                      style:
+                          TextStyle(color: context.palette.text, fontSize: 13)),
                   const SizedBox(height: 8),
                   SizedBox(
                       height: 200,

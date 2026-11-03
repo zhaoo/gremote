@@ -53,8 +53,8 @@ class _CameraPageState extends ConsumerState<CameraPage> {
                           icon: Icon(Icons.circle,
                               size: 6,
                               color: connected
-                                  ? GRemoteColors.text
-                                  : GRemoteColors.muted),
+                                  ? context.palette.text
+                                  : context.palette.muted),
                           label: ConstrainedBox(
                               constraints: BoxConstraints(
                                   maxWidth:
@@ -65,9 +65,9 @@ class _CameraPageState extends ConsumerState<CameraPage> {
                                       : '未连接',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontSize: 12,
-                                      color: GRemoteColors.muted)))),
+                                      color: context.palette.muted)))),
                     ])),
                 Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 6),

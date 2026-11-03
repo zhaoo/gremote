@@ -68,7 +68,7 @@ class CameraParamRow extends StatelessWidget {
         Text(label,
             maxLines: 1,
             style: TextStyle(
-                color: GRemoteColors.muted, fontSize: compact ? 11 : 10)),
+                color: context.palette.muted, fontSize: compact ? 11 : 10)),
         const SizedBox(height: 6),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Flexible(
@@ -76,7 +76,8 @@ class CameraParamRow extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                    color: enabled ? GRemoteColors.text : GRemoteColors.muted,
+                    color:
+                        enabled ? context.palette.text : context.palette.muted,
                     fontSize: compact ? 17 : 12,
                     fontWeight: FontWeight.w400)),
           ),

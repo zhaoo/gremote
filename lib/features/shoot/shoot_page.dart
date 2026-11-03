@@ -171,7 +171,7 @@ class _ShootPageState extends ConsumerState<ShootPage> {
       canPop: false,
       onPopInvokedWithResult: (_, __) => _goHome(),
       child: Scaffold(
-        backgroundColor: const Color(0xFF111416),
+        backgroundColor: context.palette.background,
         body: SafeArea(
           bottom: true,
           child: Stack(children: [
@@ -199,9 +199,10 @@ class _ShootPageState extends ConsumerState<ShootPage> {
                       width: double.infinity,
                       color: const Color(0xAA682C25),
                       padding: const EdgeInsets.symmetric(vertical: 3),
-                      child: const Text('已脱离',
+                      child: Text('已脱离',
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 10)),
+                          style: TextStyle(
+                              fontSize: 10, color: AppPalette.dark.text)),
                     ),
                 ],
                 viewfinder: _mode == ShootMode.more
@@ -237,7 +238,9 @@ class _ShootPageState extends ConsumerState<ShootPage> {
                                   child: Text(
                                     '${program.done}/${program.total}'
                                     '${program.reason == null ? '' : ' · ${shootReasonLabel(program.reason!)}'}',
-                                    style: const TextStyle(fontSize: 10),
+                                    style: TextStyle(
+                                        fontSize: 10,
+                                        color: AppPalette.dark.text),
                                   ),
                                 ),
                               ),
@@ -584,7 +587,7 @@ class _ShootPageState extends ConsumerState<ShootPage> {
     if (!mounted) return;
     final program = await showModalBottomSheet<Program>(
       context: context,
-      backgroundColor: GRemoteColors.navy,
+      backgroundColor: context.palette.surface,
       isScrollControlled: true,
       builder: (_) => ProgramSheet(
         kind: kind,
@@ -602,7 +605,7 @@ class _ShootPageState extends ConsumerState<ShootPage> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF202528),
+      backgroundColor: context.palette.raised,
       sheetAnimationStyle: AnimationStyle(
           duration: WorkspaceMotion.duration(context, 250),
           reverseDuration: WorkspaceMotion.duration(context, 200)),
@@ -650,7 +653,7 @@ class _ShootPageState extends ConsumerState<ShootPage> {
                             width: 30,
                             height: 3,
                             decoration: BoxDecoration(
-                                color: const Color(0xFF737B7D),
+                                color: context.palette.muted,
                                 borderRadius: BorderRadius.circular(3)))),
                     const SizedBox(height: 10),
                     Row(children: [
@@ -669,10 +672,10 @@ class _ShootPageState extends ConsumerState<ShootPage> {
                         trailing: Switch(
                             key: const Key('settings-histogram'),
                             value: _histogram,
-                            activeTrackColor: const Color(0xFF697477),
-                            activeColor: const Color(0xFFE0E5E2),
+                            activeTrackColor: context.palette.muted,
+                            activeColor: context.palette.accent,
                             onChanged: (_) => updateSheet(_toggleHistogram))),
-                    const Divider(height: 1, color: Color(0xFF353C3F)),
+                    Divider(height: 1, color: context.palette.divider),
                     _SettingsRow(
                         label: '定时拍摄',
                         value: _timerLabel(camera.value(ParamKey.drive)),
@@ -701,15 +704,15 @@ class _ShootPageState extends ConsumerState<ShootPage> {
                           for (final param in extras) parameter(param)
                         ],
                       ),
-                    const Divider(height: 1, color: Color(0xFF353C3F)),
+                    Divider(height: 1, color: context.palette.divider),
                     ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading:
                             const Icon(Icons.local_movies_outlined, size: 28),
                         title: const Text('机内胶卷'),
-                        subtitle: const Text('选择胶卷与装卷',
+                        subtitle: Text('选择胶卷与装卷',
                             style: TextStyle(
-                                fontSize: 11, color: GRemoteColors.muted)),
+                                fontSize: 11, color: context.palette.muted)),
                         trailing: const Icon(Icons.chevron_right, size: 18),
                         onTap: () {
                           Navigator.pop(sheetContext);
@@ -739,7 +742,7 @@ class _ShootPageState extends ConsumerState<ShootPage> {
   void _showTimerChoices(BuildContext settingsContext) {
     showModalBottomSheet<void>(
       context: settingsContext,
-      backgroundColor: const Color(0xFF202528),
+      backgroundColor: context.palette.raised,
       sheetAnimationStyle: AnimationStyle(
           duration: WorkspaceMotion.duration(context, 250),
           reverseDuration: WorkspaceMotion.duration(context, 200)),
@@ -802,8 +805,8 @@ class _AspectChoices extends ConsumerWidget {
     return Padding(
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('画幅',
-              style: TextStyle(fontSize: 12, color: GRemoteColors.muted)),
+          Text('画幅',
+              style: TextStyle(fontSize: 12, color: context.palette.muted)),
           const SizedBox(height: 6),
           Wrap(spacing: 8, runSpacing: 6, children: [
             for (final value in aspect.options)
@@ -836,7 +839,7 @@ class _SettingsGroupLabel extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(top: 18, bottom: 4),
         child: Text(label,
-            style: const TextStyle(fontSize: 11, color: GRemoteColors.muted)),
+            style: TextStyle(fontSize: 11, color: context.palette.muted)),
       );
 }
 
@@ -855,15 +858,15 @@ class _SettingsRow extends StatelessWidget {
                       maxWidth: MediaQuery.sizeOf(context).width * .42),
                   child: Text(value,
                       textAlign: TextAlign.right,
-                      style: const TextStyle(
-                          fontSize: 12, color: GRemoteColors.muted))),
+                      style: TextStyle(
+                          fontSize: 12, color: context.palette.muted))),
               if (onTap != null) ...[
                 const SizedBox(width: 6),
-                const Icon(Icons.chevron_right,
-                    size: 17, color: GRemoteColors.muted)
+                Icon(Icons.chevron_right,
+                    size: 17, color: context.palette.muted)
               ],
             ]),
             onTap: onTap),
-        const Divider(height: 1, color: Color(0xFF353C3F)),
+        Divider(height: 1, color: context.palette.divider),
       ]);
 }

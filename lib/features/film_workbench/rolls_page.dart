@@ -45,7 +45,7 @@ class RollsPage extends ConsumerWidget {
                   action: IconButton(
                       tooltip: '新建胶卷',
                       onPressed: () => _new(context, ref),
-                      icon: const Icon(Icons.add, color: workbenchCream))),
+                      icon: Icon(Icons.add, color: context.palette.text))),
               if (rolls.isEmpty)
                 Padding(
                     padding: const EdgeInsets.fromLTRB(30, 52, 30, 40),
@@ -54,20 +54,21 @@ class RollsPage extends ConsumerWidget {
                           width: 88,
                           height: 88,
                           decoration: BoxDecoration(
-                              color: workbenchSurface,
+                              color: context.palette.raised,
                               borderRadius: BorderRadius.circular(24)),
-                          child: const Icon(Icons.local_movies_outlined,
-                              size: 40, color: workbenchGold)),
+                          child: Icon(Icons.local_movies_outlined,
+                              size: 40, color: context.palette.accent)),
                       const SizedBox(height: 26),
-                      const Text('第一卷，从今天开始',
+                      Text('第一卷，从今天开始',
                           style: TextStyle(
                               fontSize: 22,
-                              color: workbenchCream,
+                              color: context.palette.text,
                               fontWeight: FontWeight.w600)),
                       const SizedBox(height: 12),
-                      const Text('选一种颜色，留下一段日常。\n开卷后可导入真实照片，再整理成联系印样。',
+                      Text('选一种颜色，留下一段日常。\n开卷后可导入真实照片，再整理成联系印样。',
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: workbenchMuted, height: 1.8)),
+                          style: TextStyle(
+                              color: context.palette.muted, height: 1.8)),
                       const SizedBox(height: 30),
                       FilledButton(
                           onPressed: () => _new(context, ref),
@@ -81,11 +82,12 @@ class RollsPage extends ConsumerWidget {
                         MaterialPageRoute<void>(
                             builder: (_) => RollDetailPage(rollId: roll.id)))),
               if (rolls.isNotEmpty)
-                const Padding(
-                    padding: EdgeInsets.all(24),
+                Padding(
+                    padding: const EdgeInsets.all(24),
                     child: Text('胶卷配方随照片保存 · 原片保留',
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 11, color: workbenchMuted))),
+                        style: TextStyle(
+                            fontSize: 11, color: context.palette.muted))),
             ]));
   }
 }
@@ -186,13 +188,14 @@ class _RollCover extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final items = ref.watch(rollItemsProvider(rollId)).valueOrNull;
     if (items == null || items.isEmpty) {
-      return const Center(
-          child: Icon(Icons.photo_outlined, color: workbenchMuted));
+      return Center(
+          child: Icon(Icons.photo_outlined, color: context.palette.muted));
     }
     final image = ref.watch(rollThumbnailProvider(items.first)).valueOrNull;
     return image == null
-        ? const Center(
-            child: Icon(Icons.hide_image_outlined, color: workbenchMuted))
+        ? Center(
+            child:
+                Icon(Icons.hide_image_outlined, color: context.palette.muted))
         : Image.memory(image, fit: BoxFit.cover, cacheWidth: 640);
   }
 }

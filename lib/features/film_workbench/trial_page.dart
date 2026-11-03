@@ -333,8 +333,8 @@ class _TrialPageState extends ConsumerState<TrialPage>
                 child: Row(children: [
                   Expanded(
                       child: Text(_sourceLabel,
-                          style: const TextStyle(
-                              fontSize: 10, color: workbenchMuted))),
+                          style: TextStyle(
+                              fontSize: 10, color: context.palette.muted))),
                   TextButton(
                       onPressed: _input,
                       child:
@@ -344,8 +344,8 @@ class _TrialPageState extends ConsumerState<TrialPage>
               Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 22),
                   child: Text(_sourceError,
-                      style:
-                          const TextStyle(color: workbenchGold, fontSize: 12))),
+                      style: TextStyle(
+                          color: context.palette.accent, fontSize: 12))),
             if (_processed)
               Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -363,10 +363,10 @@ class _TrialPageState extends ConsumerState<TrialPage>
             Padding(
                 padding: const EdgeInsets.fromLTRB(22, 8, 12, 4),
                 child: Row(children: [
-                  const Expanded(
+                  Expanded(
                       child: Text('为今天选一卷',
                           style: TextStyle(
-                              color: workbenchCream,
+                              color: context.palette.text,
                               fontWeight: FontWeight.w600))),
                   TextButton(
                       onPressed: () async {
@@ -383,13 +383,13 @@ class _TrialPageState extends ConsumerState<TrialPage>
             Padding(
                 padding: const EdgeInsets.fromLTRB(22, 14, 12, 8),
                 child: Column(children: [
-                  const Divider(color: Color(0xff303d31)),
+                  Divider(color: context.palette.divider),
                   Row(children: [
                     Expanded(
                         child: Text(
                             '颗粒 ${recipe.resolvedParameters['grain'] ?? 0}  /  光晕 ${recipe.resolvedParameters['haloGain'] ?? 0}',
-                            style: const TextStyle(
-                                color: workbenchCream, fontSize: 11))),
+                            style: TextStyle(
+                                color: context.palette.text, fontSize: 11))),
                     TextButton(
                         onPressed: () => showModalBottomSheet<void>(
                             context: context,
@@ -422,12 +422,13 @@ class _TrialPageState extends ConsumerState<TrialPage>
                   padding: const EdgeInsets.symmetric(horizontal: 22),
                   child: Text(
                       '预览暂不可用：${_grid ? _comparison.error : _preview.error}',
-                      style:
-                          const TextStyle(color: workbenchGold, fontSize: 11))),
-            const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 22),
+                      style: TextStyle(
+                          color: context.palette.accent, fontSize: 11))),
+            Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 22),
                 child: Text('近似预览 · 与机内最终 JPEG 会有差异',
-                    style: TextStyle(color: workbenchMuted, fontSize: 10))),
+                    style:
+                        TextStyle(color: context.palette.muted, fontSize: 10))),
             Padding(
                 padding: const EdgeInsets.fromLTRB(22, 20, 22, 28),
                 child: Wrap(spacing: 10, runSpacing: 10, children: [

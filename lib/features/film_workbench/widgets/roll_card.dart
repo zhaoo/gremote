@@ -10,7 +10,7 @@ class RollCard extends StatelessWidget {
   final Widget? cover;
   @override
   Widget build(BuildContext context) => Card(
-      color: workbenchSurface,
+      color: context.palette.raised,
       clipBehavior: Clip.antiAlias,
       margin: const EdgeInsets.fromLTRB(22, 0, 22, 16),
       child: InkWell(
@@ -27,24 +27,24 @@ class RollCard extends StatelessWidget {
                       Row(children: [
                         Expanded(
                             child: Text(roll.name,
-                                style: const TextStyle(
+                                style: TextStyle(
                                     fontSize: 22,
                                     fontWeight: FontWeight.w600,
-                                    color: workbenchCream))),
-                        const Icon(Icons.arrow_forward_rounded,
-                            size: 20, color: workbenchGold)
+                                    color: context.palette.text))),
+                        Icon(Icons.arrow_forward_rounded,
+                            size: 20, color: context.palette.accent)
                       ]),
                       const SizedBox(height: 10),
                       Text(
                           '${roll.confirmedCount} / ${roll.targetCount} 张 · ${roll.status == FilmRollStatus.open ? '拍摄中' : '已结束'}',
-                          style: const TextStyle(
-                              color: workbenchMuted, fontSize: 12)),
+                          style: TextStyle(
+                              color: context.palette.muted, fontSize: 12)),
                       const SizedBox(height: 16),
                       LinearProgressIndicator(
                           value: (roll.confirmedCount / roll.targetCount)
                               .clamp(0, 1),
-                          backgroundColor: const Color(0xff354136),
-                          color: workbenchGold,
+                          backgroundColor: context.palette.divider,
+                          color: context.palette.accent,
                           minHeight: 2),
                     ])),
           ])));

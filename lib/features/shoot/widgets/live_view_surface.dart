@@ -15,21 +15,21 @@ class LiveViewSurface extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.black,
-        border: Border.all(color: GRemoteColors.divider),
+        border: Border.all(color: AppPalette.dark.divider),
       ),
       child: AspectRatio(
         aspectRatio: 6 / 5,
         child: Stack(fit: StackFit.expand, children: [
           if (bytes == null)
-            const Column(
+            Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.no_photography_outlined,
-                    color: GRemoteColors.muted, size: 32),
-                SizedBox(height: 14),
+                    color: AppPalette.dark.muted, size: 32),
+                const SizedBox(height: 14),
                 Text('连接相机后显示取景画面',
                     style: TextStyle(
-                        color: GRemoteColors.muted,
+                        color: AppPalette.dark.muted,
                         fontSize: 12,
                         letterSpacing: 1)),
               ],
@@ -75,17 +75,17 @@ class _ViewfinderCorner extends StatelessWidget {
         decoration: BoxDecoration(
           border: Border(
             top: top
-                ? const BorderSide(color: GRemoteColors.gold, width: 2)
+                ? BorderSide(color: AppPalette.dark.accent, width: 2)
                 : BorderSide.none,
             bottom: top
                 ? BorderSide.none
-                : const BorderSide(color: GRemoteColors.gold, width: 2),
+                : BorderSide(color: AppPalette.dark.accent, width: 2),
             left: left
-                ? const BorderSide(color: GRemoteColors.gold, width: 2)
+                ? BorderSide(color: AppPalette.dark.accent, width: 2)
                 : BorderSide.none,
             right: left
                 ? BorderSide.none
-                : const BorderSide(color: GRemoteColors.gold, width: 2),
+                : BorderSide(color: AppPalette.dark.accent, width: 2),
           ),
         ),
       );

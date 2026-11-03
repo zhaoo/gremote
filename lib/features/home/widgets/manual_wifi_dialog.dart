@@ -93,8 +93,8 @@ class _ManualWifiDialogState extends State<ManualWifiDialog> {
           children: [
             const Text('先开启相机“无线 LAN”，扫描并选择网络；密码可从相机“通信信息”查看。'),
             const SizedBox(height: 10),
-            const Text('Android 扫描需要位置权限及定位开关，仅用于列出附近网络。',
-                style: TextStyle(fontSize: 11, color: GRemoteColors.muted)),
+            Text('Android 扫描需要位置权限及定位开关，仅用于列出附近网络。',
+                style: TextStyle(fontSize: 11, color: context.palette.muted)),
             TextButton.icon(
                 onPressed: _scanning ? null : _scan,
                 icon: const Icon(Icons.refresh),
@@ -106,15 +106,14 @@ class _ManualWifiDialogState extends State<ManualWifiDialog> {
             if (_scanning) const LinearProgressIndicator(),
             if (_scanError != null) ...[
               Text(_scanError!,
-                  style: const TextStyle(color: GRemoteColors.danger)),
+                  style: TextStyle(color: context.palette.danger)),
               if (_scanError!.contains('精确位置'))
                 const TextButton(
                     onPressed: ph.openAppSettings, child: Text('打开系统设置')),
             ],
             if (_scanNote != null)
               Text(_scanNote!,
-                  style: const TextStyle(
-                      color: GRemoteColors.muted, fontSize: 11)),
+                  style: TextStyle(color: context.palette.muted, fontSize: 11)),
             if (_networks.isNotEmpty && !_manual)
               SizedBox(
                   height: 140,
@@ -162,8 +161,7 @@ class _ManualWifiDialogState extends State<ManualWifiDialog> {
               decoration: const InputDecoration(labelText: '密码'),
             ),
             if (_error != null)
-              Text(_error!,
-                  style: const TextStyle(color: GRemoteColors.danger)),
+              Text(_error!, style: TextStyle(color: context.palette.danger)),
           ],
         )),
         actions: [

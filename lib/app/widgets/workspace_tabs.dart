@@ -26,16 +26,17 @@ class WorkspaceTabs<T> extends StatelessWidget {
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   minimumSize: const Size(48, 44),
-                  foregroundColor:
-                      item == value ? GRemoteColors.text : GRemoteColors.muted,
+                  foregroundColor: item == value
+                      ? context.palette.text
+                      : context.palette.muted,
                 ),
                 child: AnimatedDefaultTextStyle(
                   duration: WorkspaceMotion.duration(context, 160),
                   style: TextStyle(
                       fontSize: 15,
                       color: item == value
-                          ? GRemoteColors.text
-                          : GRemoteColors.muted,
+                          ? context.palette.text
+                          : context.palette.muted,
                       fontWeight:
                           item == value ? FontWeight.w500 : FontWeight.w400),
                   child: Text(label),

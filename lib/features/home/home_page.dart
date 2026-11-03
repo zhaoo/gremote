@@ -25,7 +25,7 @@ class HomePage extends ConsumerWidget {
     final state = ref.watch(connectionControllerProvider);
     final controller = ref.read(connectionControllerProvider.notifier);
     return ColoredBox(
-        color: const Color(0xFF171A1D),
+        color: context.palette.background,
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.only(top: 8, bottom: 23),
@@ -183,7 +183,7 @@ class _QuickStatus extends ConsumerWidget {
           onTap: () => showModalBottomSheet<void>(
               context: context,
               isScrollControlled: true,
-              backgroundColor: GRemoteColors.navy,
+              backgroundColor: context.palette.surface,
               builder: (_) => const LocationControls())),
     ]);
   }
@@ -208,22 +208,22 @@ class _StatusCell extends StatelessWidget {
         borderRadius: BorderRadius.circular(9),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 19),
-          decoration: const BoxDecoration(
-            border: Border(bottom: BorderSide(color: GRemoteColors.divider)),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: context.palette.divider)),
           ),
           child: Row(
             children: [
-              Icon(icon, size: 19, color: GRemoteColors.muted),
+              Icon(icon, size: 19, color: context.palette.muted),
               const SizedBox(width: 12),
               Text(label,
                   style: Theme.of(context)
                       .textTheme
                       .bodyMedium
-                      ?.copyWith(color: GRemoteColors.text)),
+                      ?.copyWith(color: context.palette.text)),
               const Spacer(),
               Text(value,
-                  style:
-                      GRemoteType.numeric.copyWith(color: GRemoteColors.muted)),
+                  style: GRemoteType.numeric
+                      .copyWith(color: context.palette.muted)),
             ],
           ),
         ));

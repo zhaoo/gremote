@@ -138,7 +138,7 @@ class _ImportStatusTileState extends ConsumerState<ImportStatusTile>
     final count = ref.watch(todayImportCountProvider);
     return Material(
       color: Colors.transparent,
-      shape: const Border(bottom: BorderSide(color: GRemoteColors.divider)),
+      shape: Border(bottom: BorderSide(color: context.palette.divider)),
       child: InkWell(
         borderRadius: BorderRadius.circular(9),
         onTap: () => Navigator.of(context).push(
@@ -146,22 +146,22 @@ class _ImportStatusTileState extends ConsumerState<ImportStatusTile>
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 19),
           child: Row(children: [
-            const Icon(Icons.download_done_rounded,
-                size: 19, color: GRemoteColors.muted),
+            Icon(Icons.download_done_rounded,
+                size: 19, color: context.palette.muted),
             const SizedBox(width: 12),
-            const Expanded(
-                child:
-                    Text('今日导入', style: TextStyle(color: GRemoteColors.text))),
+            Expanded(
+                child: Text('今日导入',
+                    style: TextStyle(color: context.palette.text))),
             Text(
                 count.when(
                     data: (value) => '$value 张',
                     loading: () => '…',
                     error: (_, __) => '读取失败'),
                 style:
-                    GRemoteType.numeric.copyWith(color: GRemoteColors.muted)),
+                    GRemoteType.numeric.copyWith(color: context.palette.muted)),
             const SizedBox(width: 5),
-            const Icon(Icons.chevron_right_rounded,
-                size: 16, color: GRemoteColors.muted),
+            Icon(Icons.chevron_right_rounded,
+                size: 16, color: context.palette.muted),
           ]),
         ),
       ),
@@ -203,20 +203,20 @@ class ImportHistoryPage extends ConsumerWidget {
                   itemCount: photos.length + 1,
                   itemBuilder: (context, index) {
                     if (index == 0) {
-                      return const Padding(
-                          padding: EdgeInsets.only(bottom: 16),
+                      return Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
                           child: Text(
                               '按导入日期记录 · RAW/JPG 与重复保存合并为一张\n仅显示仍保存在本机的相机原图',
                               style: TextStyle(
-                                  color: GRemoteColors.muted, fontSize: 12)));
+                                  color: context.palette.muted, fontSize: 12)));
                     }
                     final photo = photos[index - 1];
                     final time = photo.importedAt;
                     String pad(int value) => value.toString().padLeft(2, '0');
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.photo_outlined,
-                          color: GRemoteColors.goldSoft),
+                      leading: Icon(Icons.photo_outlined,
+                          color: context.palette.text),
                       title: Text(photo.name),
                       subtitle: Text(
                           '${time.year}-${pad(time.month)}-${pad(time.day)} ${pad(time.hour)}:${pad(time.minute)}'),
@@ -224,8 +224,8 @@ class ImportHistoryPage extends ConsumerWidget {
                           photo.formats.containsAll({'RAW', 'JPG'})
                               ? 'RAW+JPG'
                               : photo.formats.single,
-                          style: const TextStyle(
-                              color: GRemoteColors.goldSoft, fontSize: 12)),
+                          style: TextStyle(
+                              color: context.palette.text, fontSize: 12)),
                     );
                   },
                 ),

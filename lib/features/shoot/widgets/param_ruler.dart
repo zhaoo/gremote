@@ -39,8 +39,9 @@ class ParamRuler extends StatelessWidget {
                   onPressed: () => onChanged(value),
                   child: Text(shootValueLabel(param.wireKey, value),
                       style: TextStyle(
-                        color:
-                            selected ? GRemoteColors.gold : GRemoteColors.text,
+                        color: selected
+                            ? AppPalette.dark.accent
+                            : AppPalette.dark.text,
                         fontWeight:
                             selected ? FontWeight.w700 : FontWeight.w400,
                       )),

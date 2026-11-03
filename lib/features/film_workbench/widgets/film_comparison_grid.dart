@@ -100,12 +100,13 @@ class _PhotoTileState extends State<_PhotoTile> {
             child: AspectRatio(
                 aspectRatio: 3 / 2,
                 child: ColoredBox(
-                    color: const Color(0xff283429),
+                    color: context.palette.raised,
                     child: _image == null
-                        ? const Center(
+                        ? Center(
                             child: Text('等待画面',
                                 style: TextStyle(
-                                    color: workbenchMuted, fontSize: 11)))
+                                    color: context.palette.muted,
+                                    fontSize: 11)))
                         : RawImage(image: _image, fit: BoxFit.cover)))),
         SizedBox(
             height: 44,
@@ -113,8 +114,8 @@ class _PhotoTileState extends State<_PhotoTile> {
                 ? Align(
                     alignment: Alignment.centerLeft,
                     child: Text(widget.label,
-                        style: const TextStyle(
-                            color: workbenchMuted, fontSize: 12)))
+                        style: TextStyle(
+                            color: context.palette.muted, fontSize: 12)))
                 : TextButton(
                     onPressed: widget.onChoose,
                     child: Row(children: [

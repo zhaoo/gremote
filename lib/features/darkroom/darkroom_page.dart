@@ -22,7 +22,7 @@ class DarkroomPage extends ConsumerWidget {
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, _) => Center(
               child: Text('暗房数据读取失败：$error',
-                  style: const TextStyle(color: GRemoteColors.danger))),
+                  style: TextStyle(color: context.palette.danger))),
           data: (data) => _Overview(data: data),
         ),
       ),
@@ -53,7 +53,7 @@ class _Overview extends ConsumerWidget {
         ),
         _header(context, '最近编辑', 'RECENT EDITS'),
         if (data.edits.isEmpty)
-          _empty('还没有编辑记录；从相册打开照片。')
+          _empty(context, '还没有编辑记录；从相册打开照片。')
         else
           SliverList.builder(
             itemCount: data.edits.length,
@@ -65,8 +65,8 @@ class _Overview extends ConsumerWidget {
                     edit.title.isEmpty ? '照片 #${edit.mediaId}' : edit.title),
                 subtitle: Text(
                     '${edit.recipe.frame.label} · ${edit.recipe.ratio.label} · ${edit.recipe.size.label}',
-                    style: const TextStyle(
-                        color: GRemoteColors.muted, fontSize: 12)),
+                    style:
+                        TextStyle(color: context.palette.muted, fontSize: 12)),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/edit/${edit.mediaId}'),
               );
@@ -103,7 +103,7 @@ class _Overview extends ConsumerWidget {
         ),
         _header(context, '出图方案', 'EXPORT PRESETS'),
         if (data.presets.isEmpty)
-          _empty('在编辑页点“存为方案”，即可批量复用。')
+          _empty(context, '在编辑页点“存为方案”，即可批量复用。')
         else
           SliverList.builder(
             itemCount: data.presets.length,
@@ -136,12 +136,11 @@ class _Overview extends ConsumerWidget {
         ),
       );
 
-  SliverPadding _empty(String text) => SliverPadding(
+  SliverPadding _empty(BuildContext context, String text) => SliverPadding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         sliver: SliverToBoxAdapter(
             child: Text(text,
-                style:
-                    const TextStyle(color: GRemoteColors.muted, fontSize: 13))),
+                style: TextStyle(color: context.palette.muted, fontSize: 13))),
       );
 
   Future<void> _import(BuildContext context, DarkroomActions actions) async {
@@ -205,8 +204,8 @@ class _LutCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DecoratedBox(
         decoration: BoxDecoration(
-          color: GRemoteColors.navy,
-          border: Border.all(color: GRemoteColors.divider),
+          color: context.palette.surface,
+          border: Border.all(color: context.palette.divider),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Padding(
@@ -216,10 +215,10 @@ class _LutCard extends StatelessWidget {
               width: 5,
               height: 34,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [
-                  GRemoteColors.gold,
-                  Color(0xFF516D65),
-                  Color(0xFFCB7D5D),
+                gradient: LinearGradient(colors: [
+                  context.palette.accent,
+                  const Color(0xFF516D65),
+                  const Color(0xFFCB7D5D),
                 ], begin: Alignment.topCenter, end: Alignment.bottomCenter),
                 borderRadius: BorderRadius.circular(3),
               ),
@@ -232,8 +231,8 @@ class _LutCard extends StatelessWidget {
                 children: [
                   Text(lut.name, maxLines: 1, overflow: TextOverflow.ellipsis),
                   Text('${lut.size} 点${lut.imported ? ' · 导入' : ''}',
-                      style: const TextStyle(
-                          color: GRemoteColors.muted, fontSize: 10)),
+                      style: TextStyle(
+                          color: context.palette.muted, fontSize: 10)),
                 ],
               ),
             ),
@@ -263,7 +262,7 @@ class _PresetTile extends StatelessWidget {
   Widget build(BuildContext context) => ListTile(
         title: Text(preset.name),
         subtitle: Text(describeRecipe(preset.recipe),
-            style: const TextStyle(color: GRemoteColors.muted, fontSize: 12)),
+            style: TextStyle(color: context.palette.muted, fontSize: 12)),
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
           IconButton(
             key: ValueKey('rename-${preset.id}'),

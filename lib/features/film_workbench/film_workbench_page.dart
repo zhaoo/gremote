@@ -16,18 +16,17 @@ class _FilmWorkbenchPageState extends State<FilmWorkbenchPage> {
   @override
   Widget build(BuildContext context) => Theme(
       data: Theme.of(context).copyWith(
-        scaffoldBackgroundColor: workbenchBackground,
-        colorScheme: Theme.of(context)
-            .colorScheme
-            .copyWith(primary: workbenchGold, surface: workbenchSurface),
+        scaffoldBackgroundColor: context.palette.background,
+        colorScheme: Theme.of(context).colorScheme.copyWith(
+            primary: context.palette.accent, surface: context.palette.raised),
       ),
       child: Scaffold(
         appBar: AppBar(
-            backgroundColor: workbenchBackground,
+            backgroundColor: context.palette.background,
             surfaceTintColor: Colors.transparent,
-            title: const Text.rich(
+            title: Text.rich(
                 TextSpan(children: [
-                  TextSpan(
+                  const TextSpan(
                       text: 'GRemote',
                       style: TextStyle(
                           fontSize: 16,
@@ -36,19 +35,19 @@ class _FilmWorkbenchPageState extends State<FilmWorkbenchPage> {
                   TextSpan(
                       text: '  × M10V',
                       style: TextStyle(
-                          color: workbenchGold,
+                          color: context.palette.accent,
                           fontSize: 10,
                           letterSpacing: 1)),
                 ]),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis),
-            actions: const [
+            actions: [
               Padding(
-                  padding: EdgeInsets.only(right: 20),
+                  padding: const EdgeInsets.only(right: 20),
                   child: Center(
                       child: Text('离线可用',
-                          style:
-                              TextStyle(color: workbenchMuted, fontSize: 11))))
+                          style: TextStyle(
+                              color: context.palette.muted, fontSize: 11))))
             ]),
         body: SafeArea(
             top: false,
@@ -64,25 +63,27 @@ class _FilmWorkbenchPageState extends State<FilmWorkbenchPage> {
             animationDuration: MediaQuery.of(context).disableAnimations
                 ? Duration.zero
                 : const Duration(milliseconds: 230),
-            backgroundColor: workbenchBackground,
-            indicatorColor: workbenchSurface,
+            backgroundColor: context.palette.background,
+            indicatorColor: context.palette.raised,
             selectedIndex: _section,
             onDestinationSelected: (i) => setState(() => _section = i),
-            destinations: const [
+            destinations: [
               NavigationDestination(
-                  icon: Icon(Icons.tune_outlined, color: workbenchMuted),
-                  selectedIcon: Icon(Icons.tune_outlined, color: workbenchGold),
+                  icon: Icon(Icons.tune_outlined, color: context.palette.muted),
+                  selectedIcon:
+                      Icon(Icons.tune_outlined, color: context.palette.accent),
                   label: '试卷台'),
               NavigationDestination(
-                  icon:
-                      Icon(Icons.local_movies_outlined, color: workbenchMuted),
-                  selectedIcon:
-                      Icon(Icons.local_movies_outlined, color: workbenchGold),
+                  icon: Icon(Icons.local_movies_outlined,
+                      color: context.palette.muted),
+                  selectedIcon: Icon(Icons.local_movies_outlined,
+                      color: context.palette.accent),
                   label: '数字胶卷'),
               NavigationDestination(
-                  icon: Icon(Icons.camera_alt_outlined, color: workbenchMuted),
-                  selectedIcon:
-                      Icon(Icons.camera_alt_outlined, color: workbenchGold),
+                  icon: Icon(Icons.camera_alt_outlined,
+                      color: context.palette.muted),
+                  selectedIcon: Icon(Icons.camera_alt_outlined,
+                      color: context.palette.accent),
                   label: '相机胶卷'),
             ]),
       ));

@@ -83,8 +83,8 @@ class _ProtocolProbePageState extends ConsumerState<ProtocolProbePage> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            const Text('只读探测会读取路由状态、参数结构和变化推送，不记录 SSID、序列号等敏感值。',
-                style: TextStyle(color: GRemoteColors.muted, height: 1.5)),
+            Text('只读探测会读取路由状态、参数结构和变化推送，不记录 SSID、序列号等敏感值。',
+                style: TextStyle(color: context.palette.muted, height: 1.5)),
             const SizedBox(height: 18),
             FilledButton(
               onPressed:
@@ -99,11 +99,11 @@ class _ProtocolProbePageState extends ConsumerState<ProtocolProbePage> {
             ),
             if (_running) ...[
               const SizedBox(height: 20),
-              const LinearProgressIndicator(color: GRemoteColors.gold),
+              LinearProgressIndicator(color: context.palette.accent),
             ],
             if (_error case final String error) ...[
               const SizedBox(height: 16),
-              Text(error, style: const TextStyle(color: GRemoteColors.danger)),
+              Text(error, style: TextStyle(color: context.palette.danger)),
             ],
             if (report != null) ...[
               const SizedBox(height: 24),
@@ -144,7 +144,7 @@ class _ResultRow extends StatelessWidget {
         child: Row(children: [
           Expanded(
               child:
-                  Text(label, style: const TextStyle(color: GRemoteColors.muted))),
+                  Text(label, style: TextStyle(color: context.palette.muted))),
           Text(value),
         ]),
       );

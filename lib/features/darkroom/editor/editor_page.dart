@@ -131,7 +131,7 @@ class _EditorPageState extends ConsumerState<EditorPage> {
           if (!didPop) _leave();
         },
         child: Scaffold(
-            backgroundColor: GRemoteColors.night,
+            backgroundColor: context.palette.background,
             appBar: AppBar(
                 automaticallyImplyLeading: false,
                 leading: IconButton(
@@ -165,8 +165,8 @@ class _EditorPageState extends ConsumerState<EditorPage> {
                                   child: Icon(Icons.compare_outlined,
                                       size: 21,
                                       color: _showOriginal
-                                          ? GRemoteColors.text
-                                          : GRemoteColors.muted))))),
+                                          ? context.palette.text
+                                          : context.palette.muted))))),
                   PopupMenuButton<String>(
                       tooltip: '更多',
                       enabled: !s.exporting && !_leaving,
@@ -304,7 +304,7 @@ class _EditorPageState extends ConsumerState<EditorPage> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
-                            color: GRemoteColors.raised,
+                            color: context.palette.raised,
                             borderRadius: BorderRadius.circular(5)),
                         child:
                             const Text('原图', style: TextStyle(fontSize: 12))))
@@ -347,8 +347,8 @@ class _EditorPageState extends ConsumerState<EditorPage> {
                     style: TextStyle(
                         fontSize: 11,
                         color: s.error == null && s.saveError == null
-                            ? GRemoteColors.muted
-                            : GRemoteColors.danger)))),
+                            ? context.palette.muted
+                            : context.palette.danger)))),
         IconButton(
             tooltip: '重置当前工具',
             icon: const Icon(Icons.restart_alt, size: 19),
@@ -359,7 +359,7 @@ class _EditorPageState extends ConsumerState<EditorPage> {
   Widget _workspace(EditorState s) {
     final tool = _tool;
     return ColoredBox(
-        color: GRemoteColors.raised,
+        color: context.palette.raised,
         child: Column(children: [
           if (MediaQuery.sizeOf(context).width >
               MediaQuery.sizeOf(context).height)
@@ -395,8 +395,8 @@ class _EditorPageState extends ConsumerState<EditorPage> {
                               onPressed: () => _finish(cancel: true),
                               icon: const Icon(Icons.close, size: 21)),
                           Text(tool.label,
-                              style: const TextStyle(
-                                  fontSize: 13, color: GRemoteColors.muted)),
+                              style: TextStyle(
+                                  fontSize: 13, color: context.palette.muted)),
                           IconButton(
                               tooltip: '完成调整',
                               onPressed: () => _finish(),
@@ -640,10 +640,10 @@ class _EditorPageState extends ConsumerState<EditorPage> {
                         child: const Text('保存当前'))
                   ]),
                   if (presets.isEmpty)
-                    const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 20),
+                    Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 20),
                         child: Text('还没有保存的预设',
-                            style: TextStyle(color: GRemoteColors.muted))),
+                            style: TextStyle(color: context.palette.muted))),
                   for (final preset in presets)
                     ListTile(
                         title: Text(preset.name),

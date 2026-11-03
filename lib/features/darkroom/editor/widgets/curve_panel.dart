@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../../../app/theme/app_palette.dart';
 import 'package:flutter/gestures.dart';
 import '../../../../darkroom/model/photo_edits.dart';
 import '../../../../app/widgets/workspace_motion.dart';
@@ -170,10 +171,15 @@ class _CurvePanelState extends State<CurvePanel> {
                           selectAnimation: AnimationStyle(
                               duration:
                                   WorkspaceMotion.duration(context, 130))),
-                      selectedColor: _colors[i],
-                      backgroundColor: const Color(0xff292929),
+                      selectedColor:
+                          i == 0 ? context.palette.accent : _colors[i],
+                      backgroundColor: context.palette.raised,
                       labelStyle: TextStyle(
-                          color: i == _channel ? Colors.black : _colors[i],
+                          color: i == _channel
+                              ? (i == 0
+                                  ? context.palette.onAccent
+                                  : Colors.black)
+                              : (i == 0 ? context.palette.text : _colors[i]),
                           fontSize: 12),
                       onSelected: (_) => setState(() {
                             _channel = i;
@@ -206,8 +212,14 @@ class _CurvePanelState extends State<CurvePanel> {
                         onPanEnd: (_) => _end(),
                         onPanCancel: _end,
                         child: CustomPaint(
-                            painter: _CurvePainter(_curve, _colors[_channel],
-                                _selected, _histogram?[_channel]))));
+                            painter: _CurvePainter(
+                                _curve,
+                                _channel == 0
+                                    ? context.palette.text
+                                    : _colors[_channel],
+                                _selected,
+                                _histogram?[_channel],
+                                context.palette))));
               })),
           Wrap(
               spacing: 8,
@@ -246,14 +258,16 @@ class _CurvePanelState extends State<CurvePanel> {
                         : null,
                     child: const Text('删除控制点')),
               ]),
-          const Text('轻点添加 · 拖动控制点',
-              style: TextStyle(color: Colors.white38, fontSize: 11)),
+          Text('轻点添加 · 拖动控制点',
+              style: TextStyle(color: context.palette.muted, fontSize: 11)),
         ]));
   }
 }
 
 class _CurvePainter extends CustomPainter {
-  const _CurvePainter(this.curve, this.color, this.selected, this.histogram);
+  const _CurvePainter(
+      this.curve, this.color, this.selected, this.histogram, this.palette);
+  final AppPalette palette;
   final ToneCurve curve;
   final Color color;
   final int? selected;
@@ -261,7 +275,7 @@ class _CurvePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Rect.fromLTWH(16, 16, size.width - 32, size.height - 32);
-    canvas.drawRect(rect, Paint()..color = const Color(0xff202020));
+    canvas.drawRect(rect, Paint()..color = palette.raised);
     final bins = histogram;
     if (bins != null) {
       final peak = bins.fold<double>(0, math.max);
@@ -277,7 +291,7 @@ class _CurvePainter extends CustomPainter {
       }
     }
     final grid = Paint()
-      ..color = Colors.white12
+      ..color = palette.divider
       ..strokeWidth = 1;
     for (var i = 0; i <= 4; i++) {
       final f = i / 4;
@@ -308,12 +322,13 @@ class _CurvePainter extends CustomPainter {
           offset = Offset(
               rect.left + p.x * rect.width, rect.bottom - p.y * rect.height);
       canvas.drawCircle(offset, i == selected ? 7 : 5, Paint()..color = color);
-      canvas.drawCircle(offset, 2.5, Paint()..color = const Color(0xff202020));
+      canvas.drawCircle(offset, 2.5, Paint()..color = palette.raised);
     }
   }
 
   @override
   bool shouldRepaint(_CurvePainter oldDelegate) =>
+      oldDelegate.palette != palette ||
       oldDelegate.curve != curve ||
       oldDelegate.color != color ||
       oldDelegate.selected != selected ||

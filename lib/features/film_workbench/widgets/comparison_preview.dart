@@ -98,7 +98,7 @@ class _ComparisonPreviewState extends State<ComparisonPreview> {
                           top: 0,
                           bottom: 0,
                           width: 1,
-                          child: const ColoredBox(color: workbenchCream)),
+                          child: ColoredBox(color: context.palette.text)),
                       Positioned(
                           left: (bounds.maxWidth * _split - 22)
                               .clamp(0, bounds.maxWidth - 44),
@@ -106,15 +106,15 @@ class _ComparisonPreviewState extends State<ComparisonPreview> {
                           width: 44,
                           height: 44,
                           child: Container(
-                              decoration: const BoxDecoration(
+                              decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: workbenchCream),
-                              child: const RotatedBox(
+                                  color: context.palette.text),
+                              child: RotatedBox(
                                   quarterTurns: 1,
                                   child: RotatedBox(
                                       quarterTurns: 1,
                                       child: Icon(Icons.unfold_more_rounded,
-                                          color: workbenchBackground,
+                                          color: context.palette.background,
                                           size: 25))))),
                     ])),
               )));
@@ -128,7 +128,7 @@ class _ComparisonPreviewState extends State<ComparisonPreview> {
       decoration: BoxDecoration(
           color: Colors.black54, borderRadius: BorderRadius.circular(4)),
       child: Text(label,
-          style: const TextStyle(fontSize: 10, color: workbenchCream)));
+          style: TextStyle(fontSize: 10, color: AppPalette.dark.text)));
 }
 
 class _SplitClipper extends CustomClipper<Rect> {

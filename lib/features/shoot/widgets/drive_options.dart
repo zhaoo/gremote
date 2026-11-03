@@ -35,8 +35,8 @@ class DriveOptions extends StatelessWidget {
             label: Text('${option.$1}${index == 0 ? '' : ' · 手机'}',
                 style: const TextStyle(fontSize: 10)),
             onPressed: () => onProgram(option.$2),
-            backgroundColor: GRemoteColors.raised,
-            side: const BorderSide(color: GRemoteColors.divider),
+            backgroundColor: context.palette.raised,
+            side: BorderSide(color: context.palette.divider),
           );
         },
       ),

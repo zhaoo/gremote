@@ -25,10 +25,10 @@ class BatchExportPage extends ConsumerWidget {
                 style: Theme.of(context).textTheme.titleMedium),
           ),
           if (state.running)
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
               child: Text('导出期间请保持 GRemote 在前台，切到后台可能被系统暂停',
-                  style: TextStyle(color: GRemoteColors.muted, fontSize: 12)),
+                  style: TextStyle(color: context.palette.muted, fontSize: 12)),
             ),
           Expanded(
             child: ListView.separated(
@@ -43,18 +43,18 @@ class BatchExportPage extends ConsumerWidget {
                       ? (entry.outcome == null
                           ? null
                           : Text(entry.outcome!.displayName,
-                              style: const TextStyle(
-                                  color: GRemoteColors.muted, fontSize: 12)))
+                              style: TextStyle(
+                                  color: context.palette.muted, fontSize: 12)))
                       : Text('${failure.message}\n${failure.hint}',
-                          style: const TextStyle(
-                              color: GRemoteColors.danger, fontSize: 12)),
+                          style: TextStyle(
+                              color: context.palette.danger, fontSize: 12)),
                   isThreeLine: failure != null,
                   trailing: Text(entry.status.label,
                       style: TextStyle(
                           color: switch (entry.status) {
-                        ExportItemStatus.done => GRemoteColors.gold,
-                        ExportItemStatus.failed => GRemoteColors.danger,
-                        _ => GRemoteColors.muted,
+                        ExportItemStatus.done => context.palette.accent,
+                        ExportItemStatus.failed => context.palette.danger,
+                        _ => context.palette.muted,
                       })),
                 );
               },

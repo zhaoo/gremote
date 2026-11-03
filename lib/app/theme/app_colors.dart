@@ -1,3 +1,5 @@
+export 'app_palette.dart';
+
 import 'package:flutter/material.dart';
 
 abstract final class GRemoteColors {

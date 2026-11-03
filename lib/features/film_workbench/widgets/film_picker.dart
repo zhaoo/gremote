@@ -37,12 +37,12 @@ class FilmPicker extends StatelessWidget {
                           vertical: 12, horizontal: 5),
                       decoration: BoxDecoration(
                           color: selected
-                              ? const Color(0xff2c3023)
-                              : workbenchSurface,
+                              ? context.palette.raised
+                              : context.palette.raised,
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
                               color: selected
-                                  ? workbenchGold
+                                  ? context.palette.accent
                                   : Colors.transparent)),
                       child: Column(children: [
                         Image.asset(film.icon,
@@ -53,14 +53,14 @@ class FilmPicker extends StatelessWidget {
                         Text(film.name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: workbenchCream, fontSize: 12)),
+                            style: TextStyle(
+                                color: context.palette.text, fontSize: 12)),
                         const SizedBox(height: 4),
                         Text(film.group,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: workbenchMuted, fontSize: 10))
+                            style: TextStyle(
+                                color: context.palette.muted, fontSize: 10))
                       ]),
                     )));
           }));

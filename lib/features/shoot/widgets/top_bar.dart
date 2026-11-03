@@ -33,8 +33,8 @@ class ShootTopBar extends StatelessWidget {
                   child: Text(shootValueLabel('exposureMode', exposureMode),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 12, color: GRemoteColors.muted))),
+                      style: TextStyle(
+                          fontSize: 12, color: context.palette.muted))),
               Stack(clipBehavior: Clip.none, children: [
                 IconButton(
                     key: const Key('recipe-toggle'),
@@ -42,11 +42,11 @@ class ShootTopBar extends StatelessWidget {
                     onPressed: onRecipe,
                     icon: const Icon(Icons.layers_outlined, size: 20)),
                 if (recipeDetached)
-                  const Positioned(
+                  Positioned(
                       right: 5,
                       top: 5,
                       child: CircleAvatar(
-                          radius: 3, backgroundColor: GRemoteColors.danger)),
+                          radius: 3, backgroundColor: context.palette.danger)),
               ]),
               IconButton(
                   onPressed: onSettings,

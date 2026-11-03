@@ -141,8 +141,8 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
         Padding(
             padding: const EdgeInsets.fromLTRB(20, 4, 12, 0),
             child: Row(children: [
-              const Text('机内胶卷',
-                  style: TextStyle(fontSize: 12, color: GRemoteColors.muted)),
+              Text('机内胶卷',
+                  style: TextStyle(fontSize: 12, color: context.palette.muted)),
               const SizedBox(width: 10),
               Expanded(
                   child: Text(
@@ -218,7 +218,7 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
                     hintText: '搜索胶卷',
                     prefixIcon: const Icon(Icons.search, size: 19),
                     filled: true,
-                    fillColor: GRemoteColors.raised,
+                    fillColor: context.palette.raised,
                     isDense: true,
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(7),
@@ -228,19 +228,17 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
         Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
             child: Text(_error!,
-                style: const TextStyle(
-                    color: GRemoteColors.danger, fontSize: 12))),
+                style: TextStyle(color: context.palette.danger, fontSize: 12))),
       if (!compatible && _group != '我的 LUT')
-        const Padding(
-            padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
+        Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
             child: Text('胶卷版本与当前机身不匹配 · 可浏览',
-                style: TextStyle(color: GRemoteColors.muted, fontSize: 12))),
+                style: TextStyle(color: context.palette.muted, fontSize: 12))),
       if (!availability.canInstallFilms && _group != '我的 LUT')
         Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
             child: Text(availability.hint,
-                style:
-                    const TextStyle(color: GRemoteColors.muted, fontSize: 12))),
+                style: TextStyle(color: context.palette.muted, fontSize: 12))),
       Expanded(
           child: catalog.isLoading && films.isEmpty && custom.isEmpty
               ? const Center(child: CircularProgressIndicator())
@@ -265,9 +263,9 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
                             return FilmLibraryTile(
                                 name: lut.name,
                                 available: true,
-                                image: const ColoredBox(
-                                    color: GRemoteColors.raised,
-                                    child: Center(
+                                image: ColoredBox(
+                                    color: context.palette.raised,
+                                    child: const Center(
                                         child: Icon(Icons.tune_outlined,
                                             size: 34))),
                                 onTap: () => _lutDetails(lut.name));
@@ -358,8 +356,7 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
                                     Theme.of(context).textTheme.headlineMedium),
                             const SizedBox(height: 8),
                             Text(film.group,
-                                style: const TextStyle(
-                                    color: GRemoteColors.muted)),
+                                style: TextStyle(color: context.palette.muted)),
                             if (film.description.isNotEmpty)
                               Padding(
                                   padding: const EdgeInsets.only(top: 16),
@@ -367,9 +364,10 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
                             const SizedBox(height: 24),
                             _FilmReference(id: film.id, name: film.name),
                             const SizedBox(height: 12),
-                            const Text('参考预览 · 机内成片以实际拍摄为准',
+                            Text('参考预览 · 机内成片以实际拍摄为准',
                                 style: TextStyle(
-                                    color: GRemoteColors.muted, fontSize: 12)),
+                                    color: context.palette.muted,
+                                    fontSize: 12)),
                             const SizedBox(height: 24),
                             FilledButton(
                                 onPressed: versionMatches &&
@@ -404,8 +402,8 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
                                               ? availability.hint
                                               : '需要更新机身胶卷目录',
                                       textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                          color: GRemoteColors.muted,
+                                      style: TextStyle(
+                                          color: context.palette.muted,
                                           fontSize: 12))),
                             TextButton(
                                 onPressed: () {
@@ -479,7 +477,7 @@ class _FilmReferenceState extends ConsumerState<_FilmReference> {
           : AspectRatio(
               aspectRatio: 3 / 2,
               child: ColoredBox(
-                  color: GRemoteColors.raised,
+                  color: context.palette.raised,
                   child: Center(
                       child: _error == null
                           ? const CircularProgressIndicator()
