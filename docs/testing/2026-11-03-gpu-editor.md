@@ -41,3 +41,15 @@
 输出包含 ES 版本、GPU renderer、最大纹理/目标尺寸和半浮点绘制回读结果。编译成功不能代替执行成功；本轮 ADB 无设备，尚未运行。即便 adb-native-probe 通过，也要在后续 App 会话内再核对驱动、SurfaceProducer 和资源生命周期，不能把独立进程能力等同于 App 已完成 GPU 接入。
 
 同时已成功交叉编译包含 ToneV2 的 Android arm64 `gremote_imaging` 原生库。这不更新前述外观 APK，不代表 GPU session、shader 图、分块导出或新版 Studio 交互已完成。
+
+## Task 2：驻留会话与生命周期（源代码完成，设备验收延后）
+
+用户随后明确表示当前没有手机，这轮先不做真机测试，继续离线开发。
+
+- Android HandlerThread 独占 EGL/GL；源图一次解码/上传。SurfaceProducer 按本地 Flutter 3.24 的回调 API 接入，进入后台只解除窗口，重建后呈现最后有效帧。
+- 请求至多一个在处理、一个等待；等待输入可替换。原生 generation gate 与平台队列共同撤销旧帧/错误。关闭先撤销回调，再在原线程释放 GL，最后释放平台纹理；在途 open 也纳入清理。
+- MethodChannel 借用源 FD，平台立即复制；原生只消费复制件。后续 Dart 调用方在 finally 关闭其原件，覆盖调用失败或插件缺失路径。
+- 本阶段只实现中性图往返；尚未接入的效果显式拒绝，避免“参数变化但画面没变”。Dart 编辑器消费者留在 Task 6，当前 App 编辑器仍走现有路径。
+- 共享 EGL display 的引用配对依据 [Android EGL 实现](https://android.googlesource.com/platform/frameworks/native/+/refs/heads/main/opengl/libs/EGL/egl_display.cpp)，避免关闭照片会话时终止 Flutter 自己的引用。实际窗口方向和驱动行为仍待设备验证。
+
+检查：generation 的 2 个 native 测试与已有测试合计 66 项通过；Kotlin 的 4 个调度和 2 个 Surface 生命周期测试 RED→GREEN，全量 JVM suite 结果见任务日志；Flutter 603 pass / 3 conditional skips，analyze 无问题。Android 原生库、JNI 符号和 GPU session device harness 交叉编译通过；设备 harness **未执行**，不得当作 GPU 往返 PASS。

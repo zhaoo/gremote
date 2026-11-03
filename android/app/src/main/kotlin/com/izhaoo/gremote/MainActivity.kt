@@ -1,6 +1,7 @@
 package com.izhaoo.gremote
 
 import android.view.WindowManager
+import com.izhaoo.gremote.imaging.GpuEditorHost
 import android.content.Intent
 import android.app.Activity
 import android.os.CancellationSignal
@@ -30,6 +31,7 @@ class MainActivity : FlutterActivity() {
     private var mediaApi: GRemoteMediaHostApi? = null
     private var importHistory: CameraImportHistory? = null
     private var appInfoChannel: MethodChannel? = null
+    private var gpuEditor: GpuEditorHost? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -68,15 +70,18 @@ class MainActivity : FlutterActivity() {
         ).also { CameraDeviceHostApi.setUp(messenger, it) }
         mediaApi = GRemoteMediaHostApi(this).also { MediaHostApi.setUp(messenger, it) }
         importHistory = CameraImportHistory(applicationContext, messenger)
+        gpuEditor = GpuEditorHost(messenger, flutterEngine.renderer)
     }
 
     override fun onResume() {
         super.onResume()
         location?.onResume()
+        gpuEditor?.onResume()
     }
 
     override fun onPause() {
         location?.onPause()
+        gpuEditor?.onPause()
         wifiScanController?.onPause()
         super.onPause()
     }
@@ -130,6 +135,8 @@ class MainActivity : FlutterActivity() {
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
         val messenger = flutterEngine.dartExecutor.binaryMessenger
+        gpuEditor?.close()
+        gpuEditor = null
         appInfoChannel?.setMethodCallHandler(null)
         appInfoChannel = null
         location?.close()
