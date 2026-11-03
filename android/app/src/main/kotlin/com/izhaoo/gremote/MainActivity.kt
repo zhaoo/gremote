@@ -7,6 +7,7 @@ import android.app.Activity
 import android.os.CancellationSignal
 import kotlinx.coroutines.*
 import com.izhaoo.gremote.device.CompanionFileReader
+import com.izhaoo.gremote.device.FilmLibraryExport
 import com.izhaoo.gremote.device.FlutterError
 import com.izhaoo.gremote.location.ForegroundLocation
 import com.izhaoo.gremote.device.wifi.WifiScanController
@@ -21,10 +22,15 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
+    private companion object {
+        val exportRequestCounter = java.util.concurrent.atomic.AtomicInteger()
+    }
+    private var filmExportRequestCode: Int? = null
     private var companionFileResult: ((Result<ByteArray?>) -> Unit)? = null
     private var companionFileLimit = 0
     private var companionReadScope: CoroutineScope? = null
     private var companionFileReader: CompanionFileReader? = null
+    private var filmLibraryExport: FilmLibraryExport? = null
     private var location: ForegroundLocation? = null
     private var wifiScanController: WifiScanController? = null
     private var deviceApi: GRemoteDeviceHostApi? = null
@@ -60,6 +66,16 @@ class MainActivity : FlutterActivity() {
         }
         companionReadScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         companionFileReader = CompanionFileReader(companionReadScope!!)
+        filmLibraryExport = FilmLibraryExport(companionReadScope!!, {
+            val requestCode = 27200 + (exportRequestCounter.getAndIncrement() and 255)
+            filmExportRequestCode = requestCode
+            startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "application/octet-stream"
+                putExtra(Intent.EXTRA_TITLE, "FILMS.M10")
+                addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            }, requestCode)
+        })
         wifiScanController = WifiScanController(this, messenger)
         location = ForegroundLocation(this, messenger)
         deviceApi = GRemoteDeviceHostApi(
@@ -67,6 +83,19 @@ class MainActivity : FlutterActivity() {
             flutterApi = CameraDeviceFlutterApi(messenger),
             keepScreenOn = ::setKeepScreenOn,
             pickFile = ::pickCompanionFile,
+            exportLibrary = { bytes, callback ->
+                if (companionFileResult != null || filmLibraryExport == null) {
+                    callback(Result.failure(FlutterError("filmLibraryExportBusy", "文件导出暂不可用")))
+                } else {
+                    filmLibraryExport!!.begin(bytes) { result ->
+                        callback(result.fold({ Result.success(it) }, {
+                            Result.failure(FlutterError(
+                                if (it is IllegalArgumentException) "invalidFilmLibrary" else "filmLibraryExportFailed",
+                                it.message ?: "胶卷库导出失败"))
+                        }))
+                    }
+                }
+            },
         ).also { CameraDeviceHostApi.setUp(messenger, it) }
         mediaApi = GRemoteMediaHostApi(this).also { MediaHostApi.setUp(messenger, it) }
         importHistory = CameraImportHistory(applicationContext, messenger)
@@ -101,7 +130,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun pickCompanionFile(kind: String, callback: (Result<ByteArray?>) -> Unit) {
-        if (kind !in setOf("pairing", "film") || companionFileResult != null) {
+        if (kind !in setOf("pairing", "film") || companionFileResult != null || filmLibraryExport?.isPending == true) {
             callback(Result.failure(FlutterError("companionPickerBusy", "文件选择暂不可用"))); return
         }
         companionFileLimit = if (kind == "pairing") 4096 else 18432
@@ -111,6 +140,24 @@ class MainActivity : FlutterActivity() {
     }
     @Deprecated("Activity callback retained for FlutterActivity document picker")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode in 27200..27455) {
+            if (requestCode != filmExportRequestCode) return
+            filmExportRequestCode = null
+            if (resultCode != Activity.RESULT_OK) {
+                filmLibraryExport?.finish(null)
+            } else {
+                val uri = data?.data
+                // The only destination is the URI explicitly chosen by the
+                // user. ACTION_CREATE_DOCUMENT lets the provider handle names
+                // and any overwrite confirmation; no SD path is assumed.
+                filmLibraryExport?.finish {
+                    requireNotNull(uri) { "未选择导出位置" }
+                    contentResolver.openOutputStream(uri, "w")
+                        ?: throw IllegalStateException("无法打开导出位置")
+                }
+            }
+            return
+        }
         if (requestCode != 7214) { super.onActivityResult(requestCode, resultCode, data); return }
         val callback = companionFileResult ?: return
         if (resultCode != Activity.RESULT_OK) { companionFileResult = null; callback(Result.success(null)); return }
@@ -150,6 +197,8 @@ class MainActivity : FlutterActivity() {
         wifiScanController = null
         CameraDeviceHostApi.setUp(messenger, null)
         MediaHostApi.setUp(messenger, null)
+        filmExportRequestCode = null
+        filmLibraryExport?.close(); filmLibraryExport = null
         companionFileReader?.close(); companionFileReader = null
         companionReadScope?.cancel(); companionReadScope = null
         companionFileResult = null

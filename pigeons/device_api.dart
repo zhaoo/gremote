@@ -70,6 +70,11 @@ abstract class CameraDeviceHostApi {
   @async
   Uint8List? pickCompanionFile(String kind);
 
+  /// Opens the system save/export picker for a validated FILMS.M10 library.
+  /// Returns false when the user cancels; never contacts the camera.
+  @async
+  bool exportFilmLibrary(Uint8List bytes);
+
   @async
   void saveCompanionPairing(String instanceId, Uint8List keyBytes);
 

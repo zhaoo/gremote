@@ -23,6 +23,7 @@
 		84C7E435928A131C41757028 /* Native/GRemoteLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E08AB59E75B8296918C201 /* Native/GRemoteLocation.swift */; };
 		F2637CE2809041ED6817213B /* Native/PhotoPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7510A05ED3D82C09664055AA; };
 		414D458A4445833FCC3E9669 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 6B4B41265ACDC283B53B52DD; };
+		E0AB4F48B0FC4EE3849F1502 /* Native/FilmLibraryDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0AB4F48B0FC4EE3849F1501 /* Native/FilmLibraryDocument.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -73,6 +74,7 @@
 		36E08AB59E75B8296918C201 /* Native/GRemoteLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Native/GRemoteLocation.swift"; sourceTree = "<group>"; };
 		7510A05ED3D82C09664055AA /* Native/PhotoPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Native/PhotoPolicy.swift"; sourceTree = "<group>"; };
 		6B4B41265ACDC283B53B52DD /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "PrivacyInfo.xcprivacy"; sourceTree = "<group>"; };
+		E0AB4F48B0FC4EE3849F1501 /* Native/FilmLibraryDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Native/FilmLibraryDocument.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -138,6 +140,7 @@
 				BC791A8363C67BF31E6E7354 /* Native/CameraEndpoint.swift */,
 				7A9045F90C9754CD7890DD0B /* Native/RicohBluetooth.swift */,
 				666BED74178E62A0D105C084 /* Native/GRemoteDevice.swift */,
+				E0AB4F48B0FC4EE3849F1501 /* Native/FilmLibraryDocument.swift */,
 				91DDE74D3E40A66DA2A31C75 /* Native/GRemoteMedia.swift */,
 				36E08AB59E75B8296918C201 /* Native/GRemoteLocation.swift */,
 				7510A05ED3D82C09664055AA /* Native/PhotoPolicy.swift */,
@@ -301,6 +304,7 @@
 				0D623693DFCF861A5C7EBB86 /* Native/CameraEndpoint.swift in Sources */,
 				D6947EE56FBBDF4E2E6CF9FF /* Native/RicohBluetooth.swift in Sources */,
 				D6FF3069F76D9C1789814415 /* Native/GRemoteDevice.swift in Sources */,
+				E0AB4F48B0FC4EE3849F1502 /* Native/FilmLibraryDocument.swift in Sources */,
 				AD50D2B3C950507BFEC2BB05 /* Native/GRemoteMedia.swift in Sources */,
 				84C7E435928A131C41757028 /* Native/GRemoteLocation.swift in Sources */,
 				F2637CE2809041ED6817213B /* Native/PhotoPolicy.swift in Sources */,

@@ -20,10 +20,34 @@ import '../library/camera_gallery.dart';
 import 'workbench_providers.dart';
 import '../../camera/companion/companion_operation_gate.dart';
 
-final cameraFilmCatalogProvider = FutureProvider<CameraFilmCatalog>(
+/// Bundled current profile is independent of the connected controller.
+final latestBundledCameraCatalogProvider = FutureProvider<CameraFilmCatalog>(
     (ref) async => CameraFilmCatalog.fromJson(jsonDecode(
             await rootBundle.loadString('assets/films/camera-catalog.json'))
         as Map<String, dynamic>));
+final bundledCameraCatalogsProvider =
+    FutureProvider<List<CameraFilmCatalog>>((ref) async {
+  final latest = await ref.watch(latestBundledCameraCatalogProvider.future);
+  final installed = CameraFilmCatalog.fromJson(jsonDecode(
+          await rootBundle.loadString(
+              'assets/films/camera-profiles/installed-03db1c70-catalog.json'))
+      as Map<String, dynamic>);
+  return List.unmodifiable([latest, installed]);
+});
+
+/// UI selection follows the authenticated camera profile. Disconnected/unknown
+/// cameras remain protected by controller readOnly/stale guards.
+final cameraFilmCatalogProvider =
+    FutureProvider<CameraFilmCatalog>((ref) async {
+  final controller = ref.watch(companionSyncControllerProvider);
+  if (controller != null) {
+    void changed() => ref.invalidateSelf();
+    controller.addListener(changed);
+    ref.onDispose(() => controller.removeListener(changed));
+    if (controller.cameraCatalog != null) return controller.cameraCatalog!;
+  }
+  return ref.watch(latestBundledCameraCatalogProvider.future);
+});
 
 final companionPairingStoreProvider =
     Provider<PairingStore>((ref) => NativePairingStore());
@@ -58,8 +82,9 @@ final companionNetworkReadyProvider = Provider<bool>((ref) {
 final companionSyncControllerProvider =
     Provider.autoDispose<CompanionSyncController?>((ref) {
   final identity = ref.watch(companionPairingIdentityProvider),
-      catalog = ref.watch(cameraFilmCatalogProvider).valueOrNull;
-  if (identity == null || catalog == null) return null;
+      catalogs = ref.watch(bundledCameraCatalogsProvider).valueOrNull;
+  if (identity == null || catalogs == null) return null;
+  final catalog = catalogs.first;
   final api = ref.watch(companionApiFactoryProvider)(identity);
   final controller = CompanionSyncController(
       api: api,
@@ -67,6 +92,13 @@ final companionSyncControllerProvider =
       catalogHash: catalog.hash,
       rendererHash: catalog.rendererHash,
       cameraCatalog: catalog,
+      resolveCameraCatalog: (caps) {
+        for (final candidate in catalogs) {
+          if (candidate.hash == caps.catalogHash &&
+              candidate.rendererHash == caps.rendererHash) return candidate;
+        }
+        return null;
+      },
       isWriteBlocked: () =>
           ref.read(extensionMutationPendingProvider(identity.instanceId)) ||
           ref

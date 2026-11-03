@@ -5,6 +5,8 @@ import 'dart:isolate';
 import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
+import 'official_film_luts.dart';
+import 'official_lut_cache.dart';
 
 const officialFilmOrigin = 'https://m10v.izhaoo.com';
 
@@ -155,12 +157,85 @@ Uint8List officialPackFromZip(Uint8List zip) {
 
 class OfficialFilmSnapshot {
   const OfficialFilmSnapshot(this.films, this.updatedAt, this.sha256,
-      {required this.rendererHash, required this.cameraCompatible});
+      {required this.rendererHash,
+      required this.cameraCompatible,
+      this.phoneLuts = const []});
   final List<OfficialFilm> films;
   final DateTime updatedAt;
   final String sha256;
   final String rendererHash;
   final bool cameraCompatible;
+  final List<OfficialLutRecord> phoneLuts;
+}
+
+Set<String> _colorSources(List<OfficialFilm> films) => {
+      for (final f in films)
+        if (f.id >= 34 && f.id <= 65)
+          '/gr3/film-catalog.json'
+        else if (f.id == 66)
+          '/gr3/5207-lut.json'
+        else if (f.id == 67 || f.id == 68)
+          '/gr3/harman-luts.json'
+        else if (f.id >= 69 && f.id <= 72)
+          '/gr3/curated-luts.json'
+        else if (f.id >= 73 && f.id <= 78)
+          '/gr3/newstocks-luts.json'
+        else if (f.id >= 291 && f.id <= 297)
+          '/gr3/style-filters-luts.json'
+        else if (f.id == 298)
+          '/gr3/spectral-luts.json'
+        else if (f.id >= 299 && f.id <= 305)
+          '/gr3/d76-luts.json'
+        else if (f.id >= 309 && f.id <= 311)
+          '/gr3/anime-e6-luts.json'
+        else if (f.id == 312 || f.id == 313 || f.id >= 322 && f.id <= 326)
+          '/gr3/c41-luts.json'
+        else if (f.id >= 314 && f.id <= 317)
+          '/gr3/extra-films-luts.json'
+        else if (f.id >= 318 && f.id <= 321)
+          '/gr3/four-looks-luts.json'
+    };
+
+void _checkColorBindings(Uint8List pack,
+    Map<String, Map<String, dynamic>> sources, List<OfficialFilm> films) {
+  final header = ByteData.sublistView(pack);
+  final records = <int, int>{
+    for (var i = 0; i < films.length; i++)
+      header.getUint32(64 + i * 12, Endian.little): 4096 + i * 12288,
+  };
+  // These families bind their numeric target tables in each closed SD record.
+  // Detect a deployment changing between the pack and static-data requests.
+  for (final entry in sources.entries) {
+    if (!const {
+      '/gr3/style-filters-luts.json',
+      '/gr3/spectral-luts.json',
+      '/gr3/d76-luts.json',
+      '/gr3/anime-e6-luts.json',
+      '/gr3/c41-luts.json',
+      '/gr3/extra-films-luts.json',
+      '/gr3/four-looks-luts.json',
+    }.contains(entry.key)) continue;
+    final native = const {
+      '/gr3/anime-e6-luts.json',
+      '/gr3/c41-luts.json',
+      '/gr3/extra-films-luts.json',
+      '/gr3/four-looks-luts.json',
+    }.contains(entry.key);
+    for (final stock in entry.value['stocks'] as List) {
+      if (entry.key == '/gr3/spectral-luts.json' && stock['id'] != 298) {
+        continue;
+      }
+      final offset = records[stock['id']];
+      if (offset == null) continue;
+      final values =
+          (stock[native ? 'native_values' : 'values'] as List).cast<int>();
+      final digest = sha256.convert(values).bytes;
+      if (!List.generate(32, (i) => digest[i] == pack[offset + 64 + i])
+          .every((v) => v)) {
+        throw FormatException('官网胶卷数据已变化（${stock['id']}），请重新同步');
+      }
+    }
+  }
 }
 
 class OfficialFilmLibrary {
@@ -173,6 +248,21 @@ class OfficialFilmLibrary {
   final Future<Directory> Function() _directory;
   Future<File> get _cache async =>
       File('${(await _directory()).path}/official-library.json');
+
+  /// The same validated payload can be copied through the phone's system file
+  /// picker. This does not authorize an arbitrary camera network upload.
+  Future<Uint8List> exportPack() async {
+    final snapshot = await cached();
+    if (snapshot == null) throw const FormatException('请先同步官网胶卷库');
+    final raw = jsonDecode(await (await _cache).readAsString()) as Map;
+    final bytes = base64Decode(raw['pack'] as String);
+    validateOfficialPack(bytes, snapshot.films.map((f) => f.id).toSet());
+    if (sha256.convert(bytes).toString() != snapshot.sha256) {
+      throw const FormatException('胶卷库已变化，请重新同步');
+    }
+    return bytes;
+  }
+
   Future<Uint8List> _request(String path,
       {Map<String, String> headers = const {}, String? body}) async {
     final request = http.Request(
@@ -211,7 +301,8 @@ class OfficialFilmLibrary {
       return OfficialFilmSnapshot(
           films, DateTime.parse(json['updatedAt'] as String), hash,
           rendererHash: renderer,
-          cameraCompatible: renderer == expectedRenderer);
+          cameraCompatible: renderer == expectedRenderer,
+          phoneLuts: await OfficialLutCache(directory: _directory).entries());
     } catch (_) {
       return null;
     }
@@ -240,18 +331,43 @@ class OfficialFilmLibrary {
     // Validate every record, but expose compatibility separately for write UI.
     final renderer = await Isolate.run(
         () => validateOfficialPack(pack, films.map((f) => f.id).toSet()));
+    final sources = <String, Map<String, dynamic>>{};
+    final paths = _colorSources(films).toList();
+    // Bounded parallel reads. No remote executable code is loaded.
+    var sourceBytes = 0;
+    for (var i = 0; i < paths.length; i += 3) {
+      final batch = paths.skip(i).take(3).toList();
+      final fetched = await Future.wait(batch.map(_request));
+      for (var n = 0; n < batch.length; n++) {
+        sourceBytes += fetched[n].length;
+        if (sourceBytes > 16 * 1024 * 1024) {
+          throw const FormatException('官网色彩数据过大');
+        }
+        final data = jsonDecode(utf8.decode(fetched[n]));
+        if (data is! Map<String, dynamic>) {
+          throw const FormatException('官网色彩数据格式无效');
+        }
+        sources[batch[n]] = data;
+      }
+    }
+    final colors = await Isolate.run(
+        () => compileOfficialFilmLuts(films: films, sources: sources));
+    await Isolate.run(() => _checkColorBindings(pack, sources, films));
+    final phoneLuts =
+        await OfficialLutCache(directory: _directory).stage(colors);
     final hash = sha256.convert(pack).toString(),
         at = DateTime.now().toUtc(),
         cache = await _cache;
     await cache.parent.create(recursive: true);
-    final staging = File('${cache.path}.tmp');
+    final staging = File('${cache.path}.${at.microsecondsSinceEpoch}.tmp');
     try {
       await staging.writeAsString(
           jsonEncode({
             'catalog': source,
             'pack': base64Encode(pack),
             'hash': hash,
-            'updatedAt': at.toIso8601String()
+            'updatedAt': at.toIso8601String(),
+            'phoneLuts': phoneLuts,
           }),
           flush: true);
       await staging.rename(cache.path);
@@ -259,6 +375,9 @@ class OfficialFilmLibrary {
       if (await staging.exists()) await staging.delete();
     }
     return OfficialFilmSnapshot(films, at, hash,
-        rendererHash: renderer, cameraCompatible: renderer == expectedRenderer);
+        rendererHash: renderer,
+        cameraCompatible: renderer == expectedRenderer,
+        phoneLuts:
+            phoneLuts.map(OfficialLutRecord.fromJson).toList(growable: false));
   }
 }

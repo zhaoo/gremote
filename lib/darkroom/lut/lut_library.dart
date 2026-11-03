@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 
 import '../../imaging/imaging_engine.dart';
 import '../../imaging/imaging_exception.dart';
+import '../../film/catalog/official_lut_cache.dart';
 import '../store/darkroom_store.dart';
 import 'builtin_looks.dart';
 
@@ -19,6 +20,8 @@ class LutEntry {
     required this.name,
     required this.size,
     required this.imported,
+    this.official = false,
+    this.filmId,
     this.description = '',
   });
 
@@ -26,6 +29,8 @@ class LutEntry {
   final String name;
   final int size;
   final bool imported;
+  final bool official;
+  final int? filmId;
   final String description;
 }
 
@@ -45,15 +50,18 @@ class LutLibrary {
     required ImagingEngine engine,
     required Future<Directory> Function() dataDir,
     AssetBundle? bundle,
+    OfficialLutCache? officialCache,
   })  : _store = store,
         _engine = engine,
         _dataDir = dataDir,
+        _officialCache = officialCache ?? OfficialLutCache(directory: dataDir),
         _bundle = bundle ?? rootBundle;
 
   final DarkroomStore _store;
   final ImagingEngine _engine;
   final Future<Directory> Function() _dataDir;
   final AssetBundle _bundle;
+  final OfficialLutCache _officialCache;
 
   Future<List<LutEntry>> entries() async => [
         for (final look in builtinLooks)
@@ -66,9 +74,25 @@ class LutLibrary {
           ),
         for (final lut in await _store.importedLuts())
           LutEntry(id: lut.id, name: lut.name, size: lut.size, imported: true),
+        for (final lut in await _officialCache.entries())
+          LutEntry(
+              id: lut.id,
+              name: lut.variant == 'default'
+                  ? lut.name
+                  : '${lut.name} · ${lut.variant.toUpperCase()}',
+              size: lut.size,
+              imported: false,
+              official: true,
+              filmId: lut.filmId,
+              description: lut.approximationLabel),
       ];
 
   Future<Uint8List> load(String id) async {
+    if (id.startsWith('official:')) {
+      final bytes = await _officialCache.load(id);
+      if (bytes == null) throw LutImportException('官网胶卷色彩缓存不可用：$id');
+      return bytes;
+    }
     for (final look in builtinLooks) {
       if (look.id == id) {
         final data = await _bundle.load(look.assetPath);

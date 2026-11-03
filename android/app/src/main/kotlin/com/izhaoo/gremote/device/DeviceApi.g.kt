@@ -184,6 +184,11 @@ interface CameraDeviceHostApi {
   fun cameraRequest(method: String, url: String, headers: Map<String?, String?>, body: ByteArray?, callback: (Result<NativeHttpResponse>) -> Unit)
   fun companionRequest(method: String, path: String, headers: Map<String?, String?>, body: ByteArray?, callback: (Result<NativeHttpResponse>) -> Unit)
   fun pickCompanionFile(kind: String, callback: (Result<ByteArray?>) -> Unit)
+  /**
+   * Opens the system save/export picker for a validated FILMS.M10 library.
+   * Returns false when the user cancels; never contacts the camera.
+   */
+  fun exportFilmLibrary(bytes: ByteArray, callback: (Result<Boolean>) -> Unit)
   fun saveCompanionPairing(instanceId: String, keyBytes: ByteArray, callback: (Result<Unit>) -> Unit)
   fun removeCompanionPairing(instanceId: String, callback: (Result<Unit>) -> Unit)
   fun signCompanionRequest(instanceId: String, canonicalBytes: ByteArray, callback: (Result<ByteArray>) -> Unit)
@@ -424,6 +429,26 @@ interface CameraDeviceHostApi {
             val args = message as List<Any?>
             val kindArg = args[0] as String
             api.pickCompanionFile(kindArg) { result: Result<ByteArray?> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.gremote.CameraDeviceHostApi.exportFilmLibrary$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val bytesArg = args[0] as ByteArray
+            api.exportFilmLibrary(bytesArg) { result: Result<Boolean> ->
               val error = result.exceptionOrNull()
               if (error != null) {
                 reply.reply(wrapError(error))

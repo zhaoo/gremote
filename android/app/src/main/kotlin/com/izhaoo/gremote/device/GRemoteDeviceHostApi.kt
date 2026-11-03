@@ -21,6 +21,7 @@ class GRemoteDeviceHostApi(
     private val flutterApi: CameraDeviceFlutterApi,
     private val keepScreenOn: (Boolean) -> Unit,
     private val pickFile: (String, (Result<ByteArray?>) -> Unit) -> Unit,
+    private val exportLibrary: (ByteArray, (Result<Boolean>) -> Unit) -> Unit,
 ) : CameraDeviceHostApi {
     private val appContext = context.applicationContext
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -117,6 +118,7 @@ class GRemoteDeviceHostApi(
         requireTransport().companion().request(method, path, fields, body)
     }
     override fun pickCompanionFile(kind: String, callback: (Result<ByteArray?>) -> Unit) = pickFile(kind, callback)
+    override fun exportFilmLibrary(bytes: ByteArray, callback: (Result<Boolean>) -> Unit) = exportLibrary(bytes, callback)
     override fun saveCompanionPairing(instanceId: String, keyBytes: ByteArray, callback: (Result<Unit>) -> Unit) = launchResult(callback) { pairing.save(instanceId, keyBytes) }
     override fun removeCompanionPairing(instanceId: String, callback: (Result<Unit>) -> Unit) = launchResult(callback) { pairing.remove(instanceId) }
     override fun signCompanionRequest(instanceId: String, canonicalBytes: ByteArray, callback: (Result<ByteArray>) -> Unit) = launchResult(callback) { pairing.sign(instanceId, canonicalBytes) }

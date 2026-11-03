@@ -1,7 +1,6 @@
 import '../../film/model/film_recipe.dart';
 import 'companion_protocol.dart';
 import 'camera_film_catalog.dart';
-import 'generated_camera_contract.dart';
 
 enum ConflictChoice { local, remote, keepBoth }
 
@@ -53,6 +52,8 @@ bool knownCompanionConfig(Map<String, Object?> config,
     {Map<String, dynamic>? contract}) {
   contract ??= companionContract;
   final modern = (contract['stateSchema'] ?? 1) == 2;
+  final profile = modern ? cameraFilmProfileForContract(contract) : null;
+  if (modern && profile == null) return false;
   final seen = <int>{};
   var emptySeen = false;
   if (config.keys.any((k) => !{'slots', 'globals'}.contains(k)) ||
@@ -91,8 +92,8 @@ bool knownCompanionConfig(Map<String, Object?> config,
       final value = <String, dynamic>{
         'schemaVersion': 1,
         ...slot,
-        'catalogHash': modern ? cameraCatalogHash : '0' * 64,
-        'rendererHash': modern ? cameraRendererHash : '0' * 64
+        'catalogHash': modern ? profile!.catalogHash : '0' * 64,
+        'rendererHash': modern ? profile!.rendererHash : '0' * 64
       };
       if (modern) {
         CameraFilmRecipe.fromJson(value);

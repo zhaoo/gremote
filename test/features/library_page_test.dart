@@ -16,20 +16,27 @@ import '../support/test_darkroom.dart';
 
 Future<TestDarkroom> pumpLibrary(WidgetTester tester,
     {required FakeMediaGateway gateway,
-    Future<List<XFile>> Function()? pickPhotos}) async {
+    Future<List<XFile>> Function()? pickPhotos,
+    String? initialLut}) async {
   tester.view.physicalSize = const Size(390, 844);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
   final env = await TestDarkroom.create(gateway: gateway);
   addTearDown(env.close);
-  final router = GoRouter(initialLocation: '/library', routes: [
-    GoRoute(path: '/library', builder: (_, __) => const LibraryPage()),
-    GoRoute(
-        path: '/edit/:id',
-        builder: (_, state) => Text('edit ${state.pathParameters['id']}')),
-    GoRoute(path: '/export-queue', builder: (_, __) => const Text('queue')),
-  ]);
+  final router = GoRouter(
+      initialLocation: Uri(
+              path: '/library',
+              queryParameters: initialLut == null ? null : {'lut': initialLut})
+          .toString(),
+      routes: [
+        GoRoute(path: '/library', builder: (_, __) => const LibraryPage()),
+        GoRoute(
+            path: '/edit/:id',
+            builder: (_, state) => Text(
+                'edit ${state.pathParameters['id']}${state.uri.queryParameters['lut'] == null ? '' : ' lut ${state.uri.queryParameters['lut']}'}')),
+        GoRoute(path: '/export-queue', builder: (_, __) => const Text('queue')),
+      ]);
   await tester.pumpWidget(ProviderScope(
     overrides: [
       ...env.overrides,
@@ -75,6 +82,50 @@ class ImportGateway extends FakeMediaGateway {
 }
 
 void main() {
+  testWidgets(
+      'official selection is consumed before photo handoff and never reapplied on reopen',
+      (tester) async {
+    final lut = 'official:326:default:${'11' * 32}';
+    await pumpLibrary(tester, gateway: library(), initialLut: lut);
+    await tester.tap(tile(3));
+    await tester.pumpAndSettle();
+    final first = find.text('edit 3 lut $lut');
+    expect(first, findsOneWidget);
+    final router = GoRouter.of(tester.element(first));
+    router.pop();
+    await tester.pumpAndSettle();
+    expect(router.routeInformationProvider.value.uri.queryParameters['lut'],
+        isNull);
+    await tester.tap(tile(3));
+    await tester.pumpAndSettle();
+    expect(find.text('edit 3'), findsOneWidget);
+    expect(find.textContaining('lut official:'), findsNothing);
+    router.pop();
+    await tester.pumpAndSettle();
+    await tester.tap(tile(1));
+    await tester.pumpAndSettle();
+    expect(find.text('edit 1'), findsOneWidget);
+  });
+  for (final requested in <String?>[
+    'official:69:default:${'a' * 64}',
+    'file:///tmp/film.cube',
+    'official:4294967296:default:${'a' * 64}',
+    'official:69:default:${'a' * 64}\n',
+    null,
+  ]) {
+    testWidgets('photo forwards only a strict official LUT query: $requested',
+        (tester) async {
+      await pumpLibrary(tester, gateway: library(), initialLut: requested);
+      await tester.tap(tile(3));
+      await tester.pumpAndSettle();
+      final expected = requested?.startsWith('official:69:default:') == true &&
+              !requested!.endsWith('\n')
+          ? 'edit 3 lut $requested'
+          : 'edit 3';
+      expect(find.text(expected), findsOneWidget);
+    });
+  }
+
   testWidgets(
       'import deduplicates repeated source bytes and keeps non-GR photo',
       (tester) async {

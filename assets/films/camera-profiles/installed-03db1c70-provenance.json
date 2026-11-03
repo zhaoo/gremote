@@ -1,0 +1,12 @@
+{
+  "schema": "gremote.trusted-camera-profile/v1",
+  "buildId": "03db1c70d4dee482a54fdf87f59338b4369183486259ea15b3df39d78aa8a9dd",
+  "apkSha256": "0c6eaf5ea79b87cd85b72a7aeddf717fef92491c92aaac48b6a113f7bf134092",
+  "catalogHash": "653acf3c1b04db0ea2dd10114a1306b78bb4b584534945be8f9de9da25ebab4a",
+  "rendererHash": "80a4d357be06ff0e9510a20bef1035dc3e848ec585bd5d5cdee466c3980506a4",
+  "files": {
+    "installed-03db1c70-catalog.json": "ad918b84ba263fb4f1b48e9e5f04d3ca2d2a0353469e597b13fe1a8b492d3037",
+    "installed-03db1c70-contract.json": "e049d08db6e80a167ea935357d4a4dae885c1c06347d134522ee147ff9736929",
+    "installed-03db1c70-source-manifest.json": "6fb650999229272740d5c3f506639911ef468c46d67f3ee17c01bcba6d9ddb8a"
+  }
+}

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +14,8 @@ import '../../camera/companion/camera_film_catalog.dart';
 import '../../film/catalog/official_film_library.dart';
 import '../../film/preview/film_preview_engine.dart';
 import '../../imaging/imaging_engine.dart';
+import '../../darkroom/darkroom_providers.dart';
+import '../../platform/device_api.g.dart';
 import '../darkroom/darkroom_controller.dart';
 import '../film_workbench/camera_films_page.dart';
 import '../film_workbench/companion_providers.dart';
@@ -25,6 +28,8 @@ final officialFilmLibraryProvider = Provider((ref) {
   return OfficialFilmLibrary(
       client: client, directory: getApplicationSupportDirectory);
 });
+final officialFilmExportProvider = Provider<Future<bool> Function(Uint8List)>(
+    (ref) => CameraDeviceHostApi().exportFilmLibrary);
 final officialFilmCacheProvider = FutureProvider((ref) async {
   try {
     final catalog = await ref.watch(cameraFilmCatalogProvider.future);
@@ -44,7 +49,10 @@ class FilmLibraryPage extends ConsumerStatefulWidget {
 
 class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
   String _query = '', _group = '全部';
-  bool _syncing = false, _importing = false, _searching = false;
+  bool _syncing = false,
+      _importing = false,
+      _searching = false,
+      _exporting = false;
   final _searchFocus = FocusNode();
   @override
   void dispose() {
@@ -65,6 +73,7 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
           .read(officialFilmLibraryProvider)
           .sync(expectedRenderer: catalog.rendererHash);
       ref.invalidate(officialFilmCacheProvider);
+      ref.read(darkroomRevisionProvider.notifier).state++;
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('胶卷库已同步')));
@@ -80,6 +89,26 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
       if (mounted) setState(() => _error = '$reason · 已保留本地胶卷库');
     } finally {
       if (mounted) setState(() => _syncing = false);
+    }
+  }
+
+  Future<void> _exportSdLibrary() async {
+    if (_exporting || _syncing) return;
+    setState(() => _exporting = true);
+    try {
+      final bytes = await ref.read(officialFilmLibraryProvider).exportPack();
+      final saved = await ref.read(officialFilmExportProvider)(bytes);
+      if (mounted && saved) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('胶卷库已导出；保留原文件备份后再替换')));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('导出未完成，请先同步胶卷库后重试')));
+      }
+    } finally {
+      if (mounted) setState(() => _exporting = false);
     }
   }
 
@@ -203,6 +232,14 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
                         child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(Icons.sync, size: 20)),
             IconButton(
+                tooltip: '导出 SD 胶卷库',
+                onPressed: _exporting || _syncing ? null : _exportSdLibrary,
+                icon: _exporting
+                    ? const SizedBox.square(
+                        dimension: 17,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.sd_storage_outlined, size: 20)),
+            IconButton(
                 tooltip: '导入 LUT',
                 onPressed: _importing ? null : _import,
                 icon: const Icon(Icons.add, size: 21)),
@@ -232,7 +269,7 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
       if (!compatible && _group != '我的 LUT')
         Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-            child: Text('胶卷版本与当前机身不匹配 · 可浏览',
+            child: Text('官网版用于手机；装卷可选择机身版本',
                 style: TextStyle(color: context.palette.muted, fontSize: 12))),
       if (!availability.canInstallFilms && _group != '我的 LUT')
         Padding(
@@ -278,10 +315,14 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
                               film.icon;
                           return FilmLibraryTile(
                               name: film.name,
-                              available: compatible &&
-                                  availability.canInstallFilms &&
-                                  (local?.entries.any((f) => f.id == film.id) ??
-                                      false),
+                              available: cache?.phoneLuts
+                                          .any((l) => l.filmId == film.id) ==
+                                      true ||
+                                  compatible &&
+                                      availability.canInstallFilms &&
+                                      (local?.entries
+                                              .any((f) => f.id == film.id) ??
+                                          false),
                               image: icon.startsWith('https:')
                                   ? Image.network(icon,
                                       fit: BoxFit.contain,
@@ -336,12 +377,17 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
         showDragHandle: true,
         builder: (sheet) => Consumer(builder: (_, ref, __) {
               final availability = ref.watch(cameraAvailabilityProvider);
-              final versionMatches = compatible &&
-                  (ref
-                          .watch(officialFilmCacheProvider)
-                          .valueOrNull
-                          ?.cameraCompatible ??
-                      true);
+              final activeCatalog =
+                  ref.watch(cameraFilmCatalogProvider).valueOrNull ?? catalog;
+              final currentCache =
+                  ref.watch(officialFilmCacheProvider).valueOrNull;
+              final phoneLut = currentCache?.phoneLuts
+                  .where((l) => l.filmId == film.id && l.variant == 'default')
+                  .firstOrNull;
+              final installed =
+                  activeCatalog?.entries.any((f) => f.id == film.id) == true;
+              final versionMatches = currentCache == null ||
+                  currentCache.rendererHash == activeCatalog?.rendererHash;
               return DraggableScrollableSheet(
                   expand: false,
                   initialChildSize: .86,
@@ -369,27 +415,67 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
                                     color: context.palette.muted,
                                     fontSize: 12)),
                             const SizedBox(height: 24),
+                            if (phoneLut != null) ...[
+                              FilledButton.tonal(
+                                  onPressed: () {
+                                    Navigator.pop(sheet);
+                                    context.go(Uri(
+                                        path: '/library',
+                                        queryParameters: {
+                                          'lut': phoneLut.id
+                                        }).toString());
+                                  },
+                                  child: const Text('用于修图')),
+                              const SizedBox(height: 10),
+                            ],
                             FilledButton(
                                 onPressed: versionMatches &&
-                                        supported &&
+                                        installed &&
                                         availability.canInstallFilms
                                     ? () {
                                         if (!ref
                                                 .read(
                                                     cameraAvailabilityProvider)
                                                 .canInstallFilms ||
-                                            !compatible ||
                                             ref
                                                     .read(
-                                                        officialFilmCacheProvider)
+                                                        cameraFilmCatalogProvider)
                                                     .valueOrNull
-                                                    ?.cameraCompatible ==
-                                                false) return;
+                                                    ?.hash !=
+                                                activeCatalog?.hash ||
+                                            (ref
+                                                        .read(
+                                                            officialFilmCacheProvider)
+                                                        .valueOrNull
+                                                        ?.rendererHash ??
+                                                    activeCatalog
+                                                        ?.rendererHash) !=
+                                                activeCatalog?.rendererHash) {
+                                          return;
+                                        }
                                         Navigator.pop(sheet);
                                         _openSlots(context, filmId: film.id);
                                       }
                                     : null,
                                 child: const Text('装入相机')),
+                            if (!versionMatches && installed)
+                              OutlinedButton(
+                                  onPressed: availability.canInstallFilms
+                                      ? () {
+                                          final selected = ref
+                                              .read(cameraFilmCatalogProvider)
+                                              .valueOrNull;
+                                          if (selected?.hash !=
+                                                  activeCatalog?.hash ||
+                                              !ref
+                                                  .read(
+                                                      cameraAvailabilityProvider)
+                                                  .canInstallFilms) return;
+                                          Navigator.pop(sheet);
+                                          _openSlots(context, filmId: film.id);
+                                        }
+                                      : null,
+                                  child: const Text('装入机身版本')),
                             if (!versionMatches ||
                                 !supported ||
                                 !availability.canInstallFilms)
@@ -402,6 +488,16 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
                                               ? availability.hint
                                               : '需要更新机身胶卷目录',
                                       textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                          color: context.palette.muted,
+                                          fontSize: 12))),
+                            if (phoneLut == null)
+                              Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: Text(
+                                      currentCache == null
+                                          ? '同步官网后可用于修图'
+                                          : '此胶卷暂不支持手机色彩预设',
                                       style: TextStyle(
                                           color: context.palette.muted,
                                           fontSize: 12))),
@@ -446,6 +542,23 @@ class _FilmReferenceState extends ConsumerState<_FilmReference> {
 
   Future<void> _load() async {
     try {
+      final official = await ref.read(officialFilmCacheProvider.future);
+      final phoneLut = official?.phoneLuts
+          .where((l) => l.filmId == widget.id && l.variant == 'default')
+          .firstOrNull;
+      if (phoneLut != null) {
+        final source = await ref.read(trialSampleLoaderProvider)();
+        final cube = await ref.read(lutLibraryProvider).load(phoneLut.id);
+        final image =
+            await ref.read(imagingEngineProvider).applyLut(source, cube, 1);
+        if (mounted) {
+          setState(() {
+            _source = source;
+            _effect = image;
+          });
+        }
+        return;
+      }
       final catalog = await ref.read(filmCatalogProvider.future);
       if (!catalog.entries.any((f) => f.id == widget.id)) {
         if (mounted) setState(() => _error = '此胶卷暂无本地预览');

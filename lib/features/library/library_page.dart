@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../darkroom/darkroom_providers.dart';
+import '../../film/catalog/official_lut_selection.dart';
 import '../../darkroom/model/edit_document.dart';
 
 import 'package:flutter/material.dart';
@@ -364,9 +365,29 @@ class _LocalLibrary extends StatelessWidget {
                   items: state.items,
                   selected: state.selected,
                   tags: state.tags,
-                  onTap: (item) => selecting
-                      ? controller.toggle(item.id)
-                      : context.push('/edit/${item.id}'),
+                  onTap: (item) {
+                    if (selecting) {
+                      controller.toggle(item.id);
+                      return;
+                    }
+                    final lut = officialLutSelection(
+                        GoRouterState.of(context).uri.queryParameters['lut']);
+                    final target = Uri(
+                            path: '/edit/${item.id}',
+                            queryParameters: lut == null ? null : {'lut': lut})
+                        .toString();
+                    if (lut == null) {
+                      context.push(target);
+                    } else {
+                      // A library selection is a one-shot handoff, not a
+                      // persistent preset for every later photo/reopen.
+                      final router = GoRouter.of(context);
+                      router.go('/library');
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (context.mounted) router.push(target);
+                      });
+                    }
+                  },
                   onLongPress: onLongPress,
                 ),
         ),

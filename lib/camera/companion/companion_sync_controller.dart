@@ -51,22 +51,65 @@ class CompanionSyncController extends ChangeNotifier {
   CompanionSyncController(
       {required this.api,
       required this.repository,
-      required this.catalogHash,
-      required this.rendererHash,
-      this.cameraCatalog,
+      required String catalogHash,
+      required String rendererHash,
+      CameraFilmCatalog? cameraCatalog,
+      this.resolveCameraCatalog,
       bool Function()? isWriteBlocked,
       Future<void> Function()? wait,
       Future<void> Function(FilmRecipe)? keepLocalRecipe})
-      : isWriteBlocked = isWriteBlocked ?? (() => false),
+      : _fallbackCatalogHash = catalogHash,
+        _fallbackRendererHash = rendererHash,
+        _cameraCatalog = cameraCatalog,
+        isWriteBlocked = isWriteBlocked ?? (() => false),
         _wait =
             wait ?? (() => Future<void>.delayed(const Duration(seconds: 2))),
         _keepLocalRecipe = keepLocalRecipe;
   final CompanionApi api;
   final SyncRepository repository;
-  final String catalogHash, rendererHash;
-  final CameraFilmCatalog? cameraCatalog;
+  final String _fallbackCatalogHash, _fallbackRendererHash;
+  CameraFilmCatalog? _cameraCatalog;
+  CameraFilmCatalog? get cameraCatalog => _cameraCatalog;
+  String get catalogHash => cameraCatalog?.hash ?? _fallbackCatalogHash;
+  String get rendererHash =>
+      cameraCatalog?.rendererHash ?? _fallbackRendererHash;
+  final CameraFilmCatalog? Function(CompanionCapabilities)?
+      resolveCameraCatalog;
+  bool _unknownCameraProfile = false;
   Map<String, dynamic> get contract =>
-      cameraCatalog == null ? companionContract : cameraContract;
+      cameraCatalog?.contract ??
+      (resolveCameraCatalog == null ? companionContract : cameraContract);
+
+  CompanionCapabilities _negotiate(CompanionCapabilities caps) {
+    final resolver = resolveCameraCatalog;
+    if (resolver == null) return caps;
+    final selected = resolver(caps);
+    // Even an injected resolver cannot register an unpinned camera identity.
+    final trusted =
+        resolveCameraFilmProfile(caps.catalogHash, caps.rendererHash);
+    final next = trusted != null &&
+            selected?.hash == caps.catalogHash &&
+            selected?.rendererHash == caps.rendererHash
+        ? selected
+        : null;
+    final changed = next?.hash != _cameraCatalog?.hash ||
+        next?.rendererHash != _cameraCatalog?.rendererHash;
+    _unknownCameraProfile = next == null;
+    _cameraCatalog = next;
+    if (changed) {
+      _base = null;
+      _local = null;
+      _slot = null;
+      _recipe = null;
+      _film = null;
+      _activate = false;
+      _set(state.copyWith(
+          readOnly: true, stale: true, hasPreparedLoad: false, merge: null));
+    }
+    return CompanionCapabilities.fromJson(Map<String, dynamic>.from(caps.wire),
+        contract: contract);
+  }
+
   int get slotCount => contract['slotCount'] as int;
   PreparedCompanionLoad? get preparedLoad {
     if (!_alive ||
@@ -151,6 +194,7 @@ class CompanionSyncController extends ChangeNotifier {
         caps = await api.capabilities();
         if (!_current(epoch)) return;
       }
+      caps = _negotiate(caps);
       if (!caps.supports('readState')) {
         _set(state.copyWith(
             capabilities: caps,
@@ -168,7 +212,7 @@ class CompanionSyncController extends ChangeNotifier {
           rethrow;
         }
         api.invalidate();
-        caps = await api.capabilities();
+        caps = _negotiate(await api.capabilities());
         snapshot = await api.state();
       }
       if (!_current(epoch)) return;
@@ -195,7 +239,8 @@ class CompanionSyncController extends ChangeNotifier {
           _base = snapshot;
         }
       }
-      final compatible = caps.compatibleWith(catalogHash, rendererHash) &&
+      final compatible = !_unknownCameraProfile &&
+          caps.compatibleWith(catalogHash, rendererHash) &&
           snapshot.wire['catalogHash'] == catalogHash &&
           snapshot.wire['rendererHash'] == rendererHash &&
           !snapshot.hasUnknownFields &&
@@ -236,8 +281,11 @@ class CompanionSyncController extends ChangeNotifier {
         await repository.saveBaseline(caps.instanceId, snapshot.wire);
         if (!_current(epoch)) return;
         next = next.copyWith(
-            message:
-                compatible ? '已读取机身 $slotCount 槽配置' : '配置仅供查看，当前组件或配方版本不支持写入',
+            message: compatible
+                ? '已读取机身 $slotCount 槽配置'
+                : _unknownCameraProfile
+                    ? '配置仅供查看，此机身版本尚未受信任，请更新 App 或使用配套版本'
+                    : '配置仅供查看，当前组件或配方版本不支持写入',
             operationStatus:
                 state.operationStatus == SyncOperationStatus.synced &&
                         state.snapshot?.revision == snapshot.revision

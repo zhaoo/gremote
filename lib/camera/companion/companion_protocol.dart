@@ -205,10 +205,17 @@ class CompanionSnapshot {
     return false;
   }
 
-  FilmRecipe _recipe(Map<String, dynamic> value) =>
-      (contract['stateSchema'] ?? 1) == 2
-          ? CameraFilmRecipe.fromJson(value)
-          : FilmRecipe.fromJson(value);
+  FilmRecipe _recipe(Map<String, dynamic> value) {
+    if ((contract['stateSchema'] ?? 1) != 2) return FilmRecipe.fromJson(value);
+    // The snapshot's exact bundled profile owns the recipe, including when
+    // restoring a persisted recipe from an earlier installed camera version.
+    if (resolveCameraFilmProfile(value['catalogHash'], value['rendererHash']) ==
+        null) {
+      throw const FormatException('机身胶卷版本尚未受信任，请更新 App');
+    }
+    return CameraFilmRecipe.fromJson(value);
+  }
+
   FilmRecipe recipeAt(int slot, {String name = ''}) => _recipe({
         'schemaVersion': 1,
         ...slots[slot],

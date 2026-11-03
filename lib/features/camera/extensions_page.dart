@@ -225,13 +225,15 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
             : Switch(
                 value: value == 6,
                 onChanged: _editable(controller, 'aspect')
-                    ? (enabled) =>
-                        _confirm(controller!, 'aspect', enabled ? 6 : 0)
+                    ? (enabled) => _submit(
+                        controller!, 'aspect', enabled ? 6 : 0,
+                        revision: controller.snapshot!.revision)
                     : null));
   }
 
   Future<void> _choose(CameraExtensionsController controller, String key,
       ExtensionField field) async {
+    final revision = controller.snapshot!.revision;
     final options = field.choices?.keys.toList() ??
         [for (var i = field.min; i <= field.max; i++) i];
     final value = await showModalBottomSheet<int>(
@@ -259,7 +261,8 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
                               title: Text(field.display(value)),
                               value: value,
                               groupValue: controller.snapshot?.values[key],
-                              onChanged: _editable(controller, key)
+                              onChanged: _editable(controller, key) &&
+                                      controller.snapshot?.revision == revision
                                   ? (value) => Navigator.pop(sheet, value)
                                   : null)
                       ]))
@@ -269,40 +272,19 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
         value == controller.snapshot?.values[key]) {
       return;
     }
-    await _confirm(controller, key, value);
+    await _submit(controller, key, value, revision: revision);
   }
 
-  Future<void> _confirm(
-      CameraExtensionsController controller, String key, int value) async {
-    if (!_editable(controller, key)) return;
-    final field = extensionFields[key]!;
-    final revision = controller.snapshot!.revision;
-    final previous = controller.snapshot!.values[key];
-    if (previous == null) return;
-    final confirmed = await _showConfirmationDialog(
-        builder: (dialog) => ListenableBuilder(
-            listenable: controller,
-            builder: (dialog, _) => AlertDialog(
-                    title: Text(field.label),
-                    content: Text(
-                        '${field.display(previous)} → ${field.display(value)}'),
-                    actions: [
-                      TextButton(
-                          onPressed: () => Navigator.pop(dialog, false),
-                          child: const Text('取消')),
-                      FilledButton(
-                          onPressed: _editable(controller, key) &&
-                                  controller.snapshot?.revision == revision
-                              ? () => Navigator.pop(dialog, true)
-                              : null,
-                          child: const Text('保存'))
-                    ])));
-    if (confirmed == true && mounted) {
-      await controller.set(key, value, expectedRevision: revision);
-      if (mounted && controller.message != null) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(controller.message!)));
-      }
+  Future<void> _submit(
+      CameraExtensionsController controller, String key, int value,
+      {required String revision}) async {
+    if (!mounted ||
+        !_editable(controller, key) ||
+        controller.snapshot?.revision != revision) return;
+    await controller.set(key, value, expectedRevision: revision);
+    if (mounted && controller.message != null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(controller.message!)));
     }
   }
 

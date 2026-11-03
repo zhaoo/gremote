@@ -1,16 +1,24 @@
 import 'dart:io';
+import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gremote/darkroom/lut/builtin_looks.dart';
 import 'package:gremote/darkroom/lut/cube_writer.dart';
 import 'package:gremote/darkroom/lut/lut_library.dart';
+import 'package:gremote/darkroom/export/export_service.dart';
+import 'package:gremote/darkroom/model/edit_document.dart';
+import 'package:gremote/darkroom/model/export_recipe.dart';
 import 'package:gremote/darkroom/store/darkroom_store.dart';
 import 'package:gremote/imaging/imaging_exception.dart';
 import 'package:gremote/storage/gremote_database.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../support/fake_imaging_engine.dart';
+import '../support/fake_media_gateway.dart';
+import '../support/test_darkroom.dart';
+import 'export_service_test.dart' show photo;
 
 Uint8List identity(int size) => Uint8List.fromList(
     writeCube(title: 'id', size: size, map: (r, g, b) => [r, g, b]).codeUnits);
@@ -48,8 +56,56 @@ void main() {
 
   test('loads builtin cube bytes from assets', () async {
     final bytes = await library.load('builtin:pale');
-    expect(
-        String.fromCharCodes(bytes.take(60)), contains('gremote original look'));
+    expect(String.fromCharCodes(bytes.take(60)),
+        contains('gremote original look'));
+  });
+
+  test('synced official LUT is the immutable payload passed to photo export',
+      () async {
+    final bytes = identity(15), hash = sha256.convert(identity(15)).toString();
+    final id = 'official:69:default:$hash';
+    final lutDir = await Directory('${dir.path}/official-luts').create();
+    await File('${lutDir.path}/$hash.cube').writeAsBytes(bytes);
+    await File('${dir.path}/official-library.json').writeAsString(jsonEncode({
+      'phoneLuts': [
+        {
+          'id': id,
+          'name': '官网胶卷',
+          'filmId': 69,
+          'variant': 'default',
+          'size': 15,
+          'contentHash': hash,
+          'byteLength': bytes.length,
+        }
+      ]
+    }));
+    final entries = await library.entries();
+    expect(entries.map((entry) => entry.id), contains(id));
+    final official = entries.singleWhere((entry) => entry.id == id);
+    expect(official.imported, isFalse);
+    expect(official.official, isTrue);
+    expect(official.filmId, 69);
+    expect(official.description, contains('近似'));
+    expect(await library.load(id), orderedEquals(bytes));
+    final gateway = FakeMediaGateway();
+    final service = ExportService(
+        engine: engine,
+        gateway: gateway,
+        rasterizer: NoOverlayRasterizer(),
+        loadCube: library.load,
+        tempDir: () async => dir);
+    await service.export(
+        photo(7),
+        EditDocument(
+            mediaId: 7,
+            recipe: ExportRecipe(lutId: id, frame: FrameStyle.none),
+            updatedAt: DateTime(2026)));
+    expect(engine.jobs.single.cube, orderedEquals(bytes));
+    await library.delete(id);
+    expect(await library.load(id), orderedEquals(bytes),
+        reason: 'deleting user imports must not reclaim official payloads');
+    await File('${lutDir.path}/$hash.cube').writeAsString('broken');
+    await expectLater(library.load(id), throwsA(isA<LutImportException>()));
   });
 
   test('imports a valid cube once and can delete it', () async {

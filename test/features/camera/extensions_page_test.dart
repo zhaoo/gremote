@@ -36,6 +36,9 @@ class AllExtensionsFake extends ExtensionFake {
     'aspect': 0,
   };
   bool busy = false;
+  String revision = '04';
+  final operations = <Map<String, Object?>>[];
+  Completer<void>? commitReady, readbackReady;
   final excludedCapabilities = <String>{};
   final excludedSnapshot = <String>{};
   @override
@@ -48,29 +51,34 @@ class AllExtensionsFake extends ExtensionFake {
   }
 
   @override
-  Future<ExtensionSnapshot> extensionState() async =>
-      ExtensionSnapshot.fromJson({
-        ...extSnapshot(),
-        'busy': busy,
-        'supported': settings.keys
-            .where((key) => !excludedSnapshot.contains(key))
-            .toList(),
-        'values': {
-          for (final entry in settings.entries)
-            if (!excludedSnapshot.contains(entry.key)) entry.key: entry.value
-        },
-      });
+  Future<ExtensionSnapshot> extensionState() async {
+    if (submissions > 0) await readbackReady?.future;
+    return ExtensionSnapshot.fromJson({
+      ...extSnapshot(revision: revision),
+      'busy': busy,
+      'supported': settings.keys
+          .where((key) => !excludedSnapshot.contains(key))
+          .toList(),
+      'values': {
+        for (final entry in settings.entries)
+          if (!excludedSnapshot.contains(entry.key)) entry.key: entry.value
+      },
+    });
+  }
+
   @override
   Future<ExtensionReceipt> submitExtension(
       Map<String, Object?> operation) async {
     submissions++;
+    operations.add(Map.of(operation));
+    await commitReady?.future;
     settings[operation['field'] as String] = operation['value'] as int;
     return ExtensionReceipt.fromJson({
       'requestId': operation['requestId'],
       'bootId': bootId,
       'status': 'committed',
       'snapshot': {
-        ...extSnapshot(),
+        ...extSnapshot(revision: revision),
         'busy': busy,
         'supported': settings.keys.toList(),
         'values': settings
@@ -170,7 +178,7 @@ void main() {
   });
 
   testWidgets(
-      'Half still confirms the aspect wire value and readback before changing',
+      'Half submits its aspect wire value directly and displays readback',
       (tester) async {
     final api = AllExtensionsFake();
     final controller = makeController(api);
@@ -181,13 +189,103 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byType(Switch));
     await tester.pumpAndSettle();
-    expect(api.submissions, 0);
-    expect(find.text('3:2 → Half 3:4'), findsOneWidget);
-    await tester.tap(find.text('保存'));
-    await tester.pumpAndSettle();
     expect(api.submissions, 1);
+    expect(api.operations.single['field'], 'aspect');
+    expect(api.operations.single['value'], 6);
+    expect(find.byType(AlertDialog), findsNothing);
     expect(controller.snapshot!.values['aspect'], 6);
     expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+    expect(api.submissions, 2);
+    expect(api.operations.last['value'], 0);
+    expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
+  });
+
+  testWidgets('selection waits for committed receipt and fresh readback',
+      (tester) async {
+    final api = AllExtensionsFake()
+      ..commitReady = Completer<void>()
+      ..readbackReady = Completer<void>();
+    final controller = makeController(api);
+    addTearDown(controller.dispose);
+    await pumpExtensions(tester, controller, reducedMotion: true);
+    await tester.tap(find.text('效果'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('HDF'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('弱'));
+    await tester.pumpAndSettle();
+    expect(api.submissions, 1);
+    expect(api.operations.single['field'], 'hdf');
+    expect(api.operations.single['value'], 1);
+    expect(api.operations.single['baseRevision'], '04' * 32);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('已保存'), findsNothing);
+    expect(controller.snapshot!.values['hdf'], 0);
+    expect(controller.canWrite, isFalse);
+    api.commitReady!.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('已保存'), findsNothing);
+    expect(controller.snapshot!.values['hdf'], 0);
+    api.readbackReady!.complete();
+    await tester.pumpAndSettle();
+    expect(controller.snapshot!.values['hdf'], 1);
+    expect(controller.message, '已保存');
+    expect(find.text('已保存'), findsWidgets);
+    expect(api.submissions, 1);
+  });
+
+  testWidgets('a refreshed revision invalidates an open chooser',
+      (tester) async {
+    final api = AllExtensionsFake();
+    final controller = makeController(api);
+    addTearDown(controller.dispose);
+    await pumpExtensions(tester, controller);
+    await tester.tap(find.text('效果'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('HDF'));
+    await tester.pumpAndSettle();
+    final originalChoice = tester
+        .widget<RadioListTile<int>>(
+            find.widgetWithText(RadioListTile<int>, '弱'))
+        .onChanged!;
+    api.revision = '05';
+    api.settings['hdf'] = 3;
+    await controller.refresh();
+    await tester.pumpAndSettle();
+    expect(
+        tester
+            .widget<RadioListTile<int>>(
+                find.widgetWithText(RadioListTile<int>, '弱'))
+            .onChanged,
+        isNull);
+    // Even a choice already queued before the refresh must keep its old revision.
+    originalChoice(1);
+    await tester.pumpAndSettle();
+    expect(api.submissions, 0);
+    expect(controller.snapshot!.values['hdf'], 3);
+    await tester.tap(find.text('HDF'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('弱'));
+    await tester.pumpAndSettle();
+    expect(api.submissions, 1);
+    expect(api.operations.single['baseRevision'], '05' * 32);
+  });
+
+  testWidgets('choosing the current value does not write', (tester) async {
+    final api = AllExtensionsFake();
+    final controller = makeController(api);
+    addTearDown(controller.dispose);
+    await pumpExtensions(tester, controller);
+    await tester.tap(find.text('效果'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('HDF'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(RadioListTile<int>, '关闭'));
+    await tester.pumpAndSettle();
+    expect(api.submissions, 0);
+    expect(find.byType(AlertDialog), findsNothing);
   });
 
   testWidgets('live quick-switch pairing gate disables an already open chooser',
@@ -213,6 +311,37 @@ void main() {
   });
 
   for (final gate in ['busy', 'capability', 'snapshot']) {
+    testWidgets('$gate prevents a write from an already open chooser',
+        (tester) async {
+      final api = AllExtensionsFake();
+      final controller = makeController(api);
+      addTearDown(controller.dispose);
+      await pumpExtensions(tester, controller);
+      await tester.tap(find.text('效果'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('HDF'));
+      await tester.pumpAndSettle();
+      final originalChoice = tester
+          .widget<RadioListTile<int>>(
+              find.widgetWithText(RadioListTile<int>, '弱'))
+          .onChanged!;
+      if (gate == 'busy') api.busy = true;
+      if (gate == 'capability') api.excludedCapabilities.add('hdf');
+      if (gate == 'snapshot') api.excludedSnapshot.add('hdf');
+      await controller.refresh();
+      await tester.pumpAndSettle();
+      expect(
+          tester
+              .widget<RadioListTile<int>>(
+                  find.widgetWithText(RadioListTile<int>, '弱'))
+              .onChanged,
+          isNull);
+      originalChoice(1);
+      await tester.pumpAndSettle();
+      expect(api.submissions, 0);
+      expect(find.byType(AlertDialog), findsNothing);
+    });
+
     testWidgets('$gate disables field and Half writes', (tester) async {
       final api = AllExtensionsFake();
       if (gate == 'busy') api.busy = true;
@@ -249,7 +378,7 @@ void main() {
   }
 
   for (final size in [const Size(320, 568), const Size(844, 320)]) {
-    testWidgets('large text groups and confirmation remain usable at $size',
+    testWidgets('large text groups and direct choice remain usable at $size',
         (tester) async {
       tester.view.physicalSize = size;
       tester.view.devicePixelRatio = 1;
@@ -258,7 +387,8 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       addTearDown(
           tester.binding.platformDispatcher.clearTextScaleFactorTestValue);
-      final controller = makeController(AllExtensionsFake());
+      final api = AllExtensionsFake();
+      final controller = makeController(api);
       addTearDown(controller.dispose);
       await pumpExtensions(tester, controller);
       await tester.scrollUntilVisible(find.text('效果'), 100,
@@ -273,10 +403,8 @@ void main() {
           scrollable: find.byType(Scrollable).last);
       await tester.tap(find.text('弱'));
       await tester.pumpAndSettle();
-      expect(find.widgetWithText(FilledButton, '保存').hitTestable(),
-          findsOneWidget);
-      await tester.tap(find.text('取消'));
-      await tester.pumpAndSettle();
+      expect(api.submissions, 1);
+      expect(find.byType(AlertDialog), findsNothing);
       expect(tester.takeException(), isNull);
     });
   }
@@ -321,10 +449,8 @@ void main() {
         AnimationStatus.completed);
     await tester.tap(find.text('弱'));
     await tester.pumpAndSettle();
-    expect(
-        ModalRoute.of(tester.element(find.byType(AlertDialog)))!
-            .transitionDuration,
-        Duration.zero);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(controller.snapshot!.values['hdf'], 1);
   });
 
   testWidgets(
@@ -411,10 +537,18 @@ void main() {
         .widget<ListTile>(find.byKey(const ValueKey('extension-field-hdf')));
     expect(field.onTap, isNull);
     expect(api.submissions, 1);
+    await tester.tap(find.text('核对当前设置'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.text('重新读取机身。未决操作需重启相机后再核对，不会重复提交。'), findsOneWidget);
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+    expect(controller.pending, isTrue);
+    expect(api.submissions, 1);
   });
 
   testWidgets(
-      'external write gate disables edits and a previously open confirmation',
+      'external write gate disables edits and a previously open chooser',
       (tester) async {
     var blocked = false;
     final api = ExtensionFake();
@@ -425,17 +559,16 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('HDF'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('弱'));
-    await tester.pumpAndSettle();
     blocked = true;
     controller.notifyListeners();
     await tester.pumpAndSettle();
     expect(
         tester
-            .widget<FilledButton>(find.widgetWithText(FilledButton, '保存'))
-            .onPressed,
+            .widget<RadioListTile<int>>(
+                find.widgetWithText(RadioListTile<int>, '弱'))
+            .onChanged,
         isNull);
-    await tester.tap(find.text('取消'));
+    Navigator.of(tester.element(find.text('弱'))).pop();
     await tester.pumpAndSettle();
     expect(
         tester
@@ -474,7 +607,7 @@ void main() {
   });
   for (final width in [320.0, 390.0]) {
     testWidgets(
-        'extension HDF save uses confirmation and real readback at $width',
+        'extension HDF choice submits once with real readback at $width',
         (tester) async {
       tester.view.physicalSize = Size(width, 844);
       tester.view.devicePixelRatio = 1;
@@ -510,10 +643,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('弱'));
       await tester.pumpAndSettle();
-      expect(api.submissions, 0);
-      await tester.tap(find.text('保存'));
-      await tester.pumpAndSettle();
       expect(api.submissions, 1);
+      expect(find.byType(AlertDialog), findsNothing);
       expect(controller.snapshot!.values['hdf'], 1);
       expect(find.text('已保存'), findsOneWidget);
       expect(tester.takeException(), isNull);

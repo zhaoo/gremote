@@ -27,6 +27,9 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
   private var socket: URLSessionWebSocketTask?
   private var downloads: [ObjectIdentifier: (String, (Result<String, Error>) -> Void)] = [:]
   private var companionFileResult: ((Result<FlutterStandardTypedData?, Error>) -> Void)?
+  private var filmExportResult: ((Result<Bool, Error>) -> Void)?
+  private var filmExportDirectory: URL?
+  private weak var filmExportPicker: UIDocumentPickerViewController?
   private var companionFileLimit = 0
   private var companionFileGeneration = UUID()
   private var connected = false
@@ -100,7 +103,7 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
     completion(.failure(nativeError("companionUnsupported", "iOS 暂不支持相机伴侣网络；仍可离线试卷与整理数字胶卷")))
   }
   func pickCompanionFile(kind: String, completion: @escaping (Result<FlutterStandardTypedData?, Error>) -> Void) {
-    guard ["pairing", "film"].contains(kind), companionFileResult == nil else { completion(.failure(nativeError("companionPickerBusy", "文件选择暂不可用"))); return }
+    guard ["pairing", "film"].contains(kind), companionFileResult == nil, filmExportResult == nil else { completion(.failure(nativeError("companionPickerBusy", "文件选择暂不可用"))); return }
     guard var controller = UIApplication.shared.windows.first(where: { $0.isKeyWindow })?.rootViewController else { completion(.failure(nativeError("companionPickerFailed", "无法打开文件选择器"))); return }
     while let presented = controller.presentedViewController { controller = presented }
     companionFileGeneration = UUID()
@@ -108,16 +111,62 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
     let picker = UIDocumentPickerViewController(documentTypes: ["public.item"], in: .import); picker.delegate = self; picker.allowsMultipleSelection = false
     controller.present(picker, animated: !UIAccessibility.isReduceMotionEnabled)
   }
+  func exportFilmLibrary(bytes: FlutterStandardTypedData, completion: @escaping (Result<Bool, Error>) -> Void) {
+    do { try FilmLibraryDocument.validate(Array(bytes.data)) }
+    catch { completion(.failure(nativeError("invalidFilmLibrary", "胶卷库格式或校验无效"))); return }
+    guard filmExportResult == nil, companionFileResult == nil else {
+      completion(.failure(nativeError("filmLibraryExportBusy", "文件导出正在进行"))); return
+    }
+    guard var controller = UIApplication.shared.windows.first(where: { $0.isKeyWindow })?.rootViewController else {
+      completion(.failure(nativeError("filmLibraryExportFailed", "无法打开文件导出器"))); return
+    }
+    while let presented = controller.presentedViewController { controller = presented }
+    do {
+      // A unique private directory guarantees the exact suggested filename
+      // without replacing any existing local or camera file.
+      let directory = FileManager.default.temporaryDirectory.appendingPathComponent("gremote-film-" + UUID().uuidString, isDirectory: true)
+      try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
+      filmExportDirectory = directory
+      let file = directory.appendingPathComponent("FILMS.M10")
+      try bytes.data.write(to: file, options: .atomic)
+      filmExportResult = completion
+      let picker = UIDocumentPickerViewController(url: file, in: .exportToService)
+      picker.delegate = self; picker.allowsMultipleSelection = false
+      filmExportPicker = picker
+      controller.present(picker, animated: !UIAccessibility.isReduceMotionEnabled)
+    } catch {
+      clearFilmExport()
+      completion(.failure(nativeError("filmLibraryExportFailed", "无法准备胶卷库导出文件")))
+    }
+  }
+  private func clearFilmExport() {
+    filmExportResult = nil; filmExportPicker = nil
+    if let directory = filmExportDirectory { try? FileManager.default.removeItem(at: directory) }
+    filmExportDirectory = nil
+  }
+  deinit {
+    if let directory = filmExportDirectory { try? FileManager.default.removeItem(at: directory) }
+  }
   func cancelCompanionFileRead() {
     companionFileGeneration = UUID()
     let completion = companionFileResult; companionFileResult = nil
     completion?(.failure(nativeError("companionPickerCancelled", "文件读取已取消")))
   }
   func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+    if controller === filmExportPicker {
+      let completion = filmExportResult; clearFilmExport(); completion?(.success(false)); return
+    }
     companionFileGeneration = UUID()
     let completion = companionFileResult; companionFileResult = nil; completion?(.success(nil))
   }
   func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+    if controller === filmExportPicker {
+      let completion = filmExportResult
+      clearFilmExport()
+      if urls.isEmpty { completion?(.failure(nativeError("filmLibraryExportFailed", "系统未返回导出位置"))) }
+      else { completion?(.success(true)) }
+      return
+    }
     guard companionFileResult != nil else { return }
     let token = companionFileGeneration, limit = companionFileLimit
     guard let url = urls.first else { cancelCompanionFileRead(); return }

@@ -225,6 +225,9 @@ protocol CameraDeviceHostApi {
   func cameraRequest(method: String, url: String, headers: [String?: String?], body: FlutterStandardTypedData?, completion: @escaping (Result<NativeHttpResponse, Error>) -> Void)
   func companionRequest(method: String, path: String, headers: [String?: String?], body: FlutterStandardTypedData?, completion: @escaping (Result<NativeHttpResponse, Error>) -> Void)
   func pickCompanionFile(kind: String, completion: @escaping (Result<FlutterStandardTypedData?, Error>) -> Void)
+  /// Opens the system save/export picker for a validated FILMS.M10 library.
+  /// Returns false when the user cancels; never contacts the camera.
+  func exportFilmLibrary(bytes: FlutterStandardTypedData, completion: @escaping (Result<Bool, Error>) -> Void)
   func saveCompanionPairing(instanceId: String, keyBytes: FlutterStandardTypedData, completion: @escaping (Result<Void, Error>) -> Void)
   func removeCompanionPairing(instanceId: String, completion: @escaping (Result<Void, Error>) -> Void)
   func signCompanionRequest(instanceId: String, canonicalBytes: FlutterStandardTypedData, completion: @escaping (Result<FlutterStandardTypedData, Error>) -> Void)
@@ -446,6 +449,25 @@ class CameraDeviceHostApiSetup {
       }
     } else {
       pickCompanionFileChannel.setMessageHandler(nil)
+    }
+    /// Opens the system save/export picker for a validated FILMS.M10 library.
+    /// Returns false when the user cancels; never contacts the camera.
+    let exportFilmLibraryChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.gremote.CameraDeviceHostApi.exportFilmLibrary\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      exportFilmLibraryChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let bytesArg = args[0] as! FlutterStandardTypedData
+        api.exportFilmLibrary(bytes: bytesArg) { result in
+          switch result {
+          case .success(let res):
+            reply(wrapResult(res))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      exportFilmLibraryChannel.setMessageHandler(nil)
     }
     let saveCompanionPairingChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.gremote.CameraDeviceHostApi.saveCompanionPairing\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {

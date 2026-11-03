@@ -68,6 +68,8 @@ flutter:
     - assets/films/
     - assets/films/icons/
     - assets/films/camera-icons/
+    - assets/films/camera-profiles/
+    - assets/films/camera-profiles/old-icons/
     - assets/luts/
   fonts:
     - family: GRemoteEditorial

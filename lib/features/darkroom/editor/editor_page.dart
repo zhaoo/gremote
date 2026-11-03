@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/widgets/workspace_motion.dart';
 import '../../../darkroom/darkroom_providers.dart';
+import '../../../film/catalog/official_lut_selection.dart';
 import '../../../darkroom/export/export_service.dart';
 import '../../../darkroom/frame/frame_layout.dart';
 import '../../../darkroom/model/export_recipe.dart';
@@ -22,8 +23,9 @@ import 'widgets/frame_preview.dart';
 import 'widgets/lut_picker.dart';
 
 class EditorPage extends ConsumerStatefulWidget {
-  const EditorPage({required this.mediaId, super.key});
+  const EditorPage({required this.mediaId, this.initialLut, super.key});
   final int mediaId;
+  final String? initialLut;
   @override
   ConsumerState<EditorPage> createState() => _EditorPageState();
 }
@@ -34,6 +36,32 @@ class _EditorPageState extends ConsumerState<EditorPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    if (officialLutSelection(widget.initialLut) != null) {
+      ref.listenManual(editorProvider(widget.mediaId), (_, next) {
+        _queueInitialLut(next);
+      }, fireImmediately: true);
+    }
+  }
+
+  bool _initialLutHandled = false, _initialLutScheduled = false;
+  void _queueInitialLut(EditorState state) {
+    if (_initialLutHandled ||
+        _initialLutScheduled ||
+        state.doc == null ||
+        state.luts.isEmpty) return;
+    _initialLutScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initialLutScheduled = false;
+      if (!mounted || _initialLutHandled) return;
+      final current = ref.read(editorProvider(widget.mediaId));
+      if (current.doc == null || current.luts.isEmpty) return;
+      _initialLutHandled = true;
+      final id = officialLutSelection(widget.initialLut);
+      if (id != null &&
+          current.luts.any((entry) => entry.id == id && entry.official)) {
+        unawaited(_controller.setLut(id));
+      }
+    });
   }
 
   @override
@@ -406,7 +434,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
                               style: const TextStyle(fontSize: 12))))
                 ]),
             body: s.layout == null
-                ? Center(child: Text(s.error ?? '读取照片…'))
+                ? _loadingPhoto(s.error)
                 : SafeArea(
                     top: false,
                     child: AbsorbPointer(
@@ -459,7 +487,34 @@ class _EditorPageState extends ConsumerState<EditorPage>
         visible.height / photo.height)));
   }
 
+  Widget _loadingPhoto(String? error) {
+    // Reuse the album's bounded, oriented source thumbnail. It is only a
+    // loading aid; it never becomes the edited frame or an export source.
+    final bytes = ref.watch(thumbnailProvider(widget.mediaId)).valueOrNull;
+    return Stack(fit: StackFit.expand, children: [
+      if (bytes != null)
+        Padding(
+            padding: const EdgeInsets.all(16),
+            child: Image.memory(bytes,
+                key: const ValueKey('editor-loading-thumbnail'),
+                fit: BoxFit.contain,
+                gaplessPlayback: true,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink())),
+      Align(
+          alignment: bytes == null ? Alignment.center : Alignment.bottomCenter,
+          child: Container(
+              margin: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                  color: context.palette.raised,
+                  borderRadius: BorderRadius.circular(5)),
+              child: Text(error ?? '正在载入编辑…',
+                  style: const TextStyle(fontSize: 12)))),
+    ]);
+  }
+
   Widget _photo(EditorState s) {
+    if (s.base == null && s.gpuFrame == null) return _loadingPhoto(s.error);
     final original =
         s.gpuSession == null ? _showOriginal : (s.gpuFrame?.original ?? false);
     final meta = s.meta!;

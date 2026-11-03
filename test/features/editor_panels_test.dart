@@ -77,6 +77,50 @@ void main() {
     expect(edits.curves.first.points, hasLength(2));
   });
   testWidgets(
+      'vertical curve drag owns the graph while outside stays scrollable',
+      (tester) async {
+    var edits = const PhotoEdits();
+    var starts = 0, ends = 0;
+    final scroll = ScrollController();
+    addTearDown(scroll.dispose);
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: SizedBox(
+      width: 320,
+      height: 240,
+      child: SingleChildScrollView(
+          controller: scroll,
+          child: Column(children: [
+            StatefulBuilder(
+                builder: (context, setState) => CurvePanel(
+                    edits: edits,
+                    onChanged: (value) => setState(() => edits = value),
+                    onStart: () => starts++,
+                    onEnd: () => ends++)),
+            const SizedBox(key: ValueKey('outside-curve'), height: 600),
+          ])),
+    ))));
+    final graph = find.byKey(const ValueKey('curve-graph'));
+    final center = tester.getCenter(graph);
+    await tester.tapAt(center);
+    await tester.pump();
+    starts = ends = 0;
+    final gesture = await tester.startGesture(center);
+    await gesture.moveBy(const Offset(0, -20));
+    await gesture.moveBy(const Offset(0, -40));
+    await tester.pump();
+    expect(edits.curves.first.points[1].y, greaterThan(.8));
+    expect(scroll.offset, 0);
+    await gesture.cancel();
+    await tester.pump();
+    expect(starts, 1);
+    expect(ends, 1);
+    // The channel row is outside the captured graph.
+    await tester.dragFrom(const Offset(300, 25), const Offset(0, -80));
+    await tester.pumpAndSettle();
+    expect(scroll.offset, greaterThan(0));
+  });
+  testWidgets(
       'crop ratios use rotated dimensions and rotation resets rectangle',
       (tester) async {
     var crop = const CropEdit();

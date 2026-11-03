@@ -195,24 +195,27 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
     final gateway = ref.read(mediaGatewayProvider);
     final engine = ref.read(imagingEngineProvider);
     final store = ref.read(darkroomStoreProvider);
-    final library = ref.read(lutLibraryProvider);
     try {
-      final item = await ref.read(localMediaRepositoryProvider).find(arg);
+      final (item, saved) = await (
+        ref.read(localMediaRepositoryProvider).find(arg),
+        store.loadEdit(arg),
+      ).wait;
       if (!_alive) return;
       if (item == null || item.meta == null) {
         _emit(state.copyWith(error: () => '照片不存在，或无法读取它的 EXIF'));
         return;
       }
-      final doc = await store.loadEdit(arg) ??
+      final doc = saved ??
           EditDocument(
               mediaId: arg,
               updatedAt: DateTime.now(),
               recipe: const ExportRecipe(frame: FrameStyle.none));
-      final luts = await library.entries();
-      final access = await gateway.hasLocationAccess();
-      if (!_alive) return;
-      _emit(state.copyWith(
-          item: item, doc: doc, luts: luts, locationAccess: access));
+      _emit(state.copyWith(item: item, doc: doc));
+      // Neither the filter catalog nor GPS permissions are prerequisites for
+      // showing this photo. In particular, a slow platform permission query
+      // must not keep the native decoder/GPU idle.
+      unawaited(_loadLuts());
+      unawaited(_loadLocationAccess());
       if (ref.read(gpuEditorProvider) != null) {
         await _openGpu();
         return;
@@ -226,6 +229,24 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
       await regrade();
     } on Object catch (e) {
       _emit(state.copyWith(error: () => '无法读取照片：$e'));
+    }
+  }
+
+  Future<void> _loadLuts() async {
+    try {
+      final luts = await ref.read(lutLibraryProvider).entries();
+      if (_alive) _emit(state.copyWith(luts: luts));
+    } catch (e) {
+      if (_alive) _emit(state.copyWith(error: () => '无法读取滤镜列表：$e'));
+    }
+  }
+
+  Future<void> _loadLocationAccess() async {
+    try {
+      final access = await ref.read(mediaGatewayProvider).hasLocationAccess();
+      if (_alive) _emit(state.copyWith(locationAccess: access));
+    } catch (e) {
+      if (_alive) _emit(state.copyWith(error: () => '无法读取定位权限：$e'));
     }
   }
 

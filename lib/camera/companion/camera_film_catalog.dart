@@ -5,27 +5,98 @@ import '../../film/model/film_recipe.dart';
 import 'generated_camera_contract.dart';
 
 final Map<String, dynamic> cameraContract =
-    jsonDecode(cameraContractJson) as Map<String, dynamic>;
+    _freezeMap(jsonDecode(cameraContractJson) as Map);
 const legacyPreviewCatalogHash =
     'e0a5fe1be29c20274edd537fd234905fb6f1ac4b60a5f5b99355f43d57aa14d5';
 const legacyPreviewRendererHash =
     'f2aa5411ff40808612b5c232dc854e248b0aa0890c903eb8b319a93d8acf73b2';
 
-bool cameraParameterSupported(String key, int id) {
-  final p = (cameraContract['parameters'] as Map)[key] as Map?;
-  if ((cameraContract['readOnlyParameters'] as List).contains(key)) {
+/// Exact bundled identities only. A website cache can never register a profile.
+class CameraFilmProfile {
+  CameraFilmProfile._(
+      this.catalogHash, this.rendererHash, this.contract, this.versionLabel);
+  final String catalogHash, rendererHash, versionLabel;
+  final Map<String, dynamic> contract;
+  bool get isLatest =>
+      catalogHash == cameraCatalogHash && rendererHash == cameraRendererHash;
+}
+
+Map<String, dynamic> _freezeMap(Map value) =>
+    Map<String, dynamic>.unmodifiable(value.map((k, v) => MapEntry(
+        k as String,
+        v is Map
+            ? _freezeMap(v)
+            : v is List
+                ? _freezeList(v)
+                : v)));
+List<dynamic> _freezeList(List value) =>
+    List<dynamic>.unmodifiable(value.map((v) => v is Map
+        ? _freezeMap(v)
+        : v is List
+            ? _freezeList(v)
+            : v));
+
+const installedCameraCatalogHash =
+    '653acf3c1b04db0ea2dd10114a1306b78bb4b584534945be8f9de9da25ebab4a';
+const installedCameraRendererHash =
+    '80a4d357be06ff0e9510a20bef1035dc3e848ec585bd5d5cdee466c3980506a4';
+final List<CameraFilmProfile> trustedCameraFilmProfiles = List.unmodifiable([
+  CameraFilmProfile._(
+      cameraCatalogHash, cameraRendererHash, cameraContract, '机身版本 · 当前配套'),
+  CameraFilmProfile._(
+      installedCameraCatalogHash,
+      installedCameraRendererHash,
+      _freezeMap(jsonDecode(_installedCameraContractJson) as Map),
+      '机身版本 · 03db1c70'),
+]);
+CameraFilmProfile? resolveCameraFilmProfile(Object? catalog, Object? renderer) {
+  for (final profile in trustedCameraFilmProfiles) {
+    if (profile.catalogHash == catalog && profile.rendererHash == renderer) {
+      return profile;
+    }
+  }
+  return null;
+}
+
+CameraFilmProfile? cameraFilmProfileForContract(Map<String, dynamic> contract) {
+  final identity = canonicalJson(contract);
+  for (final profile in trustedCameraFilmProfiles) {
+    if (canonicalJson(profile.contract) == identity) return profile;
+  }
+  return null;
+}
+
+Map<String, dynamic> _displayCatalog(Map<String, dynamic> value) {
+  if (value['hash'] != installedCameraCatalogHash) return value;
+  return {
+    ...value,
+    'entries': [
+      for (final entry in value['entries'] as List)
+        {
+          ...entry as Map,
+          'icon': 'assets/films/camera-profiles/old-icons/${entry['id']}.png'
+        }
+    ]
+  };
+}
+
+bool cameraParameterSupported(String key, int id,
+    {Map<String, dynamic>? contract}) {
+  final rules = contract ?? cameraContract;
+  final p = (rules['parameters'] as Map)[key] as Map?;
+  if ((rules['readOnlyParameters'] as List).contains(key)) {
     return p != null;
   }
-  return (id > 0 ||
-          (cameraContract['readOnlyParameters'] as List).contains(key)) &&
+  return (id > 0 || (rules['readOnlyParameters'] as List).contains(key)) &&
       p != null &&
       (p['filmIds'] == null || (p['filmIds'] as List).contains(id)) &&
       !(p['excludeFilmIds'] as List? ?? []).contains(id);
 }
 
-Map<String, int> cameraDefaults(int id) => {
-      for (final e in (cameraContract['parameters'] as Map).entries)
-        if (cameraParameterSupported(e.key as String, id))
+Map<String, int> cameraDefaults(int id, {Map<String, dynamic>? contract}) => {
+      for (final e
+          in ((contract ?? cameraContract)['parameters'] as Map).entries)
+        if (cameraParameterSupported(e.key as String, id, contract: contract))
           e.key as String: (e.value as Map)['default'] as int
     };
 
@@ -46,11 +117,13 @@ class CameraFilmRecipe implements FilmRecipe {
     }
 
     need(json.keys.every(fields.contains) && json['schemaVersion'] == 1);
-    need(json['catalogHash'] == cameraCatalogHash &&
-        json['rendererHash'] == cameraRendererHash);
+    final selected =
+        resolveCameraFilmProfile(json['catalogHash'], json['rendererHash']);
+    need(selected != null);
+    profile = selected!;
+    final contract = profile.contract;
     final id = json['filmId'];
-    need(
-        id is int && id >= 0 && id <= (cameraContract['maximumFilmId'] as int));
+    need(id is int && id >= 0 && id <= (contract['maximumFilmId'] as int));
     final custom = json['customHash'];
     need(custom == null ||
         custom is String && RegExp(r'^[a-f0-9]{64}$').hasMatch(custom));
@@ -60,8 +133,9 @@ class CameraFilmRecipe implements FilmRecipe {
     final p = <String, int>{};
     for (final e in (raw as Map).entries) {
       need(e.key is String &&
-          cameraParameterSupported(e.key as String, id as int));
-      final rule = (cameraContract['parameters'] as Map)[e.key] as Map;
+          cameraParameterSupported(e.key as String, id as int,
+              contract: contract));
+      final rule = (contract['parameters'] as Map)[e.key] as Map;
       need(e.value is int &&
           e.value >= rule['min'] &&
           e.value <= (rule['overrides']?[id.toString()] ?? rule['max']));
@@ -74,6 +148,7 @@ class CameraFilmRecipe implements FilmRecipe {
     name = (label as String).trim();
     customHash = custom as String?;
   }
+  late final CameraFilmProfile profile;
   @override
   late final int filmId;
   @override
@@ -83,12 +158,12 @@ class CameraFilmRecipe implements FilmRecipe {
   @override
   late final String? customHash;
   @override
-  String get catalogHash => cameraCatalogHash;
+  String get catalogHash => profile.catalogHash;
   @override
-  String get rendererHash => cameraRendererHash;
+  String get rendererHash => profile.rendererHash;
   @override
   Map<String, int> get resolvedParameters =>
-      {...cameraDefaults(filmId), ...parameters};
+      {...cameraDefaults(filmId, contract: profile.contract), ...parameters};
   @override
   Map<String, Object?> toJson() => {
         'schemaVersion': 1,
@@ -107,15 +182,18 @@ class CameraFilmRecipe implements FilmRecipe {
 
 class CameraFilmCatalog extends FilmCatalog {
   CameraFilmCatalog.fromJson(Map<String, dynamic> value)
-      : super.fromJson(value) {
+      : super.fromJson(_displayCatalog(value)) {
     final identity = Map<String, dynamic>.from(value)..remove('hash');
-    if (hash != cameraCatalogHash ||
-        rendererHash != cameraRendererHash ||
+    final selected = resolveCameraFilmProfile(hash, rendererHash);
+    if (selected == null ||
         sha256.convert(utf8.encode(canonicalJson(identity))).toString() !=
             hash) {
       throw const FormatException('相机目录校验失败');
     }
+    profile = selected;
   }
+  late final CameraFilmProfile profile;
+  Map<String, dynamic> get contract => profile.contract;
   @override
   CameraFilmRecipe recipe(int id,
       {String? name, Map<String, int> parameters = const {}}) {
@@ -126,7 +204,7 @@ class CameraFilmCatalog extends FilmCatalog {
       'catalogHash': hash,
       'rendererHash': rendererHash,
       'name': name ?? definition.name,
-      'parameters': {...cameraDefaults(id), ...parameters}
+      'parameters': {...cameraDefaults(id, contract: contract), ...parameters}
     });
   }
 
@@ -135,6 +213,9 @@ class CameraFilmCatalog extends FilmCatalog {
         .filmId); // Only the current visible stable IDs can be newly loaded.
     Map<String, int> parameters;
     if (source is CameraFilmRecipe) {
+      if (source.catalogHash != hash || source.rendererHash != rendererHash) {
+        throw const FormatException('相机配方属于其他机身版本，请在当前机身目录重新选择');
+      }
       // Revalidate the value and exact generation before it becomes a patch.
       parameters =
           CameraFilmRecipe.fromJson(Map<String, dynamic>.from(source.toJson()))
@@ -151,15 +232,17 @@ class CameraFilmCatalog extends FilmCatalog {
       if ((old['leakGain'] ?? 0) != 0 || (old['grainSize'] ?? 1) != 1) {
         throw const FormatException('旧配方的漏光或颗粒尺寸已不支持，请先关闭这些效果');
       }
-      parameters = {...cameraDefaults(source.filmId), ...old};
+      parameters = {
+        ...cameraDefaults(source.filmId, contract: contract),
+        ...old
+      };
       parameters['haloProfile'] = (old['haloGain'] ?? 0) > 0 ? 4 : 6;
     }
-    final retired =
-        (cameraContract['readOnlyParameters'] as List).cast<String>();
+    final retired = (contract['readOnlyParameters'] as List).cast<String>();
     final prior = (target['parameters'] as Map?) ?? {};
     for (final key in retired) {
       parameters.remove(key);
-      if (cameraParameterSupported(key, source.filmId)) {
+      if (cameraParameterSupported(key, source.filmId, contract: contract)) {
         if (!prior.containsKey(key)) {
           throw const FormatException('槽位保留参数缺失，请重新读取相机');
         }
@@ -181,3 +264,7 @@ class CameraFilmCatalog extends FilmCatalog {
     });
   }
 }
+
+// Extracted from the SHA-256 verified 03db1c70 delivery APK; see bundled provenance.
+const _installedCameraContractJson =
+    r'''{"protocol":1,"recipeSchema":1,"slotCount":10,"port":18743,"officialFirmwareSha256":"d6a3c9c288d784080e7b283222ecdd8752adfeed6faa36dab44f73115354bfd4","limits":{"jsonBytes":16384,"chunkBytes":16384,"recordBytes":12288,"stagingBytes":65536,"pollMilliseconds":2000,"previewEdge":960,"previewFallbackEdge":640,"previewCacheBytes":50331648,"contactSheetPageSize":24,"filmChunkBytes":4096},"errors":["unauthorized","unsupportedProtocol","unsupportedModel","incompatibleRenderer","invalidRecipe","busy","revisionConflict","storeFailed","readbackMismatch","bridgeUnavailable","resultUnknown"],"parameters":{"grain":{"min":0,"max":3,"default":0,"label":"颗粒","excludeFilmIds":[289]},"grainSize":{"min":0,"max":2,"default":1,"label":"颗粒尺寸","excludeFilmIds":[289]},"haloGain":{"min":0,"max":8,"default":0,"label":"光晕强度"},"haloSpread":{"min":0,"max":8,"default":3,"label":"扩散范围"},"haloThreshold":{"min":0,"max":8,"default":5,"label":"高光阈值"},"haloProfile":{"min":0,"max":6,"default":6,"label":"光晕模式"},"leakGain":{"min":0,"max":8,"default":0,"label":"漏光强度","excludeFilmIds":[289]},"leakPosition":{"min":0,"max":5,"default":0,"label":"漏光位置","excludeFilmIds":[289]},"leakSpread":{"min":0,"max":8,"default":4,"label":"漏光范围","excludeFilmIds":[289]},"leakVariation":{"min":0,"max":1,"default":0,"label":"漏光变化","excludeFilmIds":[289]},"filmExposure":{"min":0,"max":2,"default":0,"label":"模拟曝光","filmIds":[67,68],"overrides":{"67":1}},"charmeraColor":{"min":0,"max":3,"default":0,"label":"机身颜色","filmIds":[289]}},"capabilities":{"readState":false,"writeState":false,"uploadFilm":false,"captureEvidence":false},"routes":{"capabilities":"/m10v/v1/capabilities","state":"/m10v/v1/state","operations":"/m10v/v1/operations","filmStage":"/m10v/v1/films/stage"},"authentication":{"algorithm":"HMAC-SHA256","maxSessions":8,"sequenceWindow":64,"bootstrapNonces":128,"receiptCount":32,"requestCanonical":"method\\npath\\nbootId\\nsessionId\\nsequence\\nnonce\\nhex(SHA256(body))","responseCanonical":"RESPONSE\\nmethod\\npath\\nbootId\\nsessionId\\nsequence\\nnonce\\nstatus\\nhex(SHA256(body))","responseSignatureHeader":"X-M10V-Response-Signature"},"filmTransfer":{"schema":"m10v.film-transfer/v1","model":"GR III","recordBytes":12288,"chunkBytes":4096,"stageTargetSlotRequired":true,"bankScope":"per-slot","chunkHashHeader":"X-M10V-Chunk-Hash","readOnlyStatusRoute":"/m10v/v1/films/stage/{uploadId}"},"stateSchema":2,"journal":{"version":5,"bytes":184,"crcOffset":180},"maximumFilmId":321,"readOnlyParameters":["grainSize","leakGain","leakPosition","leakSpread","leakVariation"]}''';

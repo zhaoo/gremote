@@ -43,12 +43,6 @@ final appRouter = GoRouter(
           ],
         ),
         StatefulShellBranch(
-          navigatorKey: _cameraKey,
-          routes: [
-            GoRoute(path: '/camera', builder: (_, __) => const CameraPage())
-          ],
-        ),
-        StatefulShellBranch(
           navigatorKey: _shootKey,
           routes: [
             GoRoute(
@@ -59,6 +53,12 @@ final appRouter = GoRouter(
                       .read(shootExitHandlerProvider);
                   return await handler?.call() ?? true;
                 }),
+          ],
+        ),
+        StatefulShellBranch(
+          navigatorKey: _cameraKey,
+          routes: [
+            GoRoute(path: '/camera', builder: (_, __) => const CameraPage())
           ],
         ),
       ],
@@ -75,7 +75,8 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/edit/:mediaId',
       builder: (_, state) => EditorPage(
-          mediaId: int.tryParse(state.pathParameters['mediaId'] ?? '') ?? -1),
+          mediaId: int.tryParse(state.pathParameters['mediaId'] ?? '') ?? -1,
+          initialLut: state.uri.queryParameters['lut']),
     ),
   ],
 );
@@ -91,7 +92,7 @@ class GRemoteShell extends StatelessWidget {
         MediaQuery.maybeOf(context)?.disableAnimations == true
             ? Duration.zero
             : const Duration(milliseconds: 180);
-    final hideNavigation = navigationShell.currentIndex == 3;
+    final hideNavigation = navigationShell.currentIndex == 2;
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: hideNavigation
@@ -117,15 +118,15 @@ class GRemoteShell extends StatelessWidget {
                               Icons.photo_library_outlined,
                               Icons.photo_library,
                               motionDuration),
-                          _destination(context, 2, '相机', Icons.camera_outlined,
-                              Icons.camera, motionDuration),
                           _destination(
                               context,
-                              3,
+                              2,
                               '拍摄',
                               Icons.camera_alt_outlined,
                               Icons.camera_alt,
                               motionDuration),
+                          _destination(context, 3, '相机', Icons.camera_outlined,
+                              Icons.camera, motionDuration),
                         ],
                       ),
                     ),
@@ -145,7 +146,7 @@ class GRemoteShell extends StatelessWidget {
         selected: selected,
         child: InkWell(
           onTap: () {
-            if (index != 3) {
+            if (index != 2) {
               unawaited(SystemChrome.setPreferredOrientations(
                 const [DeviceOrientation.portraitUp],
               ));

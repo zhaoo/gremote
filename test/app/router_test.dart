@@ -6,7 +6,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gremote/app/app.dart';
+import 'package:gremote/app/app_presence.dart';
 import 'package:gremote/app/router.dart';
+import 'package:gremote/features/darkroom/editor/editor_page.dart';
 import 'package:gremote/media/local/media_gateway.dart';
 
 import '../support/fake_media_gateway.dart';
@@ -28,6 +30,17 @@ Future<void> pumpApp(WidgetTester tester, {FakeMediaGateway? gateway}) async {
 }
 
 void main() {
+  testWidgets('edit route passes the explicit immutable LUT query to editor',
+      (tester) async {
+    await pumpApp(tester);
+    final id = 'official:69:default:${'a' * 64}';
+    appRouter.go(Uri(path: '/edit/3', queryParameters: {'lut': id}).toString());
+    await tester.pumpAndSettle();
+    final editor = tester.widget<EditorPage>(find.byType(EditorPage));
+    expect(editor.mediaId, 3);
+    expect(editor.initialLut, id);
+  });
+
   testWidgets('shows the four-tab shell', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -42,6 +55,10 @@ void main() {
     expect(find.text('拍摄'), findsOneWidget);
     expect(find.text('相册').last, findsOneWidget);
     expect(find.text('相机'), findsOneWidget);
+    final positions = ['首页', '相册', '拍摄', '相机']
+        .map((label) => tester.getCenter(find.text(label).last).dx)
+        .toList();
+    expect(positions, orderedEquals([...positions]..sort()));
     expect(find.text('GOOD PHOTOS  A KINDER WORLD'), findsNothing);
     expect(
         find.byWidgetPredicate(
@@ -49,6 +66,12 @@ void main() {
         findsOneWidget);
     await tester.tap(find.text('拍摄'));
     await tester.pumpAndSettle();
+    expect(appRouter.routeInformationProvider.value.uri.path, '/shoot');
+    expect(
+        tester
+            .widget<Scaffold>(find.byType(Scaffold).first)
+            .bottomNavigationBar,
+        isNull);
     expect(find.text('连接相机后显示取景画面'), findsOneWidget);
     await tester.tap(find.text('前往连接'));
     await tester.pumpAndSettle();
@@ -56,6 +79,56 @@ void main() {
         find.byWidgetPredicate(
             (w) => w is Image && w.semanticLabel == 'GRemote'),
         findsOneWidget);
+  });
+
+  testWidgets('camera remains the fourth branch and shoot exit is awaited',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await pumpApp(tester);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('相机').last);
+    await tester.pumpAndSettle();
+    expect(appRouter.routeInformationProvider.value.uri.path, '/camera');
+    expect(find.text('胶卷库'), findsOneWidget);
+    expect(
+        tester
+            .widget<GRemoteShell>(find.byType(GRemoteShell))
+            .navigationShell
+            .currentIndex,
+        3);
+    await tester.tap(find.text('拍摄').last);
+    await tester.pumpAndSettle();
+    expect(
+        tester
+            .widget<GRemoteShell>(find.byType(GRemoteShell))
+            .navigationShell
+            .currentIndex,
+        2);
+    final container =
+        ProviderScope.containerOf(tester.element(find.byType(GRemoteShell)));
+    final finishShootSession = container.read(shootExitHandlerProvider)!;
+    var exits = 0;
+    container.read(shootExitHandlerProvider.notifier).state = () async {
+      exits++;
+      return false;
+    };
+    appRouter.go('/camera');
+    await tester.pumpAndSettle();
+    expect(exits, 1);
+    expect(appRouter.routeInformationProvider.value.uri.path, '/shoot');
+    container.read(shootExitHandlerProvider.notifier).state = () async {
+      exits++;
+      return finishShootSession();
+    };
+    appRouter.go('/camera');
+    await tester.pumpAndSettle();
+    expect(exits, 2);
+    expect(appRouter.routeInformationProvider.value.uri.path, '/camera');
+    expect(find.text('首页'), findsOneWidget);
+    expect(container.read(shootPageVisibleProvider), isFalse);
   });
 
   testWidgets('unfinished sections explain their availability', (tester) async {

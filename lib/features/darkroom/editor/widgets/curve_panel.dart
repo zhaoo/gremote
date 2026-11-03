@@ -271,17 +271,24 @@ class _CurvePanelState extends State<CurvePanel> {
                         onIncrease: selected == null ? null : () => _nudge(.02),
                         onDecrease:
                             selected == null ? null : () => _nudge(-.02),
-                        child: GestureDetector(
+                        child: RawGestureDetector(
                             key: const ValueKey('curve-graph'),
                             behavior: HitTestBehavior.opaque,
-                            dragStartBehavior: DragStartBehavior.down,
-                            onTapUp: (d) =>
-                                _begin(d.localPosition, size, drag: false),
-                            onPanStart: (d) =>
-                                _begin(d.localPosition, size, drag: true),
-                            onPanUpdate: (d) => _move(d.localPosition, size),
-                            onPanEnd: (_) => _end(),
-                            onPanCancel: _end,
+                            gestures: {
+                              _CurvePanGestureRecognizer:
+                                  GestureRecognizerFactoryWithHandlers<
+                                      _CurvePanGestureRecognizer>(
+                                _CurvePanGestureRecognizer.new,
+                                (recognizer) => recognizer
+                                  ..dragStartBehavior = DragStartBehavior.down
+                                  ..onStart = ((d) =>
+                                      _begin(d.localPosition, size, drag: true))
+                                  ..onUpdate =
+                                      ((d) => _move(d.localPosition, size))
+                                  ..onEnd = ((_) => _end())
+                                  ..onCancel = _end,
+                              ),
+                            },
                             child: RepaintBoundary(
                                 child: CustomPaint(
                                     painter: _CurvePainter(
@@ -339,6 +346,17 @@ class _CurvePanelState extends State<CurvePanel> {
                         style: TextStyle(
                             fontSize: 11, color: context.palette.muted))),
             ])));
+  }
+}
+
+// A graph is a two-dimensional editing surface. Claim its pointer on down,
+// before an ancestor's lower-threshold vertical recognizer can scroll it away.
+// Pan start/end also cover taps, keeping point creation one undo transaction.
+class _CurvePanGestureRecognizer extends PanGestureRecognizer {
+  @override
+  void addAllowedPointer(PointerDownEvent event) {
+    super.addAllowedPointer(event);
+    resolve(GestureDisposition.accepted);
   }
 }
 
