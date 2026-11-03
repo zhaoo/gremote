@@ -1,5 +1,10 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'dart:io';
+import 'dart:ui' show Rect;
+import 'dart:math' as math;
+import 'package:path_provider/path_provider.dart';
+import '../../../imaging/gpu/gpu_detail.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meta/meta.dart';
@@ -13,6 +18,7 @@ import '../../../darkroom/model/export_recipe.dart';
 import '../../../darkroom/model/photo_meta.dart';
 import '../../../darkroom/model/photo_edits.dart';
 import '../../../imaging/imaging_engine.dart';
+import '../../../imaging/gpu/gpu_editor.dart';
 import '../../../media/local/local_media_repository.dart';
 
 /// Long edge of the decoded on-screen preview.
@@ -36,6 +42,10 @@ class EditorState {
     this.canRedo = false,
     this.cropEditing = false,
     this.renderedEdits,
+    this.gpuFrame,
+    this.gpuSession,
+    this.histogram,
+    this.detail,
   });
 
   final LocalMediaItem? item;
@@ -50,6 +60,10 @@ class EditorState {
   final String? error, saveError;
   final bool rendering, saving, canUndo, canRedo, cropEditing;
   final PhotoEdits? renderedEdits;
+  final GpuFrame? gpuFrame;
+  final GpuEditorSession? gpuSession;
+  final List<List<double>>? histogram;
+  final GpuDetail? detail;
 
   PhotoMeta? get meta => item?.meta;
   ExportRecipe get recipe => doc?.recipe ?? const ExportRecipe();
@@ -91,6 +105,10 @@ class EditorState {
     bool? canRedo,
     bool? cropEditing,
     PhotoEdits? renderedEdits,
+    GpuFrame? Function()? gpuFrame,
+    GpuEditorSession? Function()? gpuSession,
+    List<List<double>>? histogram,
+    GpuDetail? Function()? detail,
   }) =>
       EditorState(
         item: item ?? this.item,
@@ -108,6 +126,10 @@ class EditorState {
         canRedo: canRedo ?? this.canRedo,
         cropEditing: cropEditing ?? this.cropEditing,
         renderedEdits: renderedEdits ?? this.renderedEdits,
+        gpuFrame: gpuFrame == null ? this.gpuFrame : gpuFrame(),
+        gpuSession: gpuSession == null ? this.gpuSession : gpuSession(),
+        histogram: histogram ?? this.histogram,
+        detail: detail == null ? this.detail : detail(),
       );
 }
 
@@ -120,6 +142,14 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
   final _redo = <EditDocument>[];
   EditDocument? _toolStart, _gestureStart;
   List<EditDocument>? _toolUndo, _toolRedo;
+  GpuEditorSession? _gpu;
+  StreamSubscription<GpuFrame>? _gpuFrames;
+  int _gpuOpen = 0;
+  int _detailEpoch = 0;
+  ImagingCancelToken? _detailCancel;
+  String? _detailPath;
+  bool _comparing = false;
+  DateTime _histogramAt = DateTime.fromMillisecondsSinceEpoch(0);
   var _gradeTicket = 0;
   var _previewEpoch = 0;
   var _toolEpoch = 0;
@@ -132,7 +162,13 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
 
   @override
   EditorState build(int arg) {
-    ref.onDispose(() => _alive = false);
+    ref.onDispose(() {
+      _alive = false;
+      _clearDetail();
+      ++_gpuOpen;
+      unawaited(_gpuFrames?.cancel());
+      unawaited(_gpu?.close());
+    });
     Future.microtask(_load);
     return const EditorState();
   }
@@ -177,6 +213,10 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
       if (!_alive) return;
       _emit(state.copyWith(
           item: item, doc: doc, luts: luts, locationAccess: access));
+      if (ref.read(gpuEditorProvider) != null) {
+        await _openGpu();
+        return;
+      }
       final fd = await gateway.openReadFd(arg);
       final base = await engine.decodePreview(
           fd: fd, orientation: item.meta!.orientation, maxEdge: previewEdge);
@@ -189,21 +229,235 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
     }
   }
 
+  void _clearDetail() {
+    ++_detailEpoch;
+    _detailCancel?.cancel();
+    _detailCancel = null;
+    final path = _detailPath;
+    _detailPath = null;
+    if (path != null) {
+      unawaited(File(path).delete().catchError((Object _) => File(path)));
+    }
+    if (_alive && state.detail != null) {
+      _emit(state.copyWith(detail: () => null));
+    }
+  }
+
+  Future<void> detailAt(Rect region) async {
+    final session = _gpu,
+        meta = state.meta,
+        service = ref.read(gpuEditorProvider);
+    if (!_alive ||
+        session == null ||
+        session.closed ||
+        service == null ||
+        meta == null ||
+        state.exporting ||
+        _toolStart != null) return;
+    region = region.intersect(const Rect.fromLTWH(0, 0, 1, 1));
+    if (region.isEmpty) return;
+    _clearDetail();
+    final epoch = _detailEpoch, recipe = state.recipe;
+    final token = _detailCancel = ImagingCancelToken();
+    String? path;
+    try {
+      final (cw, ch) =
+          recipe.edits.crop.outputSize(meta.orientedWidth, meta.orientedHeight);
+      final scale = math.min(
+          1.0,
+          math.sqrt(
+              4 * 1024 * 1024 / (cw * ch * region.width * region.height)));
+      final w = (cw * scale).round().clamp(1, cw),
+          h = (ch * scale).round().clamp(1, ch);
+      final left = (region.left * w).floor().clamp(0, w - 1),
+          top = (region.top * h).floor().clamp(0, h - 1);
+      final right = (region.right * w).ceil().clamp(left + 1, w),
+          bottom = (region.bottom * h).ceil().clamp(top + 1, h);
+      // Round back to exact pixel bounds, so the patch never shifts at its edge.
+      final actual = Rect.fromLTRB(left / w, top / h, right / w, bottom / h);
+      final key = recipe.lutId;
+      final cube = key == null
+          ? null
+          : _cubes[key] ??= await ref.read(lutLibraryProvider).load(key);
+      final temp = await getTemporaryDirectory();
+      path =
+          '${temp.path}/gr-detail-$arg-${DateTime.now().microsecondsSinceEpoch}.jpg';
+      final fd = await ref.read(mediaGatewayProvider).openReadFd(arg);
+      await service.export(
+          ExportJob(
+              fd: fd,
+              mediaId: arg,
+              orientation: meta.orientation,
+              viewport: true,
+              photoWidth: w,
+              photoHeight: h,
+              photoX: -left,
+              photoY: -top,
+              canvasWidth: right - left,
+              canvasHeight: bottom - top,
+              background: 0xff000000,
+              quality: 100,
+              outputPath: path,
+              cube: cube,
+              lutStrength: recipe.strength,
+              adjustments: recipe.edits.nativeParameters),
+          cancel: token);
+      if (!_alive ||
+          epoch != _detailEpoch ||
+          session != _gpu ||
+          token.isCancelled) {
+        await File(path).delete();
+        return;
+      }
+      _detailPath = path;
+      _emit(state.copyWith(detail: () => GpuDetail(path!, actual)));
+    } catch (e) {
+      if (path != null && await File(path).exists()) await File(path).delete();
+      if (_alive && epoch == _detailEpoch && !token.isCancelled) {
+        _emit(state.copyWith(error: () => '高清预览失败：$e'));
+      }
+    } finally {
+      if (_detailCancel == token) _detailCancel = null;
+      token.dispose();
+    }
+  }
+
+  Future<void> _openGpu() async {
+    final service = ref.read(gpuEditorProvider), meta = state.meta;
+    if (service == null || meta == null || !_alive) return;
+    final open = ++_gpuOpen;
+    _invalidatePreviews();
+    await _gpuFrames?.cancel();
+    await _gpu?.close();
+    _gpu = null;
+    _emit(state.copyWith(
+        gpuFrame: () => null, gpuSession: () => null, rendering: true));
+    final fd = await ref.read(mediaGatewayProvider).openReadFd(arg);
+    final session = await service.open(
+        fd: fd,
+        mediaId: arg,
+        orientation: meta.orientation,
+        processVersion: state.recipe.edits.processVersion);
+    if (!_alive || open != _gpuOpen) {
+      await session.close();
+      return;
+    }
+    _gpu = session;
+    _gpuFrames = session.frames.listen((frame) {
+      if (_alive &&
+          _comparing == frame.original &&
+          (frame.original || state.gpuFrame?.original == true)) {
+        _emit(state.copyWith(gpuFrame: () => frame));
+      }
+    }, onError: (Object e) {
+      if (_alive) {
+        _emit(state.copyWith(error: () => '预览不可用，请重试：$e', rendering: false));
+      }
+    });
+    _emit(state.copyWith(gpuSession: () => session, error: () => null));
+    await regrade();
+  }
+
+  Future<void> recoverPreview() async {
+    if (!_alive || ref.read(gpuEditorProvider) == null || state.exporting) {
+      return;
+    }
+    try {
+      await _openGpu();
+    } catch (e) {
+      _emit(state.copyWith(error: () => '无法恢复预览：$e', rendering: false));
+    }
+  }
+
+  void compareOriginal(bool value) {
+    _comparing = value;
+    unawaited(_gpu?.compare(value).catchError((Object e) {
+      _emit(state.copyWith(error: () => '无法显示原图：$e'));
+    }));
+  }
+
+  Future<void> _drainGpuPreviews() async {
+    final library = ref.read(lutLibraryProvider);
+    _emit(state.copyWith(rendering: true));
+    while (_alive && _dirtyPreview) {
+      _dirtyPreview = false;
+      final recipe = state.recipe, epoch = _previewEpoch, ticket = _gradeTicket;
+      var edits = recipe.edits;
+      if (state.cropEditing) {
+        edits = edits.copyWith(
+            crop: edits.crop.copyWith(left: 0, top: 0, width: 1, height: 1));
+      }
+      final session = _gpu;
+      if (session == null || session.closed) break;
+      if (session.processVersion != edits.processVersion) {
+        unawaited(recoverPreview());
+        break;
+      }
+      try {
+        final key = recipe.lutId;
+        Uint8List? cube;
+        if (key != null) cube = _cubes[key] ??= await library.load(key);
+        if (!_alive || epoch != _previewEpoch) {
+          _dirtyPreview = true;
+          continue;
+        }
+        final (cw, ch) =
+            edits.crop.outputSize(session.sourceWidth, session.sourceHeight);
+        final edge = _gestureStart != null ? 960 : previewEdge;
+        final scale = (edge / (cw > ch ? cw : ch)).clamp(0.0, 1.0);
+        final frame = await session.update(
+            edits: edits,
+            lutKey: key ?? '',
+            cube: cube,
+            strength: recipe.strength,
+            width: (cw * scale).round().clamp(1, cw),
+            height: (ch * scale).round().clamp(1, ch));
+        if (_alive &&
+            frame != null &&
+            epoch == _previewEpoch &&
+            (ticket == _gradeTicket || _gestureStart != null)) {
+          _emit(state.copyWith(
+              gpuFrame: () => frame,
+              renderedEdits: frame.descriptor.edits,
+              error: () => null));
+          if (DateTime.now().difference(_histogramAt).inMilliseconds > 150) {
+            _histogramAt = DateTime.now();
+            unawaited(session.histogram().then((bins) {
+              if (_alive && session == _gpu && bins != null) {
+                _emit(state.copyWith(histogram: bins));
+              }
+            }).catchError((Object _) {}));
+          }
+        }
+      } catch (e) {
+        if (_alive && epoch == _previewEpoch) {
+          _emit(state.copyWith(error: () => '预览处理失败：$e'));
+        }
+      }
+    }
+    if (_alive) _emit(state.copyWith(rendering: false));
+  }
+
   // Discrete changes revoke in-flight draft publication. Keep a newest job
   // queued even when the document did not change (for example selecting the
   // same LUT), so revoking a render can never leave the preview stranded.
   void _invalidatePreviews() {
+    _clearDetail();
     ++_previewEpoch;
+    _gpu?.invalidate();
     if (_renderFuture != null) _dirtyPreview = true;
   }
 
   /// At most one native job in flight; updates during it collapse to newest.
   Future<void> regrade() {
-    if (!_alive || state.base == null) return Future<void>.value();
+    if (!_alive || (state.base == null && _gpu == null)) {
+      return Future<void>.value();
+    }
     ++_gradeTicket;
     _dirtyPreview = true;
-    return _renderFuture ??=
-        Future<void>.microtask(_drainPreviews).whenComplete(() {
+    return _renderFuture ??= Future<void>.microtask(
+            _gpu == null ? _drainPreviews : _drainGpuPreviews)
+        .whenComplete(() {
       _renderFuture = null;
       if (_alive && _dirtyPreview) unawaited(regrade());
     });
@@ -323,6 +577,7 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
   void endGesture() {
     final start = _gestureStart;
     _gestureStart = null;
+    if (start != null && _gpu != null) unawaited(regrade());
     if (start != null && state.doc != null && !_same(start, state.doc!)) {
       _push(start);
       _historyState();
@@ -464,7 +719,10 @@ class EditorController extends AutoDisposeFamilyNotifier<EditorState, int> {
     _emit(state.copyWith(doc: next));
     _historyState();
     if (_toolStart == null && _gestureStart == null) _persist(next);
-    if (pixelsChanged) unawaited(regrade());
+    if (pixelsChanged) {
+      _clearDetail();
+      unawaited(regrade());
+    }
   }
 
   void _persist(EditDocument doc) {

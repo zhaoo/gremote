@@ -36,6 +36,7 @@ class GpuEditorHost(messenger: BinaryMessenger, private val textures: TextureReg
         @Volatile var disposed = false
         @Volatile var hasSurface = false
         @Volatile var latest = 0L
+        @Volatile var comparing = false
         private var outputWidth = sourceWidth
         private var outputHeight = sourceHeight
         private val surface = GpuSurfaceLifecycle<SurfaceSpec>(
@@ -43,7 +44,8 @@ class GpuEditorHost(messenger: BinaryMessenger, private val textures: TextureReg
             attach = { spec ->
                 try {
                     GpuNativeBridge.attach(id, spec.surface, spec.width, spec.height)
-                    if (!paused && GpuNativeBridge.present(id, latest)) publish(latest)
+                    val original = comparing
+                    if (!paused && GpuNativeBridge.present(id, latest, original)) publish(latest, original)
                 } catch (failure: Throwable) { hasSurface = false; report(latest, failure) }
             },
             detach = {
@@ -62,19 +64,20 @@ class GpuEditorHost(messenger: BinaryMessenger, private val textures: TextureReg
             emit = { generation, rendered ->
                 if (rendered && !paused && hasSurface && !disposed) {
                     try {
-                        if (GpuNativeBridge.present(id, generation)) publish(generation)
+                        val original = comparing
+                        if (GpuNativeBridge.present(id, generation, original)) publish(generation, original)
                     } catch (failure: Throwable) { hasSurface = false; report(generation, failure) }
                 }
             },
             error = ::report,
         )
         private fun schedulerCurrent(generation: Long): Boolean = scheduler.isCurrent(generation)
-        private fun publish(generation: Long) {
+        private fun publish(generation: Long, original: Boolean) {
             main.post {
-                if (!disposed && !closed && !paused && schedulerCurrent(generation)) {
+                if (!disposed && !closed && !paused && schedulerCurrent(generation) && original == comparing) {
                     producer.scheduleFrame()
                     channel.invokeMethod("frame", mapOf("sessionId" to id,
-                        "generation" to generation, "width" to outputWidth, "height" to outputHeight))
+                        "generation" to generation, "width" to if (original) sourceWidth else outputWidth, "height" to if (original) sourceHeight else outputHeight, "original" to original))
                 }
             }
         }
@@ -107,6 +110,10 @@ class GpuEditorHost(messenger: BinaryMessenger, private val textures: TextureReg
             outputWidth = request.width; outputHeight = request.height
             if (!hasSurface && !paused) attachSurface()
             return scheduler.submit(request.generation, request)
+        }
+        fun compare(original: Boolean) {
+            comparing = original
+            worker.post { try { if (!disposed && !paused && hasSurface && GpuNativeBridge.present(id, latest, original)) publish(latest, original) } catch (failure: Throwable) { report(latest, failure) } }
         }
         fun invalidate(generation: Long): Boolean {
             if (disposed || generation <= latest) return false
@@ -149,6 +156,21 @@ class GpuEditorHost(messenger: BinaryMessenger, private val textures: TextureReg
                 "open" -> open(args, result)
                 "export" -> export(args, result)
                 "cancelExport" -> { GpuNativeBridge.cancelExport((args["jobId"] as Number).toLong()); result.success(null) }
+                "compare" -> {
+                    val session=sessions[(args["sessionId"] as Number).toLong()] ?: throw IllegalArgumentException("invalidSession")
+                    session.compare(args["original"] == true);result.success(null)
+                }
+                "histogram", "thumbnail" -> {
+                    val session=sessions[(args["sessionId"] as Number).toLong()] ?: throw IllegalArgumentException("invalidSession")
+                    worker.post {
+                        try {
+                            if(session.disposed)throw IllegalStateException("gpuSessionClosed")
+                            val data = if(call.method == "histogram") GpuNativeBridge.histogram(session.id,(args["generation"] as Number).toLong())
+                                else GpuNativeBridge.thumbnail(session.id,args["parameters"] as FloatArray,args["cube"] as? ByteArray,(args["strength"] as Number).toFloat(),(args["width"] as Number).toInt(),(args["height"] as Number).toInt())
+                            main.post {result.success(data)}
+                        } catch(failure: Throwable) {main.post { result.error("gpuAnalysisFailed","无法读取预览",failure.message) }}
+                    }
+                }
                 "prepareLut" -> {
                     val id = (args["sessionId"] as? Number)?.toLong()
                     val session = sessions[id] ?: throw IllegalArgumentException("invalidSession")
@@ -216,7 +238,7 @@ class GpuEditorHost(messenger: BinaryMessenger, private val textures: TextureReg
                     if (closed) throw IllegalStateException("cancelled")
                     val exif = ExifInterface(descriptor.fileDescriptor)
                     val adobe = exif.getAttributeInt(ExifInterface.TAG_COLOR_SPACE, 1) == 2 || exif.getAttribute("InteroperabilityIndex") == "R03"
-                    GpuNativeBridge.exportJpeg(jobId, id, descriptor.detachFd(), orientation, adobe, parameters, cube, strength, geometry, images, rectangles, path)
+                    GpuNativeBridge.exportJpeg(jobId, id, descriptor.detachFd(), orientation, adobe, args["viewport"] == true, parameters, cube, strength, geometry, images, rectangles, path)
                     main.post { result.success(null) }
                 } catch (failure: Throwable) {
                     main.post { result.error(if (failure.message == "cancelled") "cancelled" else "gpuExportFailed", "导出失败", failure.message) }
@@ -278,9 +300,17 @@ class GpuEditorHost(messenger: BinaryMessenger, private val textures: TextureReg
     }
     fun onPause() { paused = true; sessions.values.forEach { it.pause() } }
     fun onResume() { paused = false; sessions.values.forEach { it.attachSurface() } }
+    fun onTrimMemory(level: Int) {
+        if(level < 15 || level == 20)return
+        sessions.values.toList().forEach { session ->
+            channel.invokeMethod("invalidated",mapOf("sessionId" to session.id));session.close()
+        }
+        sessions.clear()
+    }
     fun close() {
         if (closed) return
         closed = true; channel.setMethodCallHandler(null)
+        GpuNativeBridge.cancelExports()
         sessions.values.forEach { it.close() }; sessions.clear()
         // Handles created by an in-flight open are tracked on this same queue,
         // so cleanup includes them even if the platform callback has not run.

@@ -28,7 +28,31 @@ class EditorPage extends ConsumerStatefulWidget {
   ConsumerState<EditorPage> createState() => _EditorPageState();
 }
 
-class _EditorPageState extends ConsumerState<EditorPage> {
+class _EditorPageState extends ConsumerState<EditorPage>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      final session = ref.read(editorProvider(widget.mediaId)).gpuSession;
+      if (session?.closed == true) {
+        unawaited(_controller.recoverPreview());
+      } else if (session != null) {
+        unawaited(_controller.regrade());
+      }
+    }
+  }
+
+  void _compare(bool value) {
+    setState(() => _showOriginal = value);
+    _controller.compareOriginal(value);
+  }
+
   var _showOriginal = false;
   var _allowPop = false;
   var _leaving = false;
@@ -37,11 +61,15 @@ class _EditorPageState extends ConsumerState<EditorPage> {
   double _photoDrag = 0;
   double _dragValue = 0;
   final _zoom = TransformationController();
+  final _zoomKey = GlobalKey();
+  Timer? _detailTimer;
   EditorController get _controller =>
       ref.read(editorProvider(widget.mediaId).notifier);
 
   @override
   void dispose() {
+    _detailTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     _zoom.dispose();
     super.dispose();
   }
@@ -150,15 +178,11 @@ class _EditorPageState extends ConsumerState<EditorPage> {
                           button: true,
                           label: '对比原图',
                           value: _showOriginal ? '原图' : '编辑后',
-                          onTap: () =>
-                              setState(() => _showOriginal = !_showOriginal),
+                          onTap: () => _compare(!_showOriginal),
                           child: Listener(
-                              onPointerDown: (_) =>
-                                  setState(() => _showOriginal = true),
-                              onPointerUp: (_) =>
-                                  setState(() => _showOriginal = false),
-                              onPointerCancel: (_) =>
-                                  setState(() => _showOriginal = false),
+                              onPointerDown: (_) => _compare(true),
+                              onPointerUp: (_) => _compare(false),
+                              onPointerCancel: (_) => _compare(false),
                               child: SizedBox(
                                   width: 44,
                                   height: 44,
@@ -223,8 +247,38 @@ class _EditorPageState extends ConsumerState<EditorPage> {
                               ])))));
   }
 
+  void _requestDetail(EditorState s) {
+    if (!mounted ||
+        _tool != null ||
+        _showOriginal ||
+        _zoom.value.getMaxScaleOnAxis() < 1.35) return;
+    final box = _zoomKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || s.layout == null) return;
+    final size = box.size,
+        layout = s.layout!,
+        ratio = layout.canvasWidth / layout.canvasHeight;
+    final frameWidth = math.min(size.width, size.height * ratio),
+        frameHeight = frameWidth / ratio;
+    final scale = frameWidth / layout.canvasWidth, p = layout.photo;
+    final photo = Rect.fromLTWH(
+        (size.width - frameWidth) / 2 + p.x * scale,
+        (size.height - frameHeight) / 2 + p.y * scale,
+        p.width * scale,
+        p.height * scale);
+    final visible = Rect.fromPoints(_zoom.toScene(Offset.zero),
+            _zoom.toScene(Offset(size.width, size.height)))
+        .intersect(photo);
+    if (visible.isEmpty) return;
+    unawaited(_controller.detailAt(Rect.fromLTWH(
+        (visible.left - photo.left) / photo.width,
+        (visible.top - photo.top) / photo.height,
+        visible.width / photo.width,
+        visible.height / photo.height)));
+  }
+
   Widget _photo(EditorState s) {
-    final original = _showOriginal;
+    final original =
+        s.gpuSession == null ? _showOriginal : (s.gpuFrame?.original ?? false);
     final meta = s.meta!;
     final layout = original
         ? computeFrameLayout(
@@ -237,7 +291,9 @@ class _EditorPageState extends ConsumerState<EditorPage> {
     Widget photo = FramePreview(
         key: const ValueKey('frame-preview'),
         layout: layout,
-        image: original ? s.base : s.graded);
+        image: original ? s.base : s.graded,
+        detail: original ? null : s.detail,
+        textureId: s.gpuSession?.closed == true ? null : s.gpuFrame?.textureId);
     if (s.cropEditing && !original) {
       photo = Center(
           child: AspectRatio(
@@ -251,6 +307,13 @@ class _EditorPageState extends ConsumerState<EditorPage> {
                   child: photo)));
     } else {
       photo = InteractiveViewer(
+          key: _zoomKey,
+          onInteractionStart: (_) => _detailTimer?.cancel(),
+          onInteractionEnd: (_) {
+            _detailTimer?.cancel();
+            _detailTimer = Timer(
+                const Duration(milliseconds: 200), () => _requestDetail(s));
+          },
           transformationController: _zoom,
           minScale: 1,
           maxScale: 5,
@@ -262,9 +325,9 @@ class _EditorPageState extends ConsumerState<EditorPage> {
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
         child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onLongPressStart: (_) => setState(() => _showOriginal = true),
-            onLongPressEnd: (_) => setState(() => _showOriginal = false),
-            onLongPressCancel: () => setState(() => _showOriginal = false),
+            onLongPressStart: (_) => _compare(true),
+            onLongPressEnd: (_) => _compare(false),
+            onLongPressCancel: () => _compare(false),
             onDoubleTap: () => _zoom.value = Matrix4.identity(),
             onHorizontalDragStart: _tool?.adjustments.isNotEmpty == true
                 ? (d) {
@@ -329,7 +392,14 @@ class _EditorPageState extends ConsumerState<EditorPage> {
                     ? null
                     : () {
                         if (s.saveError != null) _controller.retrySave();
-                        if (s.error != null) _controller.regrade();
+                        if (s.error != null) {
+                          if (s.gpuSession != null ||
+                              ref.read(gpuEditorProvider) != null) {
+                            _controller.recoverPreview();
+                          } else {
+                            _controller.regrade();
+                          }
+                        }
                       },
                 child: Text(
                     s.saveError ??
@@ -442,6 +512,7 @@ class _EditorPageState extends ConsumerState<EditorPage> {
         return CurvePanel(
             edits: s.recipe.edits,
             histogramSource: s.graded,
+            histogramBins: s.histogram,
             onChanged: _controller.setEdits,
             onStart: _controller.beginGesture,
             onEnd: _controller.endGesture);
@@ -460,6 +531,7 @@ class _EditorPageState extends ConsumerState<EditorPage> {
       case EditorTool.lut:
         return LutPicker(
             source: s.base,
+            gpuSession: s.gpuSession,
             edits: s.recipe.edits,
             entries: s.luts,
             selected: s.recipe.lutId,

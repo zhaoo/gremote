@@ -27,7 +27,9 @@ class GpuSession {
   const std::array<uint64_t,6>& stage_counts()const{CheckOpen();static const std::array<uint64_t,6> empty{};return pipeline_?pipeline_->counts():empty;}
   void Attach(ANativeWindow* window,int width,int height);
   void Detach();
-  bool Present(uint64_t generation);
+  bool Present(uint64_t generation,bool original=false);
+  std::vector<float> Histogram(uint64_t generation);
+  Image Thumbnail(const PhotoEdits& edits,const uint8_t* cube,size_t length,float strength,int width,int height);
   Image ReadFinal();
   void Export(const PhotoEdits& edits,const uint8_t* cube,size_t length,float strength,const ExportSpec& spec,const volatile int32_t* cancel,std::function<bool()> cancelled={});
   void Close();
@@ -45,7 +47,7 @@ class GpuSession {
   GpuContext context_;
   Image source_;
   std::shared_ptr<GenerationGate> gate_;
-  std::unique_ptr<Target> final_;
+  std::unique_ptr<Target> final_,original_;
   std::unique_ptr<ColorPipeline> pipeline_;
   std::map<std::string,std::shared_ptr<LutData>> luts_;
   std::deque<std::string> lut_order_;

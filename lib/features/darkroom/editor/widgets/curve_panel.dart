@@ -13,11 +13,13 @@ class CurvePanel extends StatefulWidget {
       required this.onStart,
       required this.onEnd,
       this.histogramSource,
+      this.histogramBins,
       super.key});
   final PhotoEdits edits;
   final ValueChanged<PhotoEdits> onChanged;
   final VoidCallback onStart, onEnd;
   final PreviewImage? histogramSource;
+  final List<List<double>>? histogramBins;
   @override
   State<CurvePanel> createState() => _CurvePanelState();
 }
@@ -57,10 +59,15 @@ class _CurvePanelState extends State<CurvePanel> {
   @override
   void didUpdateWidget(CurvePanel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.histogramSource != widget.histogramSource) _readHistogram();
+    if (oldWidget.histogramSource != widget.histogramSource ||
+        oldWidget.histogramBins != widget.histogramBins) _readHistogram();
   }
 
   void _readHistogram() {
+    if (widget.histogramBins != null) {
+      _histogram = widget.histogramBins;
+      return;
+    }
     final source = widget.histogramSource;
     if (source == null || source.rgba.length < 4) {
       _histogram = null;

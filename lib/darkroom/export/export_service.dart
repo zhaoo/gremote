@@ -1,7 +1,7 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 
 import '../../imaging/imaging_engine.dart';
@@ -161,6 +161,7 @@ class ExportService {
         await _engine.exportJpeg(
           ExportJob(
             fd: fd,
+            mediaId: item.id,
             orientation: meta.orientation,
             cube: cube,
             lutStrength: recipe.strength,
@@ -181,6 +182,10 @@ class ExportService {
       } on ImagingException catch (e) {
         if (e.code == ImagingErrorCode.cancelled) throw const ExportCancelled();
         throw fail(_stageOf(e.code), e.code.name, e.code.label);
+      } on PlatformException catch (e) {
+        if (e.code == 'cancelled') throw const ExportCancelled();
+        throw fail(ExportStage.color, e.code,
+            '${e.message ?? '导出失败'}：${e.details ?? ''}');
       }
       if (cancel?.isCancelled ?? false) throw const ExportCancelled();
       try {

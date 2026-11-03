@@ -98,8 +98,8 @@ Java_com_izhaoo_gremote_imaging_GpuNativeBridge_detach(JNIEnv* env,jobject,jlong
   try{Find(id)->Detach();}catch(const std::exception& e){Error(env,e.what());}
 }
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_izhaoo_gremote_imaging_GpuNativeBridge_present(JNIEnv* env,jobject,jlong id,jlong generation){
-  try{return Find(id)->Present(uint64_t(generation));}catch(const std::exception& e){Error(env,e.what());return false;}
+Java_com_izhaoo_gremote_imaging_GpuNativeBridge_present(JNIEnv* env,jobject,jlong id,jlong generation,jboolean original){
+  try{return Find(id)->Present(uint64_t(generation),original);}catch(const std::exception& e){Error(env,e.what());return false;}
 }
 extern "C" JNIEXPORT void JNICALL
 Java_com_izhaoo_gremote_imaging_GpuNativeBridge_close(JNIEnv* env,jobject,jlong id){
@@ -129,7 +129,7 @@ Java_com_izhaoo_gremote_imaging_GpuNativeBridge_cancelExports(JNIEnv*,jobject){s
 extern "C" JNIEXPORT void JNICALL
 Java_com_izhaoo_gremote_imaging_GpuNativeBridge_finishExport(JNIEnv*,jobject,jlong id){std::lock_guard<std::mutex> lock(jobs_mutex);jobs.erase(id);}
 extern "C" JNIEXPORT void JNICALL
-Java_com_izhaoo_gremote_imaging_GpuNativeBridge_exportJpeg(JNIEnv* env,jobject,jlong job,jlong id,jint fd,jint orientation,jboolean adobe,
+Java_com_izhaoo_gremote_imaging_GpuNativeBridge_exportJpeg(JNIEnv* env,jobject,jlong job,jlong id,jint fd,jint orientation,jboolean adobe,jboolean viewport,
   jfloatArray parameters,jbyteArray cube,jfloat strength,jintArray geometry,jobjectArray images,jintArray rectangles,jstring destination){
   struct Guard{int fd;~Guard(){if(fd>=0)::close(fd);}}guard{fd};
   try{
@@ -138,7 +138,7 @@ Java_com_izhaoo_gremote_imaging_GpuNativeBridge_exportJpeg(JNIEnv* env,jobject,j
     PhotoEdits edits;env->GetFloatArrayRegion(parameters,0,kPhotoEditCount,edits.values.data());
     jint g[8];env->GetIntArrayRegion(geometry,0,8,g);if(env->ExceptionCheck())return;
     ExportSpec spec;spec.photo_width=g[0];spec.photo_height=g[1];spec.photo_x=g[2];spec.photo_y=g[3];spec.canvas_width=g[4];spec.canvas_height=g[5];spec.quality=g[6];
-    spec.background[0]=(uint32_t(g[7])>>16)&255;spec.background[1]=(uint32_t(g[7])>>8)&255;spec.background[2]=uint32_t(g[7])&255;spec.path=Text(env,destination);
+    spec.background[0]=(uint32_t(g[7])>>16)&255;spec.background[1]=(uint32_t(g[7])>>8)&255;spec.background[2]=uint32_t(g[7])&255;spec.path=Text(env,destination);spec.viewport=viewport;
     const int count=images?env->GetArrayLength(images):0;
     if(count>64||!rectangles||env->GetArrayLength(rectangles)!=count*4)throw GpuError("gpuInvalidExportOverlays");
     std::vector<jint> rects(size_t(count)*4);env->GetIntArrayRegion(rectangles,0,count*4,rects.data());
@@ -159,4 +159,20 @@ Java_com_izhaoo_gremote_imaging_GpuNativeBridge_exportJpeg(JNIEnv* env,jobject,j
     }
     session->Export(edits,lut.empty()?nullptr:lut.data(),lut.size(),strength,spec,nullptr,[cancelled]{return cancelled->load();});
   }catch(const std::exception& e){Error(env,e.what());}
+}
+
+extern "C" JNIEXPORT jfloatArray JNICALL
+Java_com_izhaoo_gremote_imaging_GpuNativeBridge_histogram(JNIEnv* env,jobject,jlong id,jlong generation){
+  try{auto values=Find(id)->Histogram(uint64_t(generation));if(values.empty())return nullptr;auto result=env->NewFloatArray(values.size());if(result)env->SetFloatArrayRegion(result,0,values.size(),values.data());return result;}catch(const std::exception& e){Error(env,e.what());return nullptr;}
+}
+extern "C" JNIEXPORT jbyteArray JNICALL
+Java_com_izhaoo_gremote_imaging_GpuNativeBridge_thumbnail(JNIEnv* env,jobject,jlong id,jfloatArray parameters,jbyteArray cube,jfloat strength,jint width,jint height){
+  try{
+    if(!parameters||env->GetArrayLength(parameters)!=kPhotoEditCount)throw GpuError("gpuInvalidThumbnail");
+    PhotoEdits edits;env->GetFloatArrayRegion(parameters,0,kPhotoEditCount,edits.values.data());
+    std::vector<uint8_t> bytes;if(cube){const int n=env->GetArrayLength(cube);if(n>16*1024*1024)throw GpuError("gpuLutTooLarge");bytes.resize(n);env->GetByteArrayRegion(cube,0,n,reinterpret_cast<jbyte*>(bytes.data()));}
+    if(env->ExceptionCheck())return nullptr;
+    const auto image=Find(id)->Thumbnail(edits,bytes.empty()?nullptr:bytes.data(),bytes.size(),strength,width,height);
+    auto result=env->NewByteArray(image.pixels.size());if(result)env->SetByteArrayRegion(result,0,image.pixels.size(),reinterpret_cast<const jbyte*>(image.pixels.data()));return result;
+  }catch(const std::exception& e){Error(env,e.what());return nullptr;}
 }

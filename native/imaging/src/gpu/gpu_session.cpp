@@ -103,13 +103,42 @@ void GpuSession::Attach(ANativeWindow* window,int width,int height){
   CheckOpen();context_.Attach(window,width,height);window_width_=width;window_height_=height;
 }
 void GpuSession::Detach(){CheckOpen();context_.Detach();window_width_=window_height_=0;}
-bool GpuSession::Present(uint64_t generation){
+bool GpuSession::Present(uint64_t generation,bool original){
   CheckOpen();
   if(!final_||rendered_!=generation||!gate_->Accepts(generation)||!context_.HasWindow())return false;
+  context_.MakeCurrent();
+  if(original&&!original_){
+    PhotoEdits neutral;neutral.values[0]=process_version_?process_version_:2;
+    const float scale=std::min(1.f,1600.f/std::max(source_width(),source_height()));
+    const int w=std::max(1,int(std::lround(source_width()*scale))),h=std::max(1,int(std::lround(source_height()*scale)));
+    ColorPipeline pipeline(context_.capabilities());PipelineInputs inputs;inputs.source_serial=inputs.context_serial=1;inputs.edits=neutral;
+    inputs.region={source_.width,source_.height,0,0,page_width_,page_height_,orientation_,w,h,0,0,w,h};
+    const auto color=pipeline.Render(source_texture_,inputs,nullptr);
+    original_=std::make_unique<Target>(w,h,GL_RGBA8);original_->Bind();Copy(color,w,h,false);CheckGl("gpuOriginalCache");
+  }
   context_.MakeWindowCurrent();glBindFramebuffer(GL_FRAMEBUFFER,0);glViewport(0,0,window_width_,window_height_);
-  Copy(final_->texture,window_width_,window_height_,true);CheckGl("gpuPresent");
+  Copy(original?original_->texture:final_->texture,window_width_,window_height_,true);CheckGl("gpuPresent");
   if(!gate_->Accepts(generation))return false;
   context_.Swap();return true;
+}
+std::vector<float> GpuSession::Histogram(uint64_t generation){
+  CheckOpen();if(!pipeline_||rendered_!=generation||!gate_->Accepts(generation))return {};
+  context_.MakeCurrent();Target target(128,128,GL_RGBA8);target.Bind();Copy(pipeline_->curve_input(),128,128,false);
+  Image sample(128,128,4);glReadPixels(0,0,128,128,GL_RGBA,GL_UNSIGNED_BYTE,sample.pixels.data());CheckGl("gpuHistogram");
+  std::vector<float> bins(256,0);
+  for(size_t i=0;i<sample.pixels.size();i+=4){if(!sample.pixels[i+3])continue;const auto* p=sample.pixels.data()+i;
+    const int l=std::clamp(int((p[0]*.2126f+p[1]*.7152f+p[2]*.0722f)/4),0,63);++bins[l];for(int c=0;c<3;++c)++bins[(c+1)*64+p[c]/4];}
+  return bins;
+}
+Image GpuSession::Thumbnail(const PhotoEdits& edits,const uint8_t* cube,size_t length,float strength,int width,int height){
+  CheckOpen();context_.MakeCurrent();PhotoEdits checked;
+  if(ParsePhotoEdits(edits.values.data(),kPhotoEditCount,&checked)!=GREMOTE_OK||width<1||height<1||width>1600||height>1600||!std::isfinite(strength)||strength<0||strength>1||
+     (process_version_&&int(edits.values[0])!=process_version_))throw GpuError("gpuInvalidThumbnail");
+  CubeLut lut;if(length&&(!cube||ParseCube(cube,length,&lut)!=GREMOTE_OK))throw GpuError("gpuInvalidLut");
+  ColorPipeline pipeline(context_.capabilities());PipelineInputs inputs;inputs.source_serial=inputs.context_serial=1;inputs.edits=edits;inputs.strength=strength;inputs.lut_serial=length?1:0;
+  inputs.region={source_.width,source_.height,0,0,page_width_,page_height_,orientation_,width,height,0,0,width,height};
+  const auto color=pipeline.Render(source_texture_,inputs,length?&lut:nullptr);Target target(width,height,GL_RGBA8);target.Bind();Copy(color,width,height,false);
+  Image image(width,height,4);glReadPixels(0,0,width,height,GL_RGBA,GL_UNSIGNED_BYTE,image.pixels.data());CheckGl("gpuThumbnail");return image;
 }
 Image GpuSession::ReadFinal(){
   CheckOpen();if(!final_)throw GpuError("gpuNoFrame");context_.MakeCurrent();final_->Bind();
@@ -124,9 +153,10 @@ void GpuSession::Close(){
   if(!current){
     if(pipeline_)pipeline_->Abandon();
     if(final_)final_->fbo=final_->texture=0;
+    if(original_)original_->fbo=original_->texture=0;
     source_texture_=copy_=vao_=0;
   }
-  pipeline_.reset();final_.reset();luts_.clear();inline_lut_.reset();
+  pipeline_.reset();final_.reset();original_.reset();luts_.clear();inline_lut_.reset();
   if(source_texture_)glDeleteTextures(1,&source_texture_);
   if(copy_)glDeleteProgram(copy_);if(vao_)glDeleteVertexArrays(1,&vao_);
   source_texture_=copy_=vao_=0;

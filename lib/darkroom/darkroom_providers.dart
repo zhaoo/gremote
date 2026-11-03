@@ -1,4 +1,7 @@
 import 'dart:typed_data';
+import 'dart:io';
+import '../imaging/gpu/gpu_editor.dart';
+import '../imaging/gpu/gpu_imaging_engine.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
@@ -20,8 +23,16 @@ final databaseProvider = Provider<Database>(
 final mediaGatewayProvider =
     Provider<MediaGateway>((ref) => NativeMediaGateway());
 
-final imagingEngineProvider =
-    Provider<ImagingEngine>((ref) => FfiImagingEngine());
+final gpuEditorProvider = Provider<GpuEditor?>((ref) {
+  if (!Platform.isAndroid) return null;
+  final editor = GpuEditor();
+  ref.onDispose(editor.dispose);
+  return editor;
+});
+final imagingEngineProvider = Provider<ImagingEngine>((ref) {
+  final reference = FfiImagingEngine(), gpu = ref.watch(gpuEditorProvider);
+  return gpu == null ? reference : GpuImagingEngine(gpu, reference);
+});
 
 final localMediaRepositoryProvider = Provider<LocalMediaRepository>((ref) =>
     LocalMediaRepository(

@@ -79,6 +79,11 @@ class MainActivity : FlutterActivity() {
         gpuEditor?.onResume()
     }
 
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        gpuEditor?.onTrimMemory(level)
+    }
+
     override fun onPause() {
         location?.onPause()
         gpuEditor?.onPause()

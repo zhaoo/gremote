@@ -12,12 +12,14 @@ import '../../../../darkroom/lut/lut_library.dart';
 import '../../../../darkroom/model/export_recipe.dart';
 import '../../../../darkroom/model/photo_edits.dart';
 import '../../../../imaging/imaging_engine.dart';
+import '../../../../imaging/gpu/gpu_editor.dart';
 import 'frame_preview.dart';
 
 /// Current-photo LUT thumbnails, rendered serially by the shared native engine.
 class LutPicker extends ConsumerStatefulWidget {
   const LutPicker({
     required this.source,
+    this.gpuSession,
     required this.edits,
     required this.entries,
     required this.selected,
@@ -31,6 +33,7 @@ class LutPicker extends ConsumerStatefulWidget {
   });
 
   final PreviewImage? source;
+  final GpuEditorSession? gpuSession;
   final PhotoEdits edits;
   final List<LutEntry> entries;
   final String? selected;
@@ -62,7 +65,8 @@ class _LutPickerState extends ConsumerState<LutPicker> {
   @override
   void didUpdateWidget(LutPicker oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.source != widget.source ||
+    if (oldWidget.gpuSession != widget.gpuSession ||
+        oldWidget.source != widget.source ||
         oldWidget.edits != widget.edits ||
         oldWidget.strength != widget.strength) {
       _invalidate();
@@ -89,7 +93,9 @@ class _LutPickerState extends ConsumerState<LutPicker> {
   }
 
   Future<PreviewImage?> _thumbnail(String? id) {
-    if (widget.source == null) return Future.value(null);
+    if (widget.source == null && widget.gpuSession == null) {
+      return Future.value(null);
+    }
     final existing = _cache.remove(id);
     if (existing != null) {
       _cache[id] = existing;
@@ -117,7 +123,15 @@ class _LutPickerState extends ConsumerState<LutPicker> {
     final engine = ref.read(imagingEngineProvider);
     final library = ref.read(lutLibraryProvider);
     try {
-      if (source != null) {
+      if (widget.gpuSession != null) {
+        final cube =
+            request.id == null ? null : await library.load(request.id!);
+        if (!mounted || request.generation != _generation) return;
+        final image = await widget.gpuSession!.thumbnail(edits, cube, strength);
+        if (mounted &&
+            request.generation == _generation &&
+            !request.result.isCompleted) request.result.complete(image);
+      } else if (source != null) {
         final (cropWidth, cropHeight) =
             edits.crop.outputSize(source.width, source.height);
         final scale = math.min(1.0, 96 / math.max(cropWidth, cropHeight));

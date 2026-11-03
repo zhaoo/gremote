@@ -22,7 +22,9 @@ void GpuSession::Export(const PhotoEdits& edits,const uint8_t* cube,size_t lengt
   auto check=[&](){if((cancelled&&cancelled())||(cancel&&*cancel))throw GpuError("cancelled");};check();
   Image metadata;metadata.width=spec.photo_width;metadata.height=spec.photo_height;metadata.channels=3;
   FrameSpec frame{spec.canvas_width,spec.canvas_height,{spec.background[0],spec.background[1],spec.background[2]},&metadata,spec.photo_x,spec.photo_y,spec.overlays};
-  if(ValidateFrame(frame)!=GREMOTE_OK||spec.path.empty()||spec.quality<1||spec.quality>100)throw GpuError("gpuInvalidExportCanvas");
+  const bool validViewport=spec.viewport&&spec.overlays.empty()&&spec.photo_width>0&&spec.photo_height>0&&spec.photo_x<=0&&spec.photo_y<=0&&spec.canvas_width>0&&spec.canvas_height>0&&
+    int64_t(spec.photo_x)+spec.photo_width>=spec.canvas_width&&int64_t(spec.photo_y)+spec.photo_height>=spec.canvas_height&&int64_t(spec.canvas_width)*spec.canvas_height<=4*1024*1024;
+  if((spec.viewport?!validViewport:ValidateFrame(frame)!=GREMOTE_OK)||spec.path.empty()||spec.quality<1||spec.quality>100)throw GpuError("gpuInvalidExportCanvas");
   const int edge=std::min(512,context_.capabilities().max_texture),band=64;
   const auto tiles=TilePlan::Build(spec.canvas_width,spec.canvas_height,edge,band);
   CubeLut lut;if(length&&(!cube||ParseCube(cube,length,&lut)!=GREMOTE_OK))throw GpuError("gpuInvalidLut");

@@ -40,6 +40,8 @@ class ExportOverlay {
 class ExportJob {
   const ExportJob({
     required this.fd,
+    this.mediaId,
+    this.viewport = false,
     required this.orientation,
     required this.photoWidth,
     required this.photoHeight,
@@ -58,6 +60,8 @@ class ExportJob {
 
   /// Read-only descriptor; the engine always closes it.
   final int fd;
+  final int? mediaId;
+  final bool viewport;
   final int orientation;
   final Uint8List? cube;
 
