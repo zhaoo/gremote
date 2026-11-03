@@ -129,3 +129,16 @@ Review boundaries: physical GPU results remain unjudged by the user's decision; 
 ## Physical acceptance still required
 
 No phone was available. Run the opt-in arm64 capability/session/color/effect/export fixtures on the actual Android GPU, then exercise original24MP photos,2048px page boundaries, background/surface/memory trimming, permissions/cancel, process-version conversion, export/reopen color, and deep/light/system themes. Measure profile/release first frame, drag/settled frame latency, sustained updates, temperature and memory; compare real-photo V1/V2 and preview/export results with the user. The compiled harness is `native/imaging/build/android-gpu-probe/gremote_gpu_session_tests`; **compilation is not execution**. Camera firmware/SD remain outside these checks.
+
+## Final candidate —2026-11-03
+
+- Source commit: `739afdbba20c18c960be031c1f0608845d89e531` (`develop`). Subsequent documentation commits do not change the APK source.
+- APK: `dist/gremote-studio-gpu-1.2.0-dev+16-arm64-debug.apk`.
+- Package/version verified from APK: `com.izhaoo.gremote`, `1.2.0-dev`, versionCode16, arm64 debug.
+- SHA256: `a7b1180de2e0da3a90501a6654e71f8e167ec7533ad6c81489fd8ab7720082f0`.
+- Final post-fix checks:614 Flutter pass /3 conditional skips;72 native host tests;50 Kotlin JVM tests in17 suites;9 GLSL fragments; analyzer clean; Android native library and device harness cross-compiled; APK built. Native library and skcms license asset verified inside APK.
+- Conditional skips: two optional external M10V workspace host checks and the opt-in film visual suite. This round's Studio host rendering was run separately.
+- Evidence manifest, checks and host UI captures: `dist/verification/studio-20261103/`.
+- Not installed. No physical GPU execution, frame-rate/latency/heat/peak-memory measurements, real-photo acceptance or iOS build/device acceptance. No camera firmware/SD changes, push, merge or publication.
+
+This is an implementation candidate with offline checks complete. It is not a declaration that the full GPU migration has passed device acceptance.
