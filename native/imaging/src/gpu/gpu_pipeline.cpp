@@ -107,7 +107,7 @@ void ColorPipeline::Curves(GLuint source,const PipelineInputs& inputs){
   const auto& r=inputs.region;TargetFor(3,r.target_width,r.target_height);const auto program=programs_[3];Source(program,source);
   glActiveTexture(GL_TEXTURE1);glBindTexture(GL_TEXTURE_2D,curve_texture_);Int(program,"curves",1);Int(program,"processVersion",int(inputs.edits.values[0]));Draw(3);
 }
-GLuint ColorPipeline::Render(GLuint source,const PipelineInputs& inputs,const CubeLut* lut){
+GLuint ColorPipeline::RenderStages(GLuint source,const PipelineInputs& inputs,const CubeLut* lut){
   const auto dirty=previous_?FirstDirty(*previous_,inputs):Stage::Geometry;
   const int first=int(dirty);
   try{
@@ -115,9 +115,18 @@ GLuint ColorPipeline::Render(GLuint source,const PipelineInputs& inputs,const Cu
     if(first<=1){if(ActiveTone(inputs.edits))Tone(outputs_[0],inputs);else{targets_[1].reset();outputs_[1]=outputs_[0];}}
     if(first<=2){if(lut&&inputs.strength>0)Lut(outputs_[1],inputs,*lut);else{targets_[2].reset();outputs_[2]=outputs_[1];}}
     if(first<=3){if(ActiveCurves(inputs.edits))Curves(outputs_[2],inputs);else{targets_[3].reset();outputs_[3]=outputs_[2];}}
-    const auto final=effects_->Render(outputs_[3],inputs,first<=3);
-    const auto& effect_counts=effects_->counts();counts_[4]=effect_counts[0]+effect_counts[1];counts_[5]=effect_counts[2];
-    previous_=inputs;return final;
+    previous_=inputs;return outputs_[3];
   }catch(...){previous_.reset();throw;}
+}
+GLuint ColorPipeline::Render(GLuint source,const PipelineInputs& inputs,const CubeLut* lut){
+  const bool upstream=!previous_||int(FirstDirty(*previous_,inputs))<=int(Stage::Curves);
+  const auto color=RenderStages(source,inputs,lut);
+  try{
+    const auto final=effects_->Render(color,inputs,upstream);
+    const auto& c=effects_->counts();counts_[4]=c[0]+c[1];counts_[5]=c[2];return final;
+  }catch(...){previous_.reset();throw;}
+}
+void ColorPipeline::PrepareGlobalMasks(GLuint source,const PipelineInputs& inputs,const CubeLut* lut,const std::function<void()>& check){
+  effects_->PrepareGlobal(inputs,[&](const GeometryRegion& region){auto tile=inputs;tile.region=region;return RenderStages(source,tile,lut);},check);
 }
 }  // namespace gremote::gpu

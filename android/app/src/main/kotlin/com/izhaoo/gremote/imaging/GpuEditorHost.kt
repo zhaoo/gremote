@@ -1,5 +1,7 @@
 package com.izhaoo.gremote.imaging
 
+import androidx.exifinterface.media.ExifInterface
+import kotlin.math.roundToInt
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
@@ -30,7 +32,7 @@ class GpuEditorHost(messenger: BinaryMessenger, private val textures: TextureReg
     private data class SurfaceSpec(val surface: Surface, val width: Int, val height: Int)
 
     private inner class Session(val id: Long, val producer: TextureRegistry.SurfaceProducer,
-        val sourceWidth: Int, val sourceHeight: Int) {
+        val sourceWidth: Int, val sourceHeight: Int, val previewWidth: Int, val previewHeight: Int) {
         @Volatile var disposed = false
         @Volatile var hasSurface = false
         @Volatile var latest = 0L
@@ -77,7 +79,7 @@ class GpuEditorHost(messenger: BinaryMessenger, private val textures: TextureReg
             }
         }
         init {
-            producer.setSize(sourceWidth, sourceHeight)
+            producer.setSize(previewWidth, previewHeight)
             producer.setCallback(object : TextureRegistry.SurfaceProducer.Callback {
                 override fun onSurfaceCreated() { main.post { attachSurface() } }
                 override fun onSurfaceDestroyed() { main.post {
@@ -94,7 +96,7 @@ class GpuEditorHost(messenger: BinaryMessenger, private val textures: TextureReg
                     hasSurface = true
                     // Keep the producer allocation stable across crop/ratio drags.
                     // The frame's logical aspect travels with its generation.
-                    surface.created(SurfaceSpec(value, sourceWidth, sourceHeight))
+                    surface.created(SurfaceSpec(value, previewWidth, previewHeight))
                 } else { hasSurface = false; throw IllegalStateException("gpuSurfaceNotReady") }
             } catch (failure: Throwable) { report(latest, failure) }
         }
@@ -145,6 +147,8 @@ class GpuEditorHost(messenger: BinaryMessenger, private val textures: TextureReg
             val args = call.arguments as? Map<*, *> ?: emptyMap<Any, Any>()
             when (call.method) {
                 "open" -> open(args, result)
+                "export" -> export(args, result)
+                "cancelExport" -> { GpuNativeBridge.cancelExport((args["jobId"] as Number).toLong()); result.success(null) }
                 "prepareLut" -> {
                     val id = (args["sessionId"] as? Number)?.toLong()
                     val session = sessions[id] ?: throw IllegalArgumentException("invalidSession")
@@ -191,6 +195,35 @@ class GpuEditorHost(messenger: BinaryMessenger, private val textures: TextureReg
             result.error("gpuInvalidRequest", "无法处理图像请求", failure.message)
         }
     }
+    private fun export(args: Map<*, *>, result: MethodChannel.Result) {
+        val jobId = (args["jobId"] as Number).toLong()
+        val descriptor = ParcelFileDescriptor.fromFd((args["fd"] as Number).toInt())
+        try {
+            val id = (args["sessionId"] as? Number)?.toLong() ?: 0L
+            val orientation = (args["orientation"] as Number).toInt()
+            val parameters = args["parameters"] as FloatArray
+            val geometry = (args["geometry"] as IntArray)
+            val rectangles = args["rectangles"] as IntArray
+            val images = (args["images"] as List<*>).map { it as ByteArray }.toTypedArray()
+            val cube = args["cube"] as? ByteArray
+            val strength = (args["strength"] as Number).toFloat()
+            val path = args["path"] as String
+            require(orientation in 1..8 && parameters.size == 1062 && geometry.size == 8)
+            require(id == 0L || sessions.containsKey(id))
+            GpuNativeBridge.createExport(jobId)
+            worker.post {
+                try {
+                    if (closed) throw IllegalStateException("cancelled")
+                    val exif = ExifInterface(descriptor.fileDescriptor)
+                    val adobe = exif.getAttributeInt(ExifInterface.TAG_COLOR_SPACE, 1) == 2 || exif.getAttribute("InteroperabilityIndex") == "R03"
+                    GpuNativeBridge.exportJpeg(jobId, id, descriptor.detachFd(), orientation, adobe, parameters, cube, strength, geometry, images, rectangles, path)
+                    main.post { result.success(null) }
+                } catch (failure: Throwable) {
+                    main.post { result.error(if (failure.message == "cancelled") "cancelled" else "gpuExportFailed", "导出失败", failure.message) }
+                } finally { descriptor.close(); GpuNativeBridge.finishExport(jobId) }
+            }
+        } catch (failure: Throwable) { descriptor.close(); throw failure }
+    }
     private fun open(args: Map<*, *>, result: MethodChannel.Result) {
         val fd = (args["fd"] as? Number)?.toInt() ?: throw IllegalArgumentException("fd")
         require(fd >= 0)
@@ -200,13 +233,17 @@ class GpuEditorHost(messenger: BinaryMessenger, private val textures: TextureReg
         try {
             val orientation = (args["orientation"] as? Number)?.toInt() ?: 1
             val maxEdge = (args["maxEdge"] as? Number)?.toInt() ?: 1600
+            val version = (args["processVersion"] as? Number)?.toInt() ?: 2
+            require(version in 1..2)
             require(orientation in 1..8 && maxEdge in 64..4096)
             require(sessions.size + pendingOpens < 2)
             ++pendingOpens
             worker.post {
                 var id = 0L
                 try {
-                    id = GpuNativeBridge.create(descriptor.detachFd(), orientation, maxEdge)
+                    val exif = ExifInterface(descriptor.fileDescriptor)
+                    val adobe = exif.getAttributeInt(ExifInterface.TAG_COLOR_SPACE, 1) == 2 || exif.getAttribute("InteroperabilityIndex") == "R03"
+                    id = GpuNativeBridge.create(descriptor.detachFd(), orientation, maxEdge, version, adobe)
                     nativeHandles.add(id)
                     val info = JSONObject(GpuNativeBridge.info(id))
                     val width = info.getInt("sourceWidth"); val height = info.getInt("sourceHeight")
@@ -218,7 +255,8 @@ class GpuEditorHost(messenger: BinaryMessenger, private val textures: TextureReg
                             try {
                                 val producer = textures.createSurfaceProducer()
                                 allocated = producer
-                                val session = Session(id, producer, width, height)
+                                val scale = minOf(1.0, maxEdge.toDouble() / maxOf(width, height))
+                                val session = Session(id, producer, width, height, maxOf(1, (width*scale).roundToInt()), maxOf(1, (height*scale).roundToInt()))
                                 sessions[id] = session
                                 result.success(mapOf("sessionId" to id, "textureId" to producer.id(),
                                     "sourceWidth" to width, "sourceHeight" to height,

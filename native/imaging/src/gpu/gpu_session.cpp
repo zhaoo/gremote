@@ -6,17 +6,19 @@
 #include <algorithm>
 
 namespace gremote::gpu {
-GpuSession::GpuSession(Image source,std::shared_ptr<GenerationGate> gate)
-    :source_(std::move(source)),gate_(std::move(gate)) {
+GpuSession::GpuSession(Image source,std::shared_ptr<GenerationGate> gate,int orientation,int process_version)
+    :source_(std::move(source)),gate_(std::move(gate)),orientation_(orientation),process_version_(process_version) {
+  try{
   const auto& caps=context_.capabilities();
   if(!gate_||source_.channels!=4||source_.width<=0||source_.height<=0||
-      int64_t(source_.width)*source_.height>8*1024*1024||
+      orientation<1||orientation>8||int64_t(source_.width)*source_.height>64*1024*1024||
       source_.pixels.size()!=size_t(source_.width)*source_.height*4)throw GpuError("gpuInvalidSource");
   page_width_=std::min({source_.width,caps.max_texture,2048});
   page_height_=std::min({source_.height,caps.max_texture,2048});
   const int columns=(source_.width+page_width_-1)/page_width_,rows=(source_.height+page_height_-1)/page_height_;
   GLint maximum_layers=0;glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS,&maximum_layers);
   if(int64_t(columns)*rows>maximum_layers)throw GpuError("gpuSourceLayersUnsupported");
+  if(uint64_t(columns)*rows*page_width_*page_height_*4>256ull*1024*1024)throw GpuError("gpuSourceMemoryLimit");
   glGenTextures(1,&source_texture_);glBindTexture(GL_TEXTURE_2D_ARRAY,source_texture_);
   glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D_ARRAY,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
@@ -35,6 +37,7 @@ GpuSession::GpuSession(Image source,std::shared_ptr<GenerationGate> gate)
   pipeline_=std::make_unique<ColorPipeline>(caps);
   copy_=CompileProgram(shaders::present);
   glGenVertexArrays(1,&vao_);CheckGl("gpuSourceUpload");
+  }catch(...){pipeline_.reset();if(source_texture_)glDeleteTextures(1,&source_texture_);if(copy_)glDeleteProgram(copy_);if(vao_)glDeleteVertexArrays(1,&vao_);throw;}
 }
 GpuSession::~GpuSession(){try{Close();}catch(...){}}
 void GpuSession::CheckOpen()const{CheckOwner();if(closed_)throw GpuError("gpuSessionClosed");}
@@ -85,10 +88,12 @@ bool GpuSession::RenderColor(uint64_t generation,const PhotoEdits& edits,const s
   PhotoEdits checked;
   if(ParsePhotoEdits(edits.values.data(),kPhotoEditCount,&checked)!=GREMOTE_OK||width<=0||height<=0||
       !std::isfinite(strength)||strength<0||strength>1)throw GpuError("gpuInvalidDescriptor");
+  if(process_version_&&int(edits.values[0])!=process_version_)throw GpuError("gpuSourceVersionMismatch");
   context_.MakeCurrent();
+  if(!pipeline_)pipeline_=std::make_unique<ColorPipeline>(context_.capabilities());
   PipelineInputs inputs;
   inputs.source_serial=1;inputs.context_serial=1;inputs.lut_serial=lut?lut->serial:0;inputs.strength=strength;inputs.edits=edits;
-  inputs.region={source_.width,source_.height,0,0,page_width_,page_height_,1,width,height,0,0,width,height};
+  inputs.region={source_.width,source_.height,0,0,page_width_,page_height_,orientation_,width,height,0,0,width,height};
   const auto photo=pipeline_->Render(source_texture_,inputs,lut?&lut->lut:nullptr);
   if(!final_||final_->width!=width||final_->height!=height)final_=std::make_unique<Target>(width,height,GL_RGBA8);
   final_->Bind();Copy(photo,width,height,false);CheckGl("gpuRender");rendered_=generation;

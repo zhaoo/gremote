@@ -29,20 +29,11 @@ void Error(JNIEnv* env,const char* message){
 }
 }
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_izhaoo_gremote_imaging_GpuNativeBridge_create(JNIEnv* env,jobject,jint fd,jint orientation,jint max_edge){
-  // The Java host passes an owned duplicate; never close the Dart caller's FD.
-  if(orientation<1||orientation>8||max_edge<1||max_edge>4096){
-    if(fd>=0)::close(fd);Error(env,"gpuInvalidSourceDescriptor");return 0;
-  }
-  // The decoder always consumes fd, including bad-input and allocation paths.
-  uint8_t* rgba=nullptr;int32_t width=0,height=0;
-  const int status=gremote_decode_preview(fd,orientation,max_edge,&rgba,&width,&height);
-  std::unique_ptr<uint8_t,decltype(&gremote_free)> pixels(rgba,gremote_free);
-  if(status!=GREMOTE_OK){Error(env,"gpuSourceDecode");return 0;}
+Java_com_izhaoo_gremote_imaging_GpuNativeBridge_create(JNIEnv* env,jobject,jint fd,jint orientation,jint max_edge,jint version,jboolean adobe){
+  if(orientation<1||orientation>8||max_edge<1||max_edge>4096){if(fd>=0)::close(fd);Error(env,"gpuInvalidSourceDescriptor");return 0;}
   try {
-    Image source(width,height,4);std::memcpy(source.pixels.data(),pixels.get(),source.pixels.size());
-    pixels.reset();
-    auto session=std::make_unique<GpuSession>(std::move(source));auto gate=session->gate();
+    SourceIdentity identity;auto source=LoadSource(fd,version,adobe,&identity);
+    auto session=std::make_unique<GpuSession>(std::move(source),std::make_shared<GenerationGate>(),orientation,version);session->SetIdentity(identity);auto gate=session->gate();
     std::lock_guard<std::mutex> lock(registry_mutex);
     if(next_id==std::numeric_limits<jlong>::max())throw GpuError("gpuSessionIdsExhausted");
     const auto id=next_id++;registry.emplace(id,Entry{std::move(session),std::move(gate)});return id;
@@ -117,5 +108,55 @@ Java_com_izhaoo_gremote_imaging_GpuNativeBridge_close(JNIEnv* env,jobject,jlong 
     {std::lock_guard<std::mutex> lock(registry_mutex);auto it=registry.find(id);if(it==registry.end())return;
       it->second.session->CheckOwner();session=std::move(it->second.session);registry.erase(it);}
     session->Close();
+  }catch(const std::exception& e){Error(env,e.what());}
+}
+
+namespace {
+std::mutex jobs_mutex;
+std::unordered_map<jlong,std::shared_ptr<std::atomic<bool>>> jobs;
+std::string Text(JNIEnv* env,jstring value){
+  if(!value)throw GpuError("gpuInvalidString");const char* p=env->GetStringUTFChars(value,nullptr);if(!p)throw GpuError("gpuStringAllocation");
+  std::string out;try{out=p;}catch(...){env->ReleaseStringUTFChars(value,p);throw;}env->ReleaseStringUTFChars(value,p);return out;
+}
+std::shared_ptr<std::atomic<bool>> Job(jlong id){std::lock_guard<std::mutex> lock(jobs_mutex);auto it=jobs.find(id);if(it==jobs.end())throw GpuError("gpuInvalidExportJob");return it->second;}
+}
+extern "C" JNIEXPORT void JNICALL
+Java_com_izhaoo_gremote_imaging_GpuNativeBridge_createExport(JNIEnv* env,jobject,jlong id){try{std::lock_guard<std::mutex> lock(jobs_mutex);if(id<=0||jobs.count(id)||jobs.size()>=4)throw GpuError("gpuInvalidExportJob");jobs[id]=std::make_shared<std::atomic<bool>>(false);}catch(const std::exception& e){Error(env,e.what());}}
+extern "C" JNIEXPORT void JNICALL
+Java_com_izhaoo_gremote_imaging_GpuNativeBridge_cancelExport(JNIEnv*,jobject,jlong id){std::lock_guard<std::mutex> lock(jobs_mutex);auto it=jobs.find(id);if(it!=jobs.end())it->second->store(true);}
+extern "C" JNIEXPORT void JNICALL
+Java_com_izhaoo_gremote_imaging_GpuNativeBridge_cancelExports(JNIEnv*,jobject){std::lock_guard<std::mutex> lock(jobs_mutex);for(auto& entry:jobs)entry.second->store(true);}
+extern "C" JNIEXPORT void JNICALL
+Java_com_izhaoo_gremote_imaging_GpuNativeBridge_finishExport(JNIEnv*,jobject,jlong id){std::lock_guard<std::mutex> lock(jobs_mutex);jobs.erase(id);}
+extern "C" JNIEXPORT void JNICALL
+Java_com_izhaoo_gremote_imaging_GpuNativeBridge_exportJpeg(JNIEnv* env,jobject,jlong job,jlong id,jint fd,jint orientation,jboolean adobe,
+  jfloatArray parameters,jbyteArray cube,jfloat strength,jintArray geometry,jobjectArray images,jintArray rectangles,jstring destination){
+  struct Guard{int fd;~Guard(){if(fd>=0)::close(fd);}}guard{fd};
+  try{
+    const auto cancelled=Job(job);if(cancelled->load())throw GpuError("cancelled");
+    if(!parameters||env->GetArrayLength(parameters)!=kPhotoEditCount||!geometry||env->GetArrayLength(geometry)!=8)throw GpuError("gpuInvalidExportDescriptor");
+    PhotoEdits edits;env->GetFloatArrayRegion(parameters,0,kPhotoEditCount,edits.values.data());
+    jint g[8];env->GetIntArrayRegion(geometry,0,8,g);if(env->ExceptionCheck())return;
+    ExportSpec spec;spec.photo_width=g[0];spec.photo_height=g[1];spec.photo_x=g[2];spec.photo_y=g[3];spec.canvas_width=g[4];spec.canvas_height=g[5];spec.quality=g[6];
+    spec.background[0]=(uint32_t(g[7])>>16)&255;spec.background[1]=(uint32_t(g[7])>>8)&255;spec.background[2]=uint32_t(g[7])&255;spec.path=Text(env,destination);
+    const int count=images?env->GetArrayLength(images):0;
+    if(count>64||!rectangles||env->GetArrayLength(rectangles)!=count*4)throw GpuError("gpuInvalidExportOverlays");
+    std::vector<jint> rects(size_t(count)*4);env->GetIntArrayRegion(rectangles,0,count*4,rects.data());
+    std::vector<std::vector<uint8_t>> overlayBytes;overlayBytes.reserve(count);size_t total=0;
+    for(int i=0;i<count;++i){auto data=static_cast<jbyteArray>(env->GetObjectArrayElement(images,i));
+      if(!data)throw GpuError("gpuInvalidExportOverlay");const auto n=env->GetArrayLength(data);const int w=rects[i*4+2],h=rects[i*4+3];
+      total+=size_t(n);if(w<=0||h<=0||uint64_t(w)*h*4!=uint64_t(n)||total>64*1024*1024){env->DeleteLocalRef(data);throw GpuError("gpuOverlayMemoryLimit");}
+      overlayBytes.emplace_back(size_t(n));env->GetByteArrayRegion(data,0,n,reinterpret_cast<jbyte*>(overlayBytes.back().data()));env->DeleteLocalRef(data);
+      spec.overlays.push_back({rects[i*4],rects[i*4+1],w,h,overlayBytes.back().data()});
+    }
+    std::vector<uint8_t> lut;if(cube){const int n=env->GetArrayLength(cube);if(n>16*1024*1024)throw GpuError("gpuLutTooLarge");lut.resize(size_t(n));env->GetByteArrayRegion(cube,0,n,reinterpret_cast<jbyte*>(lut.data()));}
+    if(env->ExceptionCheck())return;
+    std::unique_ptr<GpuSession> owned;GpuSession* session=nullptr;
+    if(id){session=Find(id);if(!session->Matches(fd,orientation,int(edits.values[0])))throw GpuError("gpuExportSourceChanged");}
+    else{
+      int ownedFd=guard.fd;guard.fd=-1;SourceIdentity identity;auto source=LoadSource(ownedFd,int(edits.values[0]),adobe,&identity);
+      owned=std::make_unique<GpuSession>(std::move(source),std::make_shared<GenerationGate>(),orientation,int(edits.values[0]));owned->SetIdentity(identity);session=owned.get();
+    }
+    session->Export(edits,lut.empty()?nullptr:lut.data(),lut.size(),strength,spec,nullptr,[cancelled]{return cancelled->load();});
   }catch(const std::exception& e){Error(env,e.what());}
 }

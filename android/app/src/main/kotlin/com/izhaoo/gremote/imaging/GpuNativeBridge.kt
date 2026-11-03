@@ -5,7 +5,12 @@ import android.view.Surface
 /** All GL calls run on GpuEditorHost's owner thread. advance/revoke are atomic. */
 internal object GpuNativeBridge {
     init { System.loadLibrary("gremote_imaging") }
-    external fun create(fd: Int, orientation: Int, maxEdge: Int): Long
+    external fun create(fd: Int, orientation: Int, maxEdge: Int, processVersion: Int, adobeRgb: Boolean): Long
+    external fun createExport(jobId: Long)
+    external fun cancelExport(jobId: Long)
+    external fun cancelExports()
+    external fun finishExport(jobId: Long)
+    external fun exportJpeg(jobId: Long, id: Long, fd: Int, orientation: Int, adobeRgb: Boolean, parameters: FloatArray, cube: ByteArray?, strength: Float, geometry: IntArray, images: Array<ByteArray>, rectangles: IntArray, path: String)
     external fun info(id: Long): String
     external fun advance(id: Long, generation: Long): Boolean
     external fun revoke(id: Long)

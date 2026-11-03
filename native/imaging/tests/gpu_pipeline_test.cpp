@@ -56,3 +56,26 @@ TEST(GpuSpatialRadiusAndMaskCacheRespectSequentialHalationBloom) {
   dirty=DirtyMasks(a,a,true);EXPECT_TRUE(dirty.halo);EXPECT_TRUE(dirty.bloom);
   EXPECT_EQ(GlowRadius(6000,4000,0),12);EXPECT_EQ(GlowRadius(6000,4000,1),372);
 }
+
+#include "gpu/tile_plan.h"
+TEST(GpuExportTilesCoverPanoramasExactlyAndIntersectPhotoGlobally) {
+  using namespace gremote::gpu;
+  const auto tiles=TilePlan::Build(18000,2200,1024,64);
+  uint64_t area=0;
+  for(const auto& tile:tiles){EXPECT_TRUE(tile.width<=1024&&tile.height<=64);area+=uint64_t(tile.width)*tile.height;}
+  EXPECT_EQ(area,18000ull*2200);
+  const auto rect=Intersect({0,0,512,64},{30,40,6000,4000});
+  EXPECT_EQ(rect.x,30);EXPECT_EQ(rect.y,40);EXPECT_EQ(rect.width,482);EXPECT_EQ(rect.height,24);
+  bool rejected=false;try{TilePlan::Build(65536,1,1024,64);}catch(const std::exception&){rejected=true;}EXPECT_TRUE(rejected);
+}
+
+#include "input_color.h"
+TEST(InputColorRejectsIncompleteIccAndConvertsAdobeWithoutTintingNeutral) {
+  std::vector<uint8_t> jpeg={255,216,255,226,0,17,'I','C','C','_','P','R','O','F','I','L','E',0,1,2,0,255,218};
+  std::vector<uint8_t> profile;EXPECT_TRUE(!gremote::ReadJpegIcc(jpeg.data(),jpeg.size(),&profile));
+  gremote::Image input(2,1,3);input.pixels={128,128,128,160,100,80};
+  EXPECT_TRUE(gremote::NormalizeToSrgb(&input,{},true));
+  EXPECT_NEAR(input.pixels[0],input.pixels[1],1);EXPECT_NEAR(input.pixels[1],input.pixels[2],1);
+  EXPECT_TRUE(input.pixels[3]>160);EXPECT_TRUE(input.pixels[4]<101);
+  EXPECT_TRUE(!gremote::NormalizeToSrgb(&input,{1,2,3},false));
+}

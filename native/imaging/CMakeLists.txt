@@ -56,7 +56,12 @@ set_target_properties(gremote_jpeg PROPERTIES
   INTERFACE_INCLUDE_DIRECTORIES ${LJT_INSTALL_DIR}/include)
 add_dependencies(gremote_jpeg libjpeg_turbo_external)
 
+add_library(gremote_skcms STATIC ../third_party/skcms/skcms.cc ../third_party/skcms/src/skcms_TransformBaseline.cc)
+target_compile_definitions(gremote_skcms PRIVATE SKCMS_DISABLE_HSW SKCMS_DISABLE_SKX)
+target_include_directories(gremote_skcms PUBLIC ../third_party/skcms)
+
 set(GREMOTE_CORE_SOURCES
+  src/input_color.cpp
   src/cube_lut.cpp
   src/orientation.cpp
   src/resize.cpp
@@ -82,7 +87,7 @@ if(ANDROID)
   target_compile_options(gremote_core PRIVATE $<$<CONFIG:Debug>:-O2>)
 endif()
 target_include_directories(gremote_core PUBLIC include src PRIVATE vendor/m10v)
-target_link_libraries(gremote_core PUBLIC gremote_jpeg)
+target_link_libraries(gremote_core PUBLIC gremote_jpeg gremote_skcms)
 find_package(Threads REQUIRED)
 target_link_libraries(gremote_core PUBLIC Threads::Threads)
 
@@ -92,14 +97,14 @@ if(ANDROID)
   set(GPU_SHADER_HEADER "${CMAKE_CURRENT_BINARY_DIR}/generated/gpu_shaders_generated.h")
   file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated")
   file(WRITE "${GPU_SHADER_HEADER}" "#pragma once\nnamespace gremote::gpu::shaders {\n")
-  foreach(shader geometry tone lut curves present spatial texture)
+  foreach(shader geometry tone lut curves present spatial texture canvas overlay)
     set(shader_file "${CMAKE_CURRENT_SOURCE_DIR}/src/gpu/shaders/${shader}.frag")
     set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${shader_file}")
     file(READ "${shader_file}" shader_source)
     file(APPEND "${GPU_SHADER_HEADER}" "inline constexpr const char* ${shader} = R\"glsl(${shader_source})glsl\";\n")
   endforeach()
   file(APPEND "${GPU_SHADER_HEADER}" "}\n")
-  add_library(gremote_gpu OBJECT src/gpu/gpu_context.cpp src/gpu/gpu_session.cpp src/gpu/gpu_pipeline.cpp src/gpu/gpu_effects.cpp src/gpu/gpu_api.cpp)
+  add_library(gremote_gpu OBJECT src/gpu/gpu_context.cpp src/gpu/gpu_source.cpp src/gpu/gpu_session.cpp src/gpu/gpu_pipeline.cpp src/gpu/gpu_effects.cpp src/gpu/gpu_api.cpp src/gpu/gpu_export.cpp)
   target_include_directories(gremote_gpu PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
   target_include_directories(gremote_gpu PUBLIC include src)
   target_link_libraries(gremote_gpu PUBLIC EGL GLESv3 android)
@@ -141,7 +146,7 @@ if(ANDROID AND GREMOTE_BUILD_GPU_PROBE)
   add_executable(gremote_gpu_probe tests/gpu_capabilities_probe.cpp)
   target_compile_options(gremote_gpu_probe PRIVATE -Wall -Wextra -Werror)
   target_link_libraries(gremote_gpu_probe PRIVATE EGL GLESv3)
-  add_executable(gremote_gpu_session_tests tests/gpu_session_device_test.cpp tests/gpu_color_device_test.cpp tests/gpu_effects_device_test.cpp)
+  add_executable(gremote_gpu_session_tests tests/gpu_session_device_test.cpp tests/gpu_color_device_test.cpp tests/gpu_effects_device_test.cpp tests/gpu_export_device_test.cpp)
   target_include_directories(gremote_gpu_session_tests PRIVATE tests)
   target_link_libraries(gremote_gpu_session_tests PRIVATE gremote_gpu gremote_core)
 endif()

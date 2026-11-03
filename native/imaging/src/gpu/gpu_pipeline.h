@@ -19,6 +19,8 @@ class ColorPipeline {
   ColorPipeline(const ColorPipeline&)=delete;
   ColorPipeline& operator=(const ColorPipeline&)=delete;
   GLuint Render(GLuint source,const PipelineInputs& inputs,const CubeLut* lut);
+  GLuint RenderStages(GLuint source,const PipelineInputs& inputs,const CubeLut* lut);
+  void PrepareGlobalMasks(GLuint source,const PipelineInputs& inputs,const CubeLut* lut,const std::function<void()>& check);
   void Abandon();
   const std::array<uint64_t,6>& counts()const{return counts_;}
   GLuint curve_input()const{return outputs_[2];}
