@@ -175,6 +175,27 @@ final class GRemoteMedia: MediaHostApi {
     else { completion(.failure(nativeError("invalidExport","印样路径或尺寸无效"))); return }
     Self.savePhoto(input,name:displayName,completion:completion)
   }
+  func importPhoto(tempPath: String, displayName: String, completion: @escaping (Result<String, Error>) -> Void) {
+    let input = URL(fileURLWithPath: tempPath).resolvingSymlinksInPath()
+    let manager = FileManager.default
+    let roots = [manager.temporaryDirectory, manager.urls(for: .cachesDirectory, in: .userDomainMask).first].compactMap { $0 }
+    let permitted = roots.contains { input.path.hasPrefix($0.resolvingSymlinksInPath().path + "/") }
+    guard permitted,
+          let values = try? input.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey]),
+          values.isRegularFile == true, let size = values.fileSize, (1...100_000_000).contains(size),
+          let source = CGImageSourceCreateWithURL(input as CFURL, nil),
+          CGImageSourceGetType(source) as String? == "public.jpeg",
+          let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any],
+          ((properties[kCGImagePropertyPixelWidth as String] as? NSNumber)?.intValue ?? 0) > 0,
+          ((properties[kCGImagePropertyPixelHeight as String] as? NSNumber)?.intValue ?? 0) > 0
+    else {
+      completion(.failure(nativeError("invalidPhoto", "请选择 JPEG 照片")))
+      return
+    }
+    let leaf = displayName.replacingOccurrences(of: "\\", with: "/").split(separator: "/").last.map(String.init) ?? "GRemote"
+    let name = String(leaf.prefix(180))
+    Self.savePhoto(input, name: PhotoPolicy.editable(name) ? name : name + ".jpg", completion: completion)
+  }
   func shareRecipe(card: FlutterStandardTypedData) throws {
     guard card.data.count > 0, card.data.count <= 16384, let controller = controller else { throw nativeError("invalidRecipe","配方卡无效") }
     let dir = FileManager.default.temporaryDirectory.appendingPathComponent("recipe-share",isDirectory:true)
