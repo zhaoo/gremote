@@ -63,6 +63,22 @@ Future<({TestDarkroom env, FakeCameraGateways gateways})> pumpShoot(
 }
 
 void main() {
+  testWidgets(
+      'shoot toolbar omits model name and groups controls at trailing edge',
+      (tester) async {
+    await pumpShoot(tester, size: const Size(320, 720));
+
+    Rect buttonRect(String tooltip) => tester.getRect(find.byWidgetPredicate(
+        (widget) => widget is IconButton && widget.tooltip == tooltip));
+    final recipe = buttonRect('组合方案');
+    final settings = buttonRect('设置');
+    expect(find.text('GR III'), findsNothing);
+    expect(recipe.width, greaterThanOrEqualTo(44));
+    expect(settings.width, greaterThanOrEqualTo(44));
+    expect(settings.left - recipe.right, closeTo(0, 1));
+    expect(320 - settings.right, inInclusiveRange(0, 12));
+  });
+
   testWidgets('shoot settings switch and explicit timer keep current readback',
       (tester) async {
     final harness = await pumpShoot(tester, connect: true);

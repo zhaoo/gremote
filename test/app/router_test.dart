@@ -210,8 +210,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('media-3')));
     await tester.pumpAndSettle();
-    expect(find.text('R003.JPG'), findsOneWidget);
-    expect(find.byKey(const ValueKey('editor-tool-grid')), findsOneWidget);
+    expect(find.byKey(const ValueKey('frame-preview')), findsOneWidget);
+    expect(find.byKey(const ValueKey('editor-tool-ribbon')), findsOneWidget);
     expect(find.text('GOOD PHOTOS  A KINDER WORLD'), findsNothing,
         reason: 'the editor covers the tab shell');
     await tester.tap(find.byTooltip('返回相册'));

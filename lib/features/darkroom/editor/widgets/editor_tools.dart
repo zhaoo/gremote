@@ -3,7 +3,7 @@ import '../../../../app/theme/app_palette.dart';
 import '../../../../darkroom/model/photo_edits.dart';
 
 enum EditorTool {
-  basic('基础', Icons.tune, [
+  basic('调整图片', Icons.tune, [
     PhotoAdjustment.exposure,
     PhotoAdjustment.contrast,
     PhotoAdjustment.highlights,
@@ -12,7 +12,7 @@ enum EditorTool {
     PhotoAdjustment.blacks
   ]),
   crop('裁切', Icons.crop, []),
-  balance('白平衡', Icons.thermostat_outlined, [
+  balance('调色', Icons.palette_outlined, [
     PhotoAdjustment.temperature,
     PhotoAdjustment.tint,
     PhotoAdjustment.saturation,
@@ -65,51 +65,97 @@ class EditorTools extends StatelessWidget {
       {required this.onSelected, required this.changed, super.key});
   final ValueChanged<EditorTool> onSelected;
   final bool Function(EditorTool) changed;
-  List<EditorTool> get _tools => EditorTool.values
-      .where((t) =>
-          t != EditorTool.presets &&
-          t != EditorTool.history &&
-          t != EditorTool.processVersion)
-      .toList();
+  static const _tools = [
+    EditorTool.basic,
+    EditorTool.curves,
+    EditorTool.crop,
+    EditorTool.balance,
+    EditorTool.grain,
+    EditorTool.vignette,
+    EditorTool.lut,
+    EditorTool.leak,
+    EditorTool.halation,
+    EditorTool.bloom,
+    EditorTool.fade,
+    EditorTool.monochrome,
+    EditorTool.frame,
+    EditorTool.stamp,
+  ];
+
   @override
-  Widget build(BuildContext context) => GridView.builder(
-      key: const ValueKey('editor-tool-grid'),
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 4,
-          mainAxisExtent:
-              MediaQuery.textScalerOf(context).scale(12) > 18 ? 92 : 74),
-      itemCount: _tools.length,
-      itemBuilder: (context, index) {
-        final tool = _tools[index];
-        return Semantics(
+  Widget build(BuildContext context) => SingleChildScrollView(
+      key: const ValueKey('editor-tool-ribbon'),
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 5),
+      child: Row(children: [
+        for (final tool in _tools)
+          Semantics(
             button: true,
             label: '打开${tool.label}',
             child: InkWell(
-                borderRadius: BorderRadius.circular(10),
-                onTap: () => onSelected(tool),
+              onTap: () => onSelected(tool),
+              child: SizedBox(
+                width: 68,
+                height: 76,
                 child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Stack(clipBehavior: Clip.none, children: [
-                        Icon(tool.icon, size: 21),
+                        if (tool == EditorTool.curves)
+                          CustomPaint(
+                              size: const Size.square(21),
+                              painter: _CurveToolIcon(context.palette.text))
+                        else
+                          Icon(tool.icon, size: 21),
                         if (changed(tool))
-                          Positioned(
+                          const Positioned(
                               right: -7,
                               top: 0,
-                              child: Container(
-                                  width: 4,
-                                  height: 4,
-                                  decoration: BoxDecoration(
-                                      color: context.palette.accent,
-                                      shape: BoxShape.circle)))
+                              child: SizedBox(
+                                width: 4,
+                                height: 4,
+                                child: ColoredBox(color: Color(0xff3c83b8)),
+                              )),
                       ]),
-                      const SizedBox(height: 9),
+                      const SizedBox(height: 7),
                       Text(tool.label,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 12))
-                    ])));
-      });
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 11, color: context.palette.text)),
+                    ]),
+              ),
+            ),
+          ),
+      ]));
+}
+
+class _CurveToolIcon extends CustomPainter {
+  const _CurveToolIcon(this.color);
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final ink = Paint()..color = color;
+    final stroke = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6
+      ..strokeCap = StrokeCap.round;
+    for (var i = 0; i < 5; i++) {
+      canvas.drawCircle(Offset(2.5 + i * 4, 18.5), .6, ink);
+      if (i > 0) canvas.drawCircle(Offset(2.5, 18.5 - i * 4), .6, ink);
+    }
+    canvas.drawPath(
+      Path()
+        ..moveTo(4.5, 15)
+        ..cubicTo(12, 15, 16, 12, 17.5, 3.5),
+      stroke,
+    );
+    canvas.drawCircle(const Offset(4.5, 15), 1.5, ink);
+    canvas.drawCircle(const Offset(17.5, 3.5), 1.5, ink);
+  }
+
+  @override
+  bool shouldRepaint(_CurveToolIcon oldDelegate) => oldDelegate.color != color;
 }

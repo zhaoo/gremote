@@ -19,6 +19,7 @@ import 'widgets/crop_panel.dart';
 import 'widgets/curve_panel.dart';
 import 'widgets/editor_panels.dart';
 import 'widgets/editor_tools.dart';
+import 'widgets/editor_ruler.dart';
 import 'widgets/frame_preview.dart';
 import 'widgets/lut_picker.dart';
 
@@ -77,6 +78,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
   }
 
   void _compare(bool value) {
+    if (_showOriginal == value) return;
     setState(() => _showOriginal = value);
     _controller.compareOriginal(value);
   }
@@ -88,7 +90,9 @@ class _EditorPageState extends ConsumerState<EditorPage>
   int _tab = 1, _presetRevision = 0;
   bool _presetDraft = false, _presetStrength = false;
   PhotoAdjustment? _activeAdjustment;
-  double _photoDrag = 0;
+  double _photoDrag = 0, _parameterDrag = 0;
+  int _parameterStart = 0;
+  bool _parametersOpen = false;
   double _dragValue = 0;
   final _zoom = TransformationController();
   final _zoomKey = GlobalKey();
@@ -121,6 +125,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
     }
     setState(() {
       _tool = tool;
+      _parametersOpen = false;
       _activeAdjustment = tool.adjustments.firstOrNull;
       _showOriginal = false;
       _zoom.value = Matrix4.identity();
@@ -136,6 +141,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
     }
     setState(() {
       _tool = null;
+      _parametersOpen = false;
       _presetDraft = false;
       _presetStrength = false;
       _presetRevision++;
@@ -160,32 +166,22 @@ class _EditorPageState extends ConsumerState<EditorPage>
   }
 
   Widget _studioPresets(EditorState s) => LutPicker(
-      key: ValueKey(('studio-presets', _presetRevision)),
-      source: s.base,
-      gpuSession: s.gpuSession,
-      edits: s.recipe.edits,
-      entries: s.luts,
-      selected: s.recipe.lutId,
-      strength: s.recipe.strength,
-      grid: true,
-      showStrength: _presetStrength,
-      onSelected: _selectPreset,
-      onStrength: _controller.setStrength,
-      onStart: _controller.beginGesture,
-      onEnd: _controller.endGesture,
-      onImport: _importLut,
-      onSchemes: _presets,
-      onStrengthTap: () {
-        if (s.recipe.lutId == null) return;
-        if (!_presetDraft) {
-          _controller.beginTool();
-        }
-        setState(() {
-          _presetDraft = true;
-          _presetStrength = !_presetStrength;
-        });
-      });
-  Widget _records(EditorState s) {
+        key: ValueKey(('studio-presets', _presetRevision)),
+        source: s.base,
+        gpuSession: s.gpuSession,
+        edits: s.recipe.edits,
+        entries: s.luts,
+        selected: s.recipe.lutId,
+        strength: s.recipe.strength,
+        strip: true,
+        showStrength: _presetStrength,
+        onSelected: _selectPreset,
+        onStrength: _controller.setStrength,
+        onStart: _controller.beginGesture,
+        onEnd: _controller.endGesture,
+        onImport: _importLut,
+      );
+  Widget _records(BuildContext sheetContext) {
     final history = _controller.history;
     return Column(children: [
       Padding(
@@ -218,7 +214,10 @@ class _EditorPageState extends ConsumerState<EditorPage>
                 : null,
             onTap: i == history.length - 1
                 ? null
-                : () => _controller.restoreHistory(i)),
+                : () {
+                    _controller.restoreHistory(i);
+                    Navigator.of(sheetContext).pop();
+                  }),
     ]);
   }
 
@@ -263,50 +262,71 @@ class _EditorPageState extends ConsumerState<EditorPage>
     return '设置';
   }
 
-  Widget _mainNavigation() =>
-      Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-        for (var i = 0; i < 3; i++)
+  bool _canExport(EditorState s) =>
+      s.doc != null &&
+      (s.base != null ||
+          (s.gpuFrame != null && s.gpuSession?.closed == false)) &&
+      !s.exporting &&
+      !_leaving;
+
+  Widget _mainNavigation(EditorState s) => SizedBox(
+      height: 56,
+      child: Row(children: [
+        for (var i = 0; i < 2; i++)
           Expanded(
               child: Semantics(
-                  selected: _tab == i,
-                  button: true,
-                  child: InkWell(
-                      key: ValueKey('studio-tab-$i'),
-                      onTap: () => setState(() => _tab = i),
-                      child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                                [
-                                  Icons.auto_awesome_mosaic_outlined,
-                                  Icons.tune,
-                                  Icons.history
-                                ][i],
-                                size: 18,
-                                color: _tab == i
-                                    ? context.palette.text
-                                    : context.palette.muted),
-                            const SizedBox(height: 5),
-                            Text(['预设', '调整', '记录'][i],
-                                style: TextStyle(
-                                    fontSize: 11,
-                                    color: _tab == i
-                                        ? context.palette.text
-                                        : context.palette.muted,
-                                    fontWeight: _tab == i
-                                        ? FontWeight.w500
-                                        : FontWeight.w400))
-                          ])))),
-      ]);
+            selected: _tab == i,
+            button: true,
+            child: InkWell(
+              key: ValueKey('studio-tab-$i'),
+              onTap: s.layout == null ? null : () => setState(() => _tab = i),
+              child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (_tab == i)
+                      const SizedBox(
+                          height: 15,
+                          child: Center(child: EditorChevron(up: true)))
+                    else
+                      const SizedBox(height: 15),
+                    Text(i == 0 ? '样式' : '工具',
+                        style: TextStyle(
+                            color: context.palette.text,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500)),
+                  ]),
+            ),
+          )),
+        Expanded(
+            child: FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            disabledBackgroundColor: Colors.transparent,
+            foregroundColor: context.palette.text,
+            disabledForegroundColor: context.palette.muted,
+            elevation: 0,
+            shape: const RoundedRectangleBorder(),
+            padding: const EdgeInsets.only(top: 12),
+          ),
+          onPressed: _canExport(s) ? _export : null,
+          child: Text(s.exporting ? '导出中…' : '导出',
+              style:
+                  const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+        )),
+      ]));
 
   Future<void> _leave() async {
     if (_leaving || ref.read(editorProvider(widget.mediaId)).exporting) return;
+    if (_parametersOpen) {
+      setState(() => _parametersOpen = false);
+      return;
+    }
     if (_presetDraft) {
       _finish(cancel: true);
       return;
     }
     if (_tool != null) {
-      _finish();
+      _finish(cancel: true);
       return;
     }
     setState(() => _leaving = true);
@@ -343,119 +363,262 @@ class _EditorPageState extends ConsumerState<EditorPage>
     return t.adjustments.any((a) => s.recipe.edits.value(a) != a.initial);
   }
 
+  Widget _headerButton(String label, IconData icon, VoidCallback? pressed) =>
+      IconButton(
+        tooltip: label,
+        onPressed: pressed,
+        icon: Icon(icon, size: 21),
+        constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+        padding: EdgeInsets.zero,
+      );
+
+  PreferredSizeWidget _header(EditorState s, Color background) {
+    final tool = _tool;
+    final enabled = !s.exporting && !_leaving;
+    final compare = s.base != null || s.gpuFrame != null;
+    return AppBar(
+      automaticallyImplyLeading: false,
+      backgroundColor: background,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      toolbarHeight: 56,
+      titleSpacing: 0,
+      title: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 5),
+        child: Row(children: [
+          if (tool == null)
+            _headerButton('返回相册', Icons.arrow_back, enabled ? _leave : null)
+          else
+            Expanded(
+                child: Padding(
+              padding: const EdgeInsets.only(left: 10),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                SizedBox.square(
+                    dimension: 5,
+                    child: ColoredBox(
+                      color: tool == EditorTool.crop
+                          ? const Color(0xffd976d8)
+                          : const Color(0xff368ac8),
+                    )),
+                const SizedBox(width: 5),
+                Flexible(
+                    child: Text(tool.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 13))),
+              ]),
+            )),
+          if (tool == null) const Spacer(),
+          _headerButton(
+              '撤销', Icons.undo, enabled && s.canUndo ? _controller.undo : null),
+          if (tool == null && !_presetDraft)
+            _headerButton('编辑记录', Icons.layers_outlined,
+                enabled && s.doc != null ? _showRecords : null),
+          _headerButton(
+              '重做', Icons.redo, enabled && s.canRedo ? _controller.redo : null),
+          if (tool == null) const Spacer(),
+          Tooltip(
+            message: '按住对比',
+            child: Semantics(
+              button: true,
+              enabled: enabled && compare,
+              label: '对比原图',
+              value: _showOriginal ? '原图' : '编辑后',
+              onTap: enabled && compare ? () => _compare(!_showOriginal) : null,
+              child: Listener(
+                behavior: HitTestBehavior.opaque,
+                onPointerDown:
+                    enabled && compare ? (_) => _compare(true) : null,
+                onPointerUp: enabled && compare ? (_) => _compare(false) : null,
+                onPointerCancel:
+                    enabled && compare ? (_) => _compare(false) : null,
+                child: SizedBox.square(
+                    dimension: 44,
+                    child: Icon(
+                      Icons.compare_outlined,
+                      size: 21,
+                      color: compare
+                          ? context.palette.text
+                          : context.palette.muted,
+                    )),
+              ),
+            ),
+          ),
+          PopupMenuButton<String>(
+            tooltip: '更多',
+            enabled: enabled && s.doc != null,
+            icon: const Icon(Icons.more_vert, size: 21),
+            onSelected: _more,
+            itemBuilder: (_) => [
+              for (final label in [
+                if (tool == null && _tab == 0) '全部样式',
+                if (tool == null && !_presetDraft && _tab == 0) ...[
+                  '导入 LUT',
+                  '我的预设',
+                  if (s.recipe.lutId != null) '样式强度',
+                ],
+                if (tool == null &&
+                    !_presetDraft &&
+                    s.recipe.edits.processVersion == 1)
+                  '新版调色',
+                '存为方案',
+                '信息',
+                '画幅',
+                '导出',
+                '还原全部',
+              ])
+                PopupMenuItem(value: label, child: Text(label))
+            ],
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Future<void> _showRecords() => showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+              child: ConstrainedBox(
+            constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(context).height * .7),
+            child: SingleChildScrollView(child: _records(context)),
+          )));
+
   @override
   Widget build(BuildContext context) {
     final s = ref.watch(editorProvider(widget.mediaId));
-    final landscape =
-        MediaQuery.sizeOf(context).width > MediaQuery.sizeOf(context).height;
     final media = MediaQuery.sizeOf(context);
-    final height = (_tool == EditorTool.curves
-            ? media.height * .44
-            : _tool == null
-                ? media.height * .41
-                : media.height * .32)
-        .clamp(
-            _tool == EditorTool.curves ? 290.0 : 190.0,
-            _tool == EditorTool.curves
-                ? 400.0
-                : _tool == null
-                    ? 374.0
-                    : 318.0);
+    final landscape = media.width > media.height;
+    final background = Theme.of(context).brightness == Brightness.light
+        ? const Color(0xfff1f0ea)
+        : context.palette.background;
     return PopScope(
-        canPop: _allowPop,
-        onPopInvokedWithResult: (didPop, result) {
-          if (!didPop) _leave();
-        },
-        child: Scaffold(
-            backgroundColor: context.palette.background,
-            appBar: AppBar(
-                automaticallyImplyLeading: false,
-                leading: IconButton(
-                    tooltip: '返回相册',
-                    onPressed: s.exporting || _leaving ? null : _leave,
-                    icon: const Icon(Icons.chevron_left, size: 24)),
-                titleSpacing: 0,
-                title: Text(s.item?.displayName ?? '照片编辑',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12, letterSpacing: .7)),
-                actions: [
-                  Tooltip(
-                      message: '按住对比',
-                      child: Semantics(
-                          button: true,
-                          label: '对比原图',
-                          value: _showOriginal ? '原图' : '编辑后',
-                          onTap: () => _compare(!_showOriginal),
-                          child: Listener(
-                              onPointerDown: (_) => _compare(true),
-                              onPointerUp: (_) => _compare(false),
-                              onPointerCancel: (_) => _compare(false),
-                              child: SizedBox(
-                                  width: 44,
-                                  height: 44,
-                                  child: Icon(Icons.compare_outlined,
-                                      size: 21,
-                                      color: _showOriginal
-                                          ? context.palette.text
-                                          : context.palette.muted))))),
-                  PopupMenuButton<String>(
-                      tooltip: '更多',
-                      enabled: !s.exporting && !_leaving,
-                      icon: const Icon(Icons.more_horiz, size: 22),
-                      onSelected: _more,
-                      itemBuilder: (_) => [
-                            for (final label in [
-                              if (s.recipe.edits.processVersion == 1) '新版调色',
-                              '存为方案',
-                              '信息',
-                              '画幅',
-                              '导出',
-                              '还原全部'
-                            ])
-                              PopupMenuItem(value: label, child: Text(label))
-                          ]),
-                  Padding(
-                      padding: const EdgeInsets.only(right: 12),
-                      child: FilledButton(
-                          style: FilledButton.styleFrom(
-                              minimumSize: const Size(50, 36),
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 10)),
-                          onPressed: s.doc == null ||
-                                  (s.base == null &&
-                                      (s.gpuFrame == null ||
-                                          s.gpuSession?.closed != false)) ||
-                                  s.exporting ||
-                                  _leaving
-                              ? null
-                              : _export,
-                          child: Text(s.exporting ? '导出中…' : '导出',
-                              style: const TextStyle(fontSize: 12))))
-                ]),
-            body: s.layout == null
-                ? _loadingPhoto(s.error)
-                : SafeArea(
-                    top: false,
-                    child: AbsorbPointer(
-                        absorbing: s.exporting || _leaving,
-                        child: landscape
-                            ? Row(children: [
-                                Expanded(child: _photo(s)),
-                                SizedBox(
-                                    width: math.min(360, media.width * .47),
-                                    child: _workspace(s))
-                              ])
-                            : Column(children: [
-                                Expanded(child: _photo(s)),
-                                _status(s),
-                                AnimatedContainer(
-                                    duration:
-                                        WorkspaceMotion.duration(context, 180),
-                                    curve: Curves.easeOutCubic,
-                                    height: height,
-                                    child: _workspace(s))
-                              ])))));
+      canPop: _allowPop,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) _leave();
+      },
+      child: Scaffold(
+        backgroundColor: background,
+        appBar: _header(s, background),
+        body: SafeArea(
+          top: false,
+          child: AbsorbPointer(
+            absorbing: s.exporting || _leaving,
+            child: landscape
+                ? Row(children: [
+                    Expanded(child: _stage(s, overlayCurve: false)),
+                    SizedBox(
+                        width: math.min(370, media.width * .49),
+                        child: _workspace(s, overlayCurve: false)),
+                  ])
+                : Column(children: [
+                    Expanded(child: _stage(s, overlayCurve: true)),
+                    ConstrainedBox(
+                      constraints:
+                          BoxConstraints(maxHeight: media.height * .42),
+                      child: _workspace(s, overlayCurve: true),
+                    ),
+                  ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _stage(EditorState s, {required bool overlayCurve}) {
+    final curve =
+        overlayCurve && _tool == EditorTool.curves && s.layout != null;
+    return Stack(fit: StackFit.expand, children: [
+      Padding(
+        padding: EdgeInsets.only(bottom: curve ? 60 : 0),
+        child: s.layout == null ? _loadingPhoto(s.error) : _photo(s),
+      ),
+      if (curve) _curve(s, overlay: true),
+      if (_parametersOpen && _tool?.adjustments.isNotEmpty == true)
+        _parameterOverlay(s),
+    ]);
+  }
+
+  Widget _parameterOverlay(EditorState s) {
+    final adjustments = _tool!.adjustments;
+    final active = _activeAdjustment;
+    return Stack(fit: StackFit.expand, children: [
+      GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => setState(() => _parametersOpen = false),
+        child: TweenAnimationBuilder<Color?>(
+          tween: ColorTween(
+              begin: Colors.transparent, end: const Color(0x99111111)),
+          duration: WorkspaceMotion.duration(context, 100),
+          builder: (_, color, __) =>
+              ColoredBox(color: color ?? Colors.transparent),
+        ),
+      ),
+      Center(
+        child: SingleChildScrollView(
+          child: Material(
+            color: const Color(0xba171914),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              for (final a in adjustments)
+                Semantics(
+                  selected: a == active,
+                  child: InkWell(
+                    key: ValueKey(('editor-parameter', a)),
+                    onTap: () => setState(() {
+                      _activeAdjustment = a;
+                      _parametersOpen = false;
+                    }),
+                    child: Ink(
+                      color: a == active ? editorMarker : Colors.transparent,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: SizedBox(
+                            height: 41,
+                            child: Row(children: [
+                              Expanded(
+                                  child: Text(a.label,
+                                      style: TextStyle(
+                                          fontSize: 14,
+                                          color: a == active
+                                              ? const Color(0xff181a15)
+                                              : Colors.white))),
+                              Text(a.display(s.recipe.edits.value(a)),
+                                  style: TextStyle(
+                                      fontSize: 13,
+                                      fontFeatures: const [
+                                        FontFeature.tabularFigures()
+                                      ],
+                                      color: a == active
+                                          ? const Color(0xff181a15)
+                                          : Colors.white)),
+                            ])),
+                      ),
+                    ),
+                  ),
+                ),
+            ]),
+          ),
+        ),
+      ),
+    ]);
+  }
+
+  void _startParameterDrag(List<PhotoAdjustment> adjustments) {
+    _parameterDrag = 0;
+    _parameterStart = math.max(0, adjustments.indexOf(_activeAdjustment!));
+    setState(() => _parametersOpen = true);
+  }
+
+  void _updateParameterDrag(double delta, List<PhotoAdjustment> adjustments) {
+    _parameterDrag += delta;
+    final index = (_parameterStart + (_parameterDrag / 35).round())
+        .clamp(0, adjustments.length - 1);
+    if (_activeAdjustment != adjustments[index]) {
+      setState(() => _activeAdjustment = adjustments[index]);
+    }
   }
 
   void _requestDetail(EditorState s) {
@@ -543,7 +706,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
                   onChanged: (c) =>
                       _controller.setEdits(s.recipe.edits.copyWith(crop: c)),
                   child: photo)));
-    } else {
+    } else if (_tool == null) {
       photo = InteractiveViewer(
           key: _zoomKey,
           onInteractionStart: (_) => _detailTimer?.cancel(),
@@ -555,24 +718,43 @@ class _EditorPageState extends ConsumerState<EditorPage>
           transformationController: _zoom,
           minScale: 1,
           maxScale: 5,
-          panEnabled: _tool == null,
-          scaleEnabled: _tool == null,
           child: photo);
     }
+    final adjustments = _tool?.adjustments ?? const <PhotoAdjustment>[];
+    final canSwitch = adjustments.length > 1;
     return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+        padding: EdgeInsets.symmetric(horizontal: s.cropEditing ? 16 : 0),
         child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onLongPressStart: (_) => _compare(true),
             onLongPressEnd: (_) => _compare(false),
             onLongPressCancel: () => _compare(false),
-            onDoubleTap: () => _zoom.value = Matrix4.identity(),
+            onDoubleTap:
+                _tool == null ? () => _zoom.value = Matrix4.identity() : null,
+            onVerticalDragStart:
+                canSwitch ? (_) => _startParameterDrag(adjustments) : null,
+            onVerticalDragUpdate: canSwitch
+                ? (d) => _updateParameterDrag(d.delta.dy, adjustments)
+                : null,
+            onVerticalDragEnd: canSwitch
+                ? (_) => setState(() => _parametersOpen = false)
+                : null,
+            onVerticalDragCancel: canSwitch
+                ? () {
+                    if (_parametersOpen) {
+                      setState(() => _parametersOpen = false);
+                    }
+                  }
+                : null,
             onHorizontalDragStart: _tool?.adjustments.isNotEmpty == true
                 ? (d) {
                     _controller.beginGesture();
                     _photoDrag = 0;
-                    _dragValue = s.recipe.edits
-                        .value((_activeAdjustment ?? _tool!.adjustments.first));
+                    _dragValue = ref
+                        .read(editorProvider(widget.mediaId))
+                        .recipe
+                        .edits
+                        .value(_activeAdjustment ?? adjustments.first);
                   }
                 : null,
             onHorizontalDragUpdate: _tool?.adjustments.isNotEmpty == true
@@ -612,97 +794,153 @@ class _EditorPageState extends ConsumerState<EditorPage>
             ])));
   }
 
-  Widget _status(EditorState s) => SizedBox(
-      height: 40,
-      child: Row(children: [
-        const SizedBox(width: 12),
-        IconButton(
-            tooltip: '撤销',
-            icon: const Icon(Icons.undo, size: 18),
-            onPressed: s.canUndo && !s.exporting ? _controller.undo : null),
-        IconButton(
-            tooltip: '重做',
-            icon: const Icon(Icons.redo, size: 18),
-            onPressed: s.canRedo && !s.exporting ? _controller.redo : null),
-        Expanded(
-            child: GestureDetector(
-                onTap: s.error == null && s.saveError == null
-                    ? null
-                    : () {
-                        if (s.saveError != null) _controller.retrySave();
-                        if (s.error != null) {
-                          if (s.gpuSession != null ||
-                              ref.read(gpuEditorProvider) != null) {
-                            _controller.recoverPreview();
-                          } else {
-                            _controller.regrade();
-                          }
-                        }
-                      },
-                child: Text(s.saveError ?? s.error ?? '',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: s.error == null && s.saveError == null
-                            ? context.palette.muted
-                            : context.palette.danger)))),
-        IconButton(
-            tooltip: '重置当前工具',
-            icon: const Icon(Icons.restart_alt, size: 19),
-            onPressed: _tool == null ||
-                    _tool == EditorTool.processVersion ||
-                    s.exporting
-                ? null
-                : _resetTool),
-        const SizedBox(width: 12)
-      ]));
+  Widget _errorStatus(EditorState s) => TextButton(
+      onPressed: () {
+        if (s.saveError != null) _controller.retrySave();
+        if (s.error != null) {
+          if (s.gpuSession != null || ref.read(gpuEditorProvider) != null) {
+            _controller.recoverPreview();
+          } else {
+            _controller.regrade();
+          }
+        }
+      },
+      child: Text(s.saveError ?? s.error ?? '',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 11, color: context.palette.danger)));
 
-  Widget _workspace(EditorState s) {
+  Widget _workspace(EditorState s, {required bool overlayCurve}) {
     final tool = _tool;
-    return ColoredBox(
-        color: context.palette.raised,
-        child: Column(children: [
-          if (MediaQuery.sizeOf(context).width >
-              MediaQuery.sizeOf(context).height)
-            _status(s),
-          Expanded(
-              child: SingleChildScrollView(
-                  key: ValueKey(tool),
-                  child: AnimatedSwitcher(
-                      duration: WorkspaceMotion.duration(context, 160),
-                      child: tool == null
-                          ? _tab == 0
-                              ? _studioPresets(s)
-                              : _tab == 2
-                                  ? _records(s)
-                                  : EditorTools(
-                                      key: const ValueKey('editor-tools'),
-                                      onSelected: _open,
-                                      changed: (t) => _changed(t, s))
-                          : _panel(tool, s)))),
-          SizedBox(
-              height: 53,
-              child: tool == null && !_presetDraft
-                  ? _mainNavigation()
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                          IconButton(
-                              tooltip: '取消调整',
-                              onPressed: () => _finish(cancel: true),
-                              icon: const Icon(Icons.close, size: 21)),
-                          Text(_presetDraft ? "预设" : tool!.label,
-                              style: TextStyle(
-                                  fontSize: 13, color: context.palette.muted)),
-                          IconButton(
-                              tooltip: '完成调整',
-                              onPressed: () => _finish(),
-                              icon: const Icon(Icons.check, size: 21))
-                        ]))
-        ]));
+    final panel =
+        s.layout == null || (tool == EditorTool.curves && overlayCurve)
+            ? const SizedBox.shrink()
+            : tool == null
+                ? _tab == 0
+                    ? _studioPresets(s)
+                    : EditorTools(
+                        key: const ValueKey('editor-tools'),
+                        onSelected: _open,
+                        changed: (t) => _changed(t, s))
+                : _panel(tool, s);
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      if (s.layout != null && (s.saveError != null || s.error != null))
+        _errorStatus(s),
+      Flexible(
+        child: tool == EditorTool.curves && !overlayCurve
+            ? panel
+            : SingleChildScrollView(
+                key: ValueKey((tool, tool == null ? _tab : null)),
+                child: panel,
+              ),
+      ),
+      if (tool == null && !_presetDraft) _mainNavigation(s) else _confirmBar(s),
+    ]);
   }
+
+  Widget _confirmAction(String label, IconData icon, VoidCallback onTap,
+          {String? tooltip, bool selected = false}) =>
+      Tooltip(
+          message: tooltip ?? label,
+          child: InkWell(
+            onTap: onTap,
+            child: Container(
+              constraints: const BoxConstraints(minWidth: 46, minHeight: 44),
+              decoration: BoxDecoration(
+                color: selected ? context.palette.divider : Colors.transparent,
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(icon, size: 20),
+                    const SizedBox(height: 3),
+                    Text(label,
+                        maxLines: 1,
+                        style: const TextStyle(fontSize: 11, height: 1)),
+                  ]),
+            ),
+          ));
+
+  Widget _confirmBar(EditorState s) {
+    final tool = _tool;
+    final crop = s.recipe.edits.crop;
+    void updateCrop(CropEdit value) {
+      _controller.beginGesture();
+      _controller.setEdits(ref
+          .read(editorProvider(widget.mediaId))
+          .recipe
+          .edits
+          .copyWith(crop: value));
+      _controller.endGesture();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(7, 0, 7, 5),
+      child: SizedBox(
+          height: 49,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _headerButton('取消调整', Icons.close, () => _finish(cancel: true)),
+              if (_presetDraft)
+                _confirmAction('强度', Icons.tune, () {
+                  setState(() => _presetStrength = !_presetStrength);
+                }, selected: _presetStrength)
+              else if (tool != EditorTool.processVersion)
+                _confirmAction('重置', Icons.restart_alt, _resetTool,
+                    tooltip: '重置当前工具'),
+              if (tool == EditorTool.crop) ...[
+                PopupMenuButton<String>(
+                  tooltip: '翻转',
+                  onSelected: (axis) => updateCrop(axis == '水平翻转'
+                      ? crop.copyWith(flipX: !crop.flipX)
+                      : crop.copyWith(flipY: !crop.flipY)),
+                  itemBuilder: (_) => [
+                    CheckedPopupMenuItem(
+                        value: '水平翻转',
+                        checked: crop.flipX,
+                        child: const Text('水平翻转')),
+                    CheckedPopupMenuItem(
+                        value: '垂直翻转',
+                        checked: crop.flipY,
+                        child: const Text('垂直翻转')),
+                  ],
+                  child: const SizedBox(
+                    width: 46,
+                    height: 44,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.flip, size: 20),
+                        SizedBox(height: 3),
+                        Text('翻转',
+                            maxLines: 1,
+                            style: TextStyle(fontSize: 11, height: 1)),
+                      ],
+                    ),
+                  ),
+                ),
+                _confirmAction('旋转', Icons.rotate_right,
+                    () => updateCrop(rotateCrop(crop)),
+                    tooltip: '向右旋转90°'),
+              ],
+              _headerButton('完成调整', Icons.check, _finish),
+            ],
+          )),
+    );
+  }
+
+  Widget _curve(EditorState s, {required bool overlay}) => CurvePanel(
+      edits: s.recipe.edits,
+      histogramSource: s.graded,
+      histogramBins: s.histogram,
+      overlay: overlay,
+      showOriginal: _showOriginal,
+      onChanged: _controller.setEdits,
+      onStart: _controller.beginGesture,
+      onEnd: _controller.endGesture);
 
   Widget _panel(EditorTool tool, EditorState s) {
     if (tool.adjustments.isNotEmpty) {
@@ -731,7 +969,9 @@ class _EditorPageState extends ConsumerState<EditorPage>
             edits: s.recipe.edits,
             adjustments: tool.adjustments,
             onChanged: _controller.setEdits,
-            onActiveChanged: (a) => _activeAdjustment = a,
+            activeAdjustment: _activeAdjustment,
+            onOpenParameters: () =>
+                setState(() => _parametersOpen = !_parametersOpen),
             onStart: _controller.beginGesture,
             onEnd: _controller.endGesture)
       ]);
@@ -751,16 +991,11 @@ class _EditorPageState extends ConsumerState<EditorPage>
                     .copyWith(processVersion: v)),
                 note: '保留现有参数，确认后可撤销'));
       case EditorTool.curves:
-        return CurvePanel(
-            edits: s.recipe.edits,
-            histogramSource: s.graded,
-            histogramBins: s.histogram,
-            onChanged: _controller.setEdits,
-            onStart: _controller.beginGesture,
-            onEnd: _controller.endGesture);
+        return _curve(s, overlay: false);
       case EditorTool.crop:
         return CropPanel(
             crop: s.recipe.edits.crop,
+            showTransforms: false,
             sourceWidth: s.meta!.orientedWidth,
             sourceHeight: s.meta!.orientedHeight,
             onChanged: (c) => _controller.setEdits(ref
@@ -883,6 +1118,26 @@ class _EditorPageState extends ConsumerState<EditorPage>
   void _notice(String text) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   Future<void> _more(String action) async {
+    if (action == '全部样式') {
+      await _showStyleLibrary();
+      return;
+    }
+    if (action == '导入 LUT') {
+      await _importLut();
+      return;
+    }
+    if (action == '我的预设') {
+      await _presets();
+      return;
+    }
+    if (action == '样式强度') {
+      _controller.beginTool();
+      setState(() {
+        _presetDraft = true;
+        _presetStrength = true;
+      });
+      return;
+    }
     if (action == '新版调色') {
       _open(EditorTool.processVersion);
       return;
@@ -918,8 +1173,14 @@ class _EditorPageState extends ConsumerState<EditorPage>
                     Padding(
                         padding: const EdgeInsets.fromLTRB(20, 10, 8, 0),
                         child: Row(children: [
-                          Text(action),
-                          const Spacer(),
+                          if (action == '信息' && s.item != null)
+                            Expanded(
+                                child: Text(s.item!.displayName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis))
+                          else
+                            Text(action),
+                          if (action != '信息' || s.item == null) const Spacer(),
                           IconButton(
                               tooltip: '关闭',
                               onPressed: () => Navigator.pop(context),
@@ -940,6 +1201,44 @@ class _EditorPageState extends ConsumerState<EditorPage>
                   ]);
                 }))));
   }
+
+  Future<void> _showStyleLibrary() => showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        builder: (sheetContext) => SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(sheetContext).height * .75,
+            ),
+            child: Consumer(builder: (context, ref, _) {
+              final s = ref.watch(editorProvider(widget.mediaId));
+              return SingleChildScrollView(
+                child: LutPicker(
+                  grid: true,
+                  showStrength: false,
+                  source: s.base,
+                  gpuSession: s.gpuSession,
+                  edits: s.recipe.edits,
+                  entries: s.luts,
+                  selected: s.recipe.lutId,
+                  strength: s.recipe.strength,
+                  onSelected: (id) {
+                    Navigator.of(sheetContext).pop();
+                    _selectPreset(id);
+                  },
+                  onStrength: _controller.setStrength,
+                  onStart: _controller.beginGesture,
+                  onEnd: _controller.endGesture,
+                  onImport: () {
+                    Navigator.of(sheetContext).pop();
+                    _importLut();
+                  },
+                ),
+              );
+            }),
+          ),
+        ),
+      );
 
   Future<void> _presets() async {
     final presets = await ref.read(darkroomStoreProvider).presets();

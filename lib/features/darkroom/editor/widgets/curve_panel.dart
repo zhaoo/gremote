@@ -16,12 +16,15 @@ class CurvePanel extends StatefulWidget {
       required this.onEnd,
       this.histogramSource,
       this.histogramBins,
+      this.overlay = false,
+      this.showOriginal = false,
       super.key});
   final PhotoEdits edits;
   final ValueChanged<PhotoEdits> onChanged;
   final VoidCallback onStart, onEnd;
   final PreviewImage? histogramSource;
   final List<List<double>>? histogramBins;
+  final bool overlay, showOriginal;
   @override
   State<CurvePanel> createState() => _CurvePanelState();
 }
@@ -35,6 +38,28 @@ class _CurvePanelState extends State<CurvePanel> {
   bool _histogramBusy = false;
   List<List<double>>? _histogram;
   static const _names = ['RGB', 'R', 'G', 'B'];
+  static const _labels = ['RGB', '红色', '绿色', '蓝色'];
+  static const _dots = [
+    Color(0xff888b81),
+    Color(0xffc7443b),
+    Color(0xff2c9761),
+    Color(0xff2866b0)
+  ];
+  static const _presets = <String, List<CurvePoint>>{
+    '线性': [CurvePoint(0, 0), CurvePoint(1, 1)],
+    '柔和': [
+      CurvePoint(0, .06),
+      CurvePoint(.25, .28),
+      CurvePoint(.75, .73),
+      CurvePoint(1, .96)
+    ],
+    '对比': [
+      CurvePoint(0, 0),
+      CurvePoint(.25, .18),
+      CurvePoint(.75, .82),
+      CurvePoint(1, 1)
+    ],
+  };
   static const _colors = [
     Colors.white,
     Color(0xfff18a87),
@@ -204,148 +229,194 @@ class _CurvePanelState extends State<CurvePanel> {
     _transaction(ToneCurve.fromPoints(points));
   }
 
+  void _selectChannel(int i) => setState(() {
+        _channel = i;
+        _selected = null;
+        _localCurve = null;
+      });
+
+  void _applyPreset(String name) {
+    setState(() => _selected = null);
+    _transaction(ToneCurve.fromPoints(_presets[name]!));
+  }
+
+  void _removePoint() {
+    final index = _selected;
+    if (index == null || index == 0 || index >= _curve.points.length - 1) {
+      return;
+    }
+    final points = [..._curve.points]..removeAt(index);
+    setState(() => _selected = null);
+    _transaction(ToneCurve.fromPoints(points));
+  }
+
+  Widget _graph() => LayoutBuilder(builder: (context, constraints) {
+        final size = constraints.biggest;
+        final selected = _selected;
+        return Semantics(
+            increasedValue: selected == null ? null : '提高输出',
+            decreasedValue: selected == null ? null : '降低输出',
+            label: '${_names[_channel]}曲线，点击添加控制点，拖动调整',
+            value: selected != null && selected < _curve.points.length
+                ? '输入${(_curve.points[selected].x * 255).round()}，输出${(_curve.points[selected].y * 255).round()}'
+                : null,
+            onIncrease: selected == null ? null : () => _nudge(.02),
+            onDecrease: selected == null ? null : () => _nudge(-.02),
+            child: RawGestureDetector(
+                key: const ValueKey('curve-graph'),
+                behavior: HitTestBehavior.opaque,
+                gestures: {
+                  _CurvePanGestureRecognizer:
+                      GestureRecognizerFactoryWithHandlers<
+                          _CurvePanGestureRecognizer>(
+                    _CurvePanGestureRecognizer.new,
+                    (recognizer) => recognizer
+                      ..dragStartBehavior = DragStartBehavior.down
+                      ..onStart =
+                          ((d) => _begin(d.localPosition, size, drag: true))
+                      ..onUpdate = ((d) => _move(d.localPosition, size))
+                      ..onEnd = ((_) => _end())
+                      ..onCancel = _end,
+                  ),
+                },
+                child: RepaintBoundary(
+                    child: CustomPaint(
+                        painter: _CurvePainter(
+                            _curve,
+                            _channelColor(context, _channel),
+                            _selected,
+                            _histogram?[_channel],
+                            context.palette,
+                            overlay: widget.overlay)))));
+      });
+
+  Widget _channels(BuildContext context) {
+    final removable = _selected != null &&
+        _selected! > 0 &&
+        _selected! < _curve.points.length - 1;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 2, 8, 0),
+      child: Row(children: [
+        for (var i = 0; i < 4; i++)
+          Expanded(
+              child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 3),
+            child: Semantics(
+              selected: i == _channel,
+              button: true,
+              label: '${_names[i]}通道',
+              child: InkWell(
+                onTap: () => _selectChannel(i),
+                child: Container(
+                  height: 58,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(2),
+                    border: Border.all(
+                        color: i == _channel
+                            ? context.palette.text
+                            : Colors.transparent),
+                  ),
+                  child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        DecoratedBox(
+                            decoration: BoxDecoration(
+                                color: _dots[i], shape: BoxShape.circle),
+                            child: const SizedBox(width: 22, height: 22)),
+                        const SizedBox(height: 4),
+                        Text(_labels[i],
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                color: context.palette.text,
+                                fontSize: 11,
+                                height: 1)),
+                      ]),
+                ),
+              ),
+            ),
+          )),
+        PopupMenuButton<String>(
+          tooltip: '曲线选项',
+          icon: const Icon(Icons.more_horiz, size: 20),
+          onSelected: (action) {
+            switch (action) {
+              case '坐标':
+                _coordinates();
+              case '删除控制点':
+                _removePoint();
+              case '还原当前通道':
+                _applyPreset('线性');
+              default:
+                _applyPreset(action);
+            }
+          },
+          itemBuilder: (_) => [
+            for (final name in _presets.keys)
+              PopupMenuItem(value: name, child: Text(name)),
+            const PopupMenuDivider(),
+            const PopupMenuItem(value: '还原当前通道', child: Text('还原当前通道')),
+            PopupMenuItem(
+                value: '坐标',
+                enabled: _selected != null && _selected! < _curve.points.length,
+                child: const Text('精确坐标')),
+            PopupMenuItem(
+                value: '删除控制点', enabled: removable, child: const Text('删除控制点')),
+          ],
+        ),
+      ]),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (widget.overlay) {
+      return Column(children: [
+        Expanded(child: LayoutBuilder(builder: (context, box) {
+          final side = math.min(box.maxWidth, box.maxHeight);
+          if (side < 48) return const SizedBox.shrink();
+          return Align(
+            alignment: Alignment.bottomCenter,
+            child: IgnorePointer(
+              ignoring: widget.showOriginal,
+              child: Opacity(
+                opacity: widget.showOriginal ? 0 : 1,
+                child: SizedBox.square(dimension: side, child: _graph()),
+              ),
+            ),
+          );
+        })),
+        _channels(context),
+      ]);
+    }
     final selected = _selected;
     final removable =
         selected != null && selected > 0 && selected < _curve.points.length - 1;
     return SingleChildScrollView(
-        child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                for (var i = 0; i < 4; i++)
-                  Semantics(
-                      selected: i == _channel,
-                      button: true,
-                      label: '${_names[i]}通道',
-                      child: IconButton(
-                          onPressed: () => setState(() {
-                                _channel = i;
-                                _selected = null;
-                                _localCurve = null;
-                              }),
-                          icon: Container(
-                              width: 28,
-                              height: 28,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: i == _channel
-                                      ? _channelColor(context, i)
-                                      : Colors.transparent,
-                                  border: Border.all(
-                                      color: _channelColor(context, i)
-                                          .withOpacity(
-                                              i == _channel ? 1 : .35))),
-                              child: Text(_names[i],
-                                  style: TextStyle(
-                                      fontSize: i == 0 ? 9 : 11,
-                                      color: i == _channel
-                                          ? (_channelColor(context, i)
-                                                      .computeLuminance() >
-                                                  .179
-                                              ? Colors.black
-                                              : Colors.white)
-                                          : _channelColor(context, i)))))),
-                IconButton(
-                    tooltip: '还原当前通道',
-                    onPressed: () {
-                      setState(() => _selected = null);
-                      _transaction(const ToneCurve());
-                    },
-                    icon: const Icon(Icons.restart_alt, size: 18)),
-              ]),
-              AspectRatio(
-                  aspectRatio: 1.65,
-                  child: LayoutBuilder(builder: (context, constraints) {
-                    final size = constraints.biggest;
-                    return Semantics(
-                        increasedValue: selected == null ? null : '提高输出',
-                        decreasedValue: selected == null ? null : '降低输出',
-                        label: '${_names[_channel]}曲线，点击添加控制点，拖动调整',
-                        value: selected != null &&
-                                selected < _curve.points.length
-                            ? '输入${(_curve.points[selected].x * 255).round()}，输出${(_curve.points[selected].y * 255).round()}'
-                            : null,
-                        onIncrease: selected == null ? null : () => _nudge(.02),
-                        onDecrease:
-                            selected == null ? null : () => _nudge(-.02),
-                        child: RawGestureDetector(
-                            key: const ValueKey('curve-graph'),
-                            behavior: HitTestBehavior.opaque,
-                            gestures: {
-                              _CurvePanGestureRecognizer:
-                                  GestureRecognizerFactoryWithHandlers<
-                                      _CurvePanGestureRecognizer>(
-                                _CurvePanGestureRecognizer.new,
-                                (recognizer) => recognizer
-                                  ..dragStartBehavior = DragStartBehavior.down
-                                  ..onStart = ((d) =>
-                                      _begin(d.localPosition, size, drag: true))
-                                  ..onUpdate =
-                                      ((d) => _move(d.localPosition, size))
-                                  ..onEnd = ((_) => _end())
-                                  ..onCancel = _end,
-                              ),
-                            },
-                            child: RepaintBoundary(
-                                child: CustomPaint(
-                                    painter: _CurvePainter(
-                                        _curve,
-                                        _channelColor(context, _channel),
-                                        _selected,
-                                        _histogram?[_channel],
-                                        context.palette)))));
-                  })),
-              Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    for (final entry in <String, List<CurvePoint>>{
-                      '线性': const [CurvePoint(0, 0), CurvePoint(1, 1)],
-                      '柔和': const [
-                        CurvePoint(0, .06),
-                        CurvePoint(.25, .28),
-                        CurvePoint(.75, .73),
-                        CurvePoint(1, .96)
-                      ],
-                      '对比': const [
-                        CurvePoint(0, 0),
-                        CurvePoint(.25, .18),
-                        CurvePoint(.75, .82),
-                        CurvePoint(1, 1)
-                      ]
-                    }.entries)
-                      TextButton(
-                          onPressed: () {
-                            setState(() => _selected = null);
-                            _transaction(ToneCurve.fromPoints(entry.value));
-                          },
-                          child: Text(entry.key)),
-                    TextButton(
-                        onPressed: removable
-                            ? () {
-                                final points = [..._curve.points]
-                                  ..removeAt(selected);
-                                setState(() => _selected = null);
-                                _transaction(ToneCurve.fromPoints(points));
-                              }
-                            : null,
-                        child: const Text('删除控制点')),
-                  ]),
-              if (selected != null)
-                TextButton(
-                    key: const ValueKey('curve-coordinates'),
-                    onPressed: _coordinates,
-                    child: Text(
-                        selected < _curve.points.length
-                            ? '输入 ${(_curve.points[selected].x * 255).round()}    输出 ${(_curve.points[selected].y * 255).round()}'
-                            : '输入 —    输出 —',
-                        style: TextStyle(
-                            fontSize: 11, color: context.palette.muted))),
-            ])));
+      padding: const EdgeInsets.all(12),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        _channels(context),
+        AspectRatio(aspectRatio: 1.65, child: _graph()),
+        Wrap(alignment: WrapAlignment.center, children: [
+          for (final name in _presets.keys)
+            TextButton(onPressed: () => _applyPreset(name), child: Text(name)),
+          TextButton(
+              onPressed: removable ? _removePoint : null,
+              child: const Text('删除控制点')),
+        ]),
+        if (selected != null)
+          TextButton(
+            key: const ValueKey('curve-coordinates'),
+            onPressed: _coordinates,
+            child: Text(
+              selected < _curve.points.length
+                  ? '输入 ${(_curve.points[selected].x * 255).round()}    输出 ${(_curve.points[selected].y * 255).round()}'
+                  : '输入 —    输出 —',
+              style: TextStyle(fontSize: 11, color: context.palette.muted),
+            ),
+          ),
+      ]),
+    );
   }
 }
 
@@ -362,7 +433,9 @@ class _CurvePanGestureRecognizer extends PanGestureRecognizer {
 
 class _CurvePainter extends CustomPainter {
   const _CurvePainter(
-      this.curve, this.color, this.selected, this.histogram, this.palette);
+      this.curve, this.color, this.selected, this.histogram, this.palette,
+      {required this.overlay});
+  final bool overlay;
   final AppPalette palette;
   final ToneCurve curve;
   final Color color;
@@ -371,7 +444,7 @@ class _CurvePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Rect.fromLTWH(16, 16, size.width - 32, size.height - 32);
-    canvas.drawRect(rect, Paint()..color = palette.raised);
+    if (!overlay) canvas.drawRect(rect, Paint()..color = palette.raised);
     final bins = histogram;
     if (bins != null) {
       final peak = bins.fold<double>(0, math.max);
@@ -383,11 +456,12 @@ class _CurvePainter extends CustomPainter {
         }
         path.lineTo(rect.right, rect.bottom);
         path.close();
-        canvas.drawPath(path, Paint()..color = color.withOpacity(.14));
+        canvas.drawPath(
+            path, Paint()..color = color.withOpacity(overlay ? .24 : .14));
       }
     }
     final grid = Paint()
-      ..color = palette.divider
+      ..color = overlay ? const Color(0x889e9f92) : palette.divider
       ..strokeWidth = 1;
     for (var i = 0; i <= 4; i++) {
       final f = i / 4;
@@ -407,6 +481,14 @@ class _CurvePainter extends CustomPainter {
         path.lineTo(x, y);
       }
     }
+    if (overlay) {
+      canvas.drawPath(
+          path,
+          Paint()
+            ..color = const Color(0x99f8f8f1)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 3.4);
+    }
     canvas.drawPath(
         path,
         Paint()
@@ -418,12 +500,14 @@ class _CurvePainter extends CustomPainter {
           offset = Offset(
               rect.left + p.x * rect.width, rect.bottom - p.y * rect.height);
       canvas.drawCircle(offset, i == selected ? 7 : 5, Paint()..color = color);
-      canvas.drawCircle(offset, 2.5, Paint()..color = palette.raised);
+      canvas.drawCircle(offset, overlay ? (i == selected ? 5 : 3.5) : 2.5,
+          Paint()..color = overlay ? const Color(0xfff8f8f1) : palette.raised);
     }
   }
 
   @override
   bool shouldRepaint(_CurvePainter oldDelegate) =>
+      oldDelegate.overlay != overlay ||
       oldDelegate.palette != palette ||
       oldDelegate.curve != curve ||
       oldDelegate.color != color ||

@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_palette.dart';
 import '../../../../darkroom/model/photo_edits.dart';
-import '../../../../app/widgets/workspace_motion.dart';
+import 'editor_ruler.dart';
 
 class CropPanel extends StatefulWidget {
   const CropPanel(
@@ -12,9 +12,11 @@ class CropPanel extends StatefulWidget {
       required this.onChanged,
       required this.onStart,
       required this.onEnd,
+      this.showTransforms = true,
       super.key});
   final CropEdit crop;
   final int sourceWidth, sourceHeight;
+  final bool showTransforms;
   final ValueChanged<CropEdit> onChanged;
   final VoidCallback onStart, onEnd;
   @override
@@ -59,11 +61,11 @@ class _CropPanelState extends State<CropPanel> {
           ? widget.sourceHeight / math.max(1, widget.sourceWidth)
           : widget.sourceWidth / math.max(1, widget.sourceHeight),
       '1:1': 1,
-      '4:3': 4 / 3,
-      '3:4': 3 / 4,
       '3:2': 3 / 2,
-      '2:3': 2 / 3,
+      '4:3': 4 / 3,
       '16:9': 16 / 9,
+      '3:4': 3 / 4,
+      '2:3': 2 / 3,
       '9:16': 9 / 16
     };
     final selected = c.aspectRatio == 0
@@ -76,75 +78,122 @@ class _CropPanelState extends State<CropPanel> {
                     e.value != null && (e.value! - c.aspectRatio).abs() < .0001)
                 .map((e) => e.key)
                 .firstOrNull;
-    return Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              alignment: WrapAlignment.center,
-              children: [
-                for (final ratio in ratios.entries)
-                  ChoiceChip(
-                      label: Text(ratio.key),
-                      selected: selected == ratio.key,
-                      onSelected: (_) => _ratio(ratio.key, ratio.value),
-                      showCheckmark: false,
-                      labelStyle: TextStyle(
-                          fontSize: 12,
-                          color: selected == ratio.key
-                              ? context.palette.onAccent
-                              : context.palette.muted),
-                      selectedColor: context.palette.accent,
-                      backgroundColor: context.palette.raised,
-                      visualDensity: VisualDensity.compact,
-                      chipAnimationStyle: ChipAnimationStyle(
-                          selectAnimation: AnimationStyle(
-                              duration:
-                                  WorkspaceMotion.duration(context, 130)))),
-              ]),
-          const SizedBox(height: 8),
-          Wrap(spacing: 12, alignment: WrapAlignment.center, children: [
-            IconButton(
-                tooltip: '向右旋转90°',
-                icon: const Icon(Icons.rotate_90_degrees_cw),
-                onPressed: () {
-                  setState(() => _selected = '自由');
-                  _apply(c.copyWith(
-                      quarterTurns: c.quarterTurns + 1,
-                      left: 0,
-                      top: 0,
-                      width: 1,
-                      height: 1,
-                      aspectRatio: 0));
-                }),
-            IconButton(
-                tooltip: '水平翻转',
-                isSelected: c.flipX,
-                icon: const Icon(Icons.flip),
-                onPressed: () => _apply(c.copyWith(flipX: !c.flipX))),
-            IconButton(
-                tooltip: '垂直翻转',
-                isSelected: c.flipY,
-                icon:
-                    const RotatedBox(quarterTurns: 1, child: Icon(Icons.flip)),
-                onPressed: () => _apply(c.copyWith(flipY: !c.flipY))),
-          ]),
-          Text('校正  ${c.angle > 0 ? '+' : ''}${c.angle.toStringAsFixed(1)}°',
-              style: TextStyle(fontSize: 13, color: context.palette.muted)),
-          Slider(
-              value: c.angle,
-              min: -45,
-              max: 45,
-              label: '${c.angle.toStringAsFixed(1)}°',
-              activeColor: context.palette.accent,
-              semanticFormatterCallback: (v) => '${v.toStringAsFixed(1)}度',
-              onChangeStart: (_) => widget.onStart(),
-              onChanged: (v) => widget.onChanged(c.copyWith(angle: v)),
-              onChangeEnd: (_) => widget.onEnd()),
-        ]));
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(children: [
+          SizedBox(
+            height: 38,
+            child: Stack(alignment: Alignment.center, children: [
+              const Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text('角度', style: TextStyle(fontSize: 13))),
+              Text('${c.angle.toStringAsFixed(2)}°',
+                  style: const TextStyle(
+                      fontSize: 13,
+                      fontFeatures: [FontFeature.tabularFigures()])),
+            ]),
+          ),
+          EditorRuler(
+            value: c.angle,
+            min: -45,
+            max: 45,
+            format: (v) => '${v.toStringAsFixed(2)}度',
+            onStart: widget.onStart,
+            onEnd: widget.onEnd,
+            onChanged: (v) => widget.onChanged(widget.crop.copyWith(angle: v)),
+          ),
+        ]),
+      ),
+      SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: Row(children: [
+          for (final ratio in ratios.entries)
+            Semantics(
+              button: true,
+              selected: selected == ratio.key,
+              child: InkWell(
+                onTap: () => _ratio(ratio.key, ratio.value),
+                child: SizedBox(
+                    width: 65,
+                    height: 70,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 36,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(2),
+                            border: Border.all(
+                                color: selected == ratio.key
+                                    ? context.palette.text
+                                    : Colors.transparent),
+                          ),
+                          child: switch (ratio.key) {
+                            '自由' => const Icon(Icons.crop_free, size: 21),
+                            '原始' => const Icon(Icons.image_outlined, size: 21),
+                            _ => Container(
+                                width: 20 * math.min(1.0, ratio.value!),
+                                height: 20 / math.max(1.0, ratio.value!),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(2),
+                                  border: Border.all(
+                                      color: context.palette.text, width: 1.7),
+                                ),
+                              ),
+                          },
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.showTransforms
+                              ? ratio.key
+                              : switch (ratio.key) {
+                                  '1:1' => '正方形',
+                                  '原始' => '原图',
+                                  _ => ratio.key,
+                                },
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 11, height: 1),
+                        ),
+                      ],
+                    )),
+              ),
+            ),
+        ]),
+      ),
+      if (widget.showTransforms)
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          IconButton(
+              tooltip: '向右旋转90°',
+              icon: const Icon(Icons.rotate_right),
+              onPressed: () => _apply(rotateCrop(c))),
+          IconButton(
+              tooltip: '水平翻转',
+              isSelected: c.flipX,
+              icon: const Icon(Icons.flip),
+              onPressed: () => _apply(c.copyWith(flipX: !c.flipX))),
+          IconButton(
+              tooltip: '垂直翻转',
+              isSelected: c.flipY,
+              icon: const RotatedBox(quarterTurns: 1, child: Icon(Icons.flip)),
+              onPressed: () => _apply(c.copyWith(flipY: !c.flipY))),
+        ]),
+    ]);
   }
 }
+
+CropEdit rotateCrop(CropEdit crop) => crop.copyWith(
+      quarterTurns: crop.quarterTurns + 1,
+      left: 0,
+      top: 0,
+      width: 1,
+      height: 1,
+      aspectRatio: 0,
+    );
 
 /// Positioned over the uncropped, rotated image. Coordinates stay normalized.
 class CropSelection extends StatefulWidget {
@@ -246,7 +295,13 @@ class _CropSelectionState extends State<CropSelection> {
             clipBehavior: Clip.hardEdge,
             children: [
               widget.child,
-              IgnorePointer(child: CustomPaint(painter: _CropPainter(rect))),
+              IgnorePointer(
+                  child: CustomPaint(
+                      painter: _CropPainter(
+                          rect,
+                          Theme.of(context).brightness == Brightness.light
+                              ? const Color(0x75e7e7df)
+                              : Colors.black45))),
               Positioned.fromRect(
                   rect: rect,
                   child: _gesture(
@@ -275,7 +330,8 @@ class _CropSelectionState extends State<CropSelection> {
 }
 
 class _CropPainter extends CustomPainter {
-  const _CropPainter(this.rect);
+  const _CropPainter(this.rect, this.shade);
+  final Color shade;
   final Rect rect;
   @override
   void paint(Canvas canvas, Size size) {
@@ -284,20 +340,12 @@ class _CropPainter extends CustomPainter {
           ..fillType = PathFillType.evenOdd
           ..addRect(Offset.zero & size)
           ..addRect(rect),
-        Paint()..color = Colors.black45);
+        Paint()..color = shade);
     final line = Paint()
       ..color = Colors.white70
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
     canvas.drawRect(rect, line);
-    for (var i = 1; i < 3; i++) {
-      canvas.drawLine(
-          Offset(rect.left + rect.width * i / 3, rect.top),
-          Offset(rect.left + rect.width * i / 3, rect.bottom),
-          line..color = Colors.white38);
-      canvas.drawLine(Offset(rect.left, rect.top + rect.height * i / 3),
-          Offset(rect.right, rect.top + rect.height * i / 3), line);
-    }
     line
       ..color = Colors.white
       ..strokeWidth = 3;
@@ -314,5 +362,6 @@ class _CropPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_CropPainter oldDelegate) => oldDelegate.rect != rect;
+  bool shouldRepaint(_CropPainter oldDelegate) =>
+      oldDelegate.rect != rect || oldDelegate.shade != shade;
 }

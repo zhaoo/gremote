@@ -10,9 +10,17 @@ class ShootTopBar extends StatelessWidget {
       required this.onSettings,
       required this.recipeDetached,
       super.key});
-  final String exposureMode;
+  final String? exposureMode;
   final VoidCallback onBack, onRecipe, onSettings;
   final bool recipeDetached;
+
+  static final _buttonStyle = IconButton.styleFrom(
+    minimumSize: const Size(44, 48),
+    maximumSize: const Size(44, 48),
+    padding: EdgeInsets.zero,
+    visualDensity: VisualDensity.standard,
+    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+  );
 
   @override
   Widget build(BuildContext context) => SizedBox(
@@ -24,21 +32,24 @@ class ShootTopBar extends StatelessWidget {
                   onPressed: onBack,
                   tooltip: '返回首页',
                   icon: const Icon(Icons.chevron_left, size: 23)),
-              const Expanded(
-                  child: Text('GR III',
-                      maxLines: 1,
-                      style: TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w500))),
-              Flexible(
-                  child: Text(shootValueLabel('exposureMode', exposureMode),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontSize: 12, color: context.palette.muted))),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.only(end: 4),
+                  child: exposureMode == null
+                      ? null
+                      : Text(shootValueLabel('exposureMode', exposureMode!),
+                          textAlign: TextAlign.end,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 12, color: context.palette.muted)),
+                ),
+              ),
               Stack(clipBehavior: Clip.none, children: [
                 IconButton(
                     key: const Key('recipe-toggle'),
                     tooltip: '组合方案',
+                    style: _buttonStyle,
                     onPressed: onRecipe,
                     icon: const Icon(Icons.layers_outlined, size: 20)),
                 if (recipeDetached)
@@ -51,6 +62,7 @@ class ShootTopBar extends StatelessWidget {
               IconButton(
                   onPressed: onSettings,
                   tooltip: '设置',
+                  style: _buttonStyle,
                   icon: const Icon(Icons.tune, size: 20)),
             ])),
       );

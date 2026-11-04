@@ -98,15 +98,7 @@ void main() {
     await tester.tap(find.widgetWithText(PopupMenuItem<String>, '新版调色'));
     await tester.pumpAndSettle();
     expect(container.read(editorProvider(3)).recipe.edits.processVersion, 2);
-    expect(
-        tester
-            .widget<IconButton>(find
-                .ancestor(
-                    of: find.byTooltip('重置当前工具'),
-                    matching: find.byType(IconButton))
-                .first)
-            .onPressed,
-        isNull);
+    expect(find.byTooltip('重置当前工具'), findsNothing);
     expect(
         container
             .read(editorProvider(3))
@@ -144,7 +136,7 @@ void main() {
     final controller = container.read(editorProvider(3).notifier);
     controller.setEdits(before.edits.withValue(PhotoAdjustment.exposure, 1));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('studio-tab-2')));
+    await tester.tap(find.byTooltip('编辑记录'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('打开时'));
     await tester.pumpAndSettle();
@@ -157,16 +149,14 @@ void main() {
         0);
     expect(container.read(editorProvider(3)).canRedo, isTrue);
   });
-  testWidgets('tool grid opens adjustments and cancel restores the photo',
+  testWidgets('tool ribbon opens adjustments and cancel restores the photo',
       (tester) async {
     final (_, container) = await pumpEditor(tester);
-    expect(find.byKey(const ValueKey('editor-tool-grid')), findsOneWidget);
-    await tester.tap(find.text('基础'));
+    expect(find.byKey(const ValueKey('editor-tool-ribbon')), findsOneWidget);
+    await tester.tap(find.text('调整图片'));
     await tester.pumpAndSettle();
-    final slider = tester.widget<Slider>(find.byType(Slider).first);
-    slider.onChangeStart?.call(0);
-    slider.onChanged?.call(1);
-    slider.onChangeEnd?.call(1);
+    final slider = find.byType(Slider).first;
+    await tester.dragFrom(tester.getCenter(slider), const Offset(72, 0));
     await tester.pumpAndSettle();
     expect(
         container
@@ -174,7 +164,7 @@ void main() {
             .recipe
             .edits
             .value(PhotoAdjustment.exposure),
-        1);
+        greaterThan(.5));
     await tester.tap(find.byTooltip('取消调整'));
     await tester.pumpAndSettle();
     expect(
@@ -225,6 +215,8 @@ void main() {
     await openTab(tester, 'LUT');
     expect(find.byKey(const ValueKey('frame-preview')), findsOneWidget);
     expect(env.engine.decoded, env.gateway.openedFds);
+    expect(find.text('R003.JPG'), findsNothing);
+    await openTab(tester, '信息');
     expect(find.text('R003.JPG'), findsOneWidget);
   });
 
@@ -335,8 +327,25 @@ void main() {
       'photo drag follows selected adjustment and exports applied edits',
       (tester) async {
     final (env, c) = await pumpEditor(tester);
-    await openTab(tester, '基础');
-    await tester.tap(find.text('对比度'));
+    await openTab(tester, '调整图片');
+    final photo = find.byKey(const ValueKey('frame-preview'));
+    final start = tester.getCenter(photo);
+    final gesture = await tester.startGesture(start);
+    await gesture.moveBy(const Offset(0, 24));
+    await gesture.moveBy(const Offset(0, 32));
+    await tester.pump();
+    expect(
+        find.byKey(
+            const ValueKey(('editor-parameter', PhotoAdjustment.contrast))),
+        findsOneWidget);
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(find.text('对比度'), findsOneWidget);
+    final selector = find.byKey(const ValueKey('adjustment-parameters'));
+    await tester.tap(selector);
+    await tester.pumpAndSettle();
+    await tester.tap(find
+        .byKey(const ValueKey(('editor-parameter', PhotoAdjustment.contrast))));
     await tester.pumpAndSettle();
     await tester.drag(
         find.byKey(const ValueKey('frame-preview')), const Offset(50, 0));
@@ -344,13 +353,40 @@ void main() {
     final e = c.read(editorProvider(3)).recipe.edits;
     expect(e.value(PhotoAdjustment.exposure), 0);
     expect(e.value(PhotoAdjustment.contrast), greaterThan(.1));
+    await tester.tap(find.byTooltip('完成调整'));
+    await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, '导出'));
     await tester.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 100)));
     await tester.pumpAndSettle();
     expect(env.engine.jobs.last.adjustments![2],
         closeTo(e.value(PhotoAdjustment.contrast), .00001));
-    expect(find.byKey(const ValueKey('editor-tool-grid')), findsOneWidget);
+    expect(find.byKey(const ValueKey('editor-tool-ribbon')), findsOneWidget);
+  });
+
+  testWidgets('curve overlay owns vertical drags without moving the photo',
+      (tester) async {
+    final (_, c) = await pumpEditor(tester);
+    await openTab(tester, '曲线');
+    final graph = find.byKey(const ValueKey('curve-graph'));
+    final photo = find.byKey(const ValueKey('frame-preview'));
+    final plot = tester.getRect(graph);
+    final frame = tester.getRect(photo);
+    expect(plot.width, plot.height);
+    expect(plot.overlaps(frame), isTrue);
+
+    await tester.tapAt(plot.center);
+    await tester.pump();
+    await tester.dragFrom(plot.center, const Offset(0, -60));
+    await tester.pumpAndSettle();
+    expect(c.read(editorProvider(3)).recipe.edits.curves.first.points[1].y,
+        greaterThan(.6));
+    expect(tester.getRect(graph), plot);
+    expect(tester.getRect(photo), frame);
+    await tester.tap(find.byTooltip('取消调整'));
+    await tester.pumpAndSettle();
+    expect(
+        c.read(editorProvider(3)).recipe.edits.curves.first, const ToneCurve());
   });
 
   testWidgets('landscape large text keeps apply and crop reachable',
@@ -361,8 +397,8 @@ void main() {
     await pumpEditor(tester, size: const Size(844, 390));
     await openTab(tester, '裁切');
     expect(find.byTooltip('完成调整'), findsOneWidget);
-    await tester.ensureVisible(find.text('1:1'));
-    await tester.tap(find.text('1:1'));
+    await tester.ensureVisible(find.text('正方形'));
+    await tester.tap(find.text('正方形'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     await tester.tap(find.byTooltip('完成调整'));

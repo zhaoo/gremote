@@ -58,11 +58,13 @@ void main() {
     await tester.tap(find.text('应用'));
     await tester.pumpAndSettle();
     expect(edits.curves[0].points[1].y, closeTo(180 / 255, .0001));
-    await tester.tap(find.text('R'));
+    await tester.tap(find.text('红色'));
     await tester.pump();
     await tester.tap(find.text('对比'));
     await tester.pump();
-    await tester.tap(find.byTooltip('还原当前通道'));
+    await tester.tap(find.byTooltip('曲线选项'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('还原当前通道'));
     await tester.pump();
     expect(edits.curves[1], const ToneCurve());
     expect(edits.curves[0].points, hasLength(3));

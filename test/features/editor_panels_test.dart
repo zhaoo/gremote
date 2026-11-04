@@ -28,11 +28,16 @@ void main() {
             onStart: () => starts++,
             onEnd: () => ends++))));
     expect(tester.widget<Slider>(find.byType(Slider)).min, -3);
-    await tester.tap(find.text('大小'));
-    await tester.pump();
+    final parameters = find.byKey(const ValueKey('adjustment-parameters'));
+    await tester.tap(parameters);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('大小').last);
+    await tester.pumpAndSettle();
     expect(tester.widget<Slider>(find.byType(Slider)).min, 0);
-    await tester.tap(find.text('曝光'));
-    await tester.pump();
+    await tester.tap(parameters);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('曝光').last);
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('adjustment-value')));
     await tester.pump(const Duration(milliseconds: 40));
     await tester.tap(find.byKey(const ValueKey('adjustment-value')));
@@ -69,7 +74,7 @@ void main() {
     await tester.tap(find.text('删除控制点'));
     await tester.pump();
     expect(edits.curves.first.points, hasLength(2));
-    await tester.tap(find.text('R'));
+    await tester.tap(find.text('红色'));
     await tester.pump();
     await tester.tap(find.text('对比'));
     await tester.pump();

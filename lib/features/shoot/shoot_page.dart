@@ -171,8 +171,7 @@ class _ShootPageState extends ConsumerState<ShootPage> {
             ShootWorkspaceLayout(
                 header: [
                   ShootTopBar(
-                    exposureMode:
-                        camera.value(ParamKey.exposureMode) ?? 'GR III',
+                    exposureMode: camera.value(ParamKey.exposureMode),
                     onBack: _goHome,
                     onRecipe: () =>
                         setState(() => _showRecipes = !_showRecipes),

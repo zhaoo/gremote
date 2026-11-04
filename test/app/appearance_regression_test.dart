@@ -159,23 +159,14 @@ void main() {
                 onChanged: (_) {},
                 onStart: () {},
                 onEnd: () {}))));
-    for (final name in ['R', 'G', 'B']) {
-      Color background() {
-        final circle = tester.widget<Container>(find
-            .ancestor(of: find.text(name), matching: find.byType(Container))
-            .first);
-        final color = (circle.decoration! as BoxDecoration).color!;
-        return color.opacity == 0
-            ? GRemoteTheme.light.scaffoldBackgroundColor
-            : color;
-      }
-
+    final background = GRemoteTheme.light.scaffoldBackgroundColor;
+    for (final name in ['红色', '绿色', '蓝色']) {
       Color foreground() => tester.widget<Text>(find.text(name)).style!.color!;
-      expect(contrast(foreground(), background()), greaterThanOrEqualTo(4.5),
+      expect(contrast(foreground(), background), greaterThanOrEqualTo(4.5),
           reason: name);
       await tester.tap(find.text(name));
       await tester.pumpAndSettle();
-      expect(contrast(foreground(), background()), greaterThanOrEqualTo(4.5),
+      expect(contrast(foreground(), background), greaterThanOrEqualTo(4.5),
           reason: 'selected $name');
     }
   });

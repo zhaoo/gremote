@@ -21,6 +21,7 @@ class LutPicker extends ConsumerStatefulWidget {
     required this.source,
     this.gpuSession,
     this.grid = false,
+    this.strip = false,
     this.showStrength = true,
     this.onStrengthTap,
     this.onSchemes,
@@ -38,7 +39,7 @@ class LutPicker extends ConsumerStatefulWidget {
 
   final PreviewImage? source;
   final GpuEditorSession? gpuSession;
-  final bool grid, showStrength;
+  final bool grid, strip, showStrength;
   final VoidCallback? onStrengthTap, onSchemes;
   final PhotoEdits edits;
   final List<LutEntry> entries;
@@ -112,7 +113,9 @@ class _LutPickerState extends ConsumerState<LutPicker> {
     if (oldWidget.gpuSession != widget.gpuSession ||
         oldWidget.source != widget.source ||
         oldWidget.edits != widget.edits ||
-        (!widget.grid && oldWidget.strength != widget.strength)) {
+        (!widget.grid &&
+            !widget.strip &&
+            oldWidget.strength != widget.strength)) {
       _invalidate();
     }
   }
@@ -163,7 +166,7 @@ class _LutPickerState extends ConsumerState<LutPicker> {
     final request = _active = _queue.removeFirst();
     final source = widget.source;
     final edits = widget.edits;
-    final strength = widget.grid ? 1.0 : widget.strength;
+    final strength = widget.grid || widget.strip ? 1.0 : widget.strength;
     final engine = ref.read(imagingEngineProvider);
     final library = ref.read(lutLibraryProvider);
     try {
@@ -211,7 +214,11 @@ class _LutPickerState extends ConsumerState<LutPicker> {
     final id = entry?.id;
     final selected = widget.selected == id;
     return SizedBox(
-      width: grid ? null : 82,
+      width: grid
+          ? null
+          : widget.strip
+              ? 68
+              : 82,
       child: Semantics(
         button: true,
         selected: selected,
@@ -219,25 +226,36 @@ class _LutPickerState extends ConsumerState<LutPicker> {
         child: InkWell(
           key: ValueKey(id == null ? 'lut-original' : 'lut-$id'),
           onTap: () => widget.onSelected(id),
-          borderRadius: BorderRadius.circular(grid ? 2 : 10),
+          borderRadius: BorderRadius.circular(grid || widget.strip ? 2 : 10),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Column(children: [
               Container(
-                height: grid ? 86 : 76,
-                padding: const EdgeInsets.all(3),
+                width: widget.strip ? 48 : null,
+                height: grid
+                    ? 86
+                    : widget.strip
+                        ? 48
+                        : 76,
+                padding: EdgeInsets.all(widget.strip ? 1 : 3),
                 decoration: BoxDecoration(
                   color: context.palette.raised,
-                  borderRadius: BorderRadius.circular(grid ? 1 : 9),
+                  borderRadius:
+                      BorderRadius.circular(grid || widget.strip ? 1 : 9),
                   border: Border.all(
                     color: selected
-                        ? context.palette.text
-                        : context.palette.divider,
+                        ? widget.strip
+                            ? const Color(0xff368ac8)
+                            : context.palette.text
+                        : widget.strip
+                            ? Colors.transparent
+                            : context.palette.divider,
                     width: selected ? 1 : .5,
                   ),
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(grid ? 0 : 5),
+                  borderRadius:
+                      BorderRadius.circular(grid || widget.strip ? 0 : 5),
                   child: FutureBuilder<PreviewImage?>(
                     key: ValueKey((_generation, id)),
                     future: _thumbnail(id),
@@ -261,7 +279,7 @@ class _LutPickerState extends ConsumerState<LutPicker> {
                         ),
                         image: image,
                       );
-                      return grid
+                      return grid || widget.strip
                           ? ClipRect(
                               child: FittedBox(
                                   fit: BoxFit.cover,
@@ -437,21 +455,22 @@ class _LutPickerState extends ConsumerState<LutPicker> {
       : Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Padding(
-              padding: const EdgeInsets.only(left: 16, right: 8),
-              child: Row(children: [
-                const Expanded(
-                    child: Text('滤镜', style: TextStyle(fontSize: 13))),
-                IconButton(
-                  key: const ValueKey('lut-import'),
-                  tooltip: '导入 LUT',
-                  onPressed: widget.onImport,
-                  icon: const Icon(Icons.add_rounded, size: 21),
-                ),
-              ]),
-            ),
+            if (!widget.strip)
+              Padding(
+                padding: const EdgeInsets.only(left: 16, right: 8),
+                child: Row(children: [
+                  const Expanded(
+                      child: Text('滤镜', style: TextStyle(fontSize: 13))),
+                  IconButton(
+                    key: const ValueKey('lut-import'),
+                    tooltip: '导入 LUT',
+                    onPressed: widget.onImport,
+                    icon: const Icon(Icons.add_rounded, size: 21),
+                  ),
+                ]),
+              ),
             SizedBox(
-              height: 114,
+              height: widget.strip ? 78 : 114,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -463,30 +482,32 @@ class _LutPickerState extends ConsumerState<LutPicker> {
                 },
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(children: [
-                Text('强度',
-                    style:
-                        TextStyle(fontSize: 12, color: context.palette.muted)),
-                Expanded(
-                    child: Slider(
-                  key: const ValueKey('lut-strength'),
-                  value: widget.strength.clamp(0, 1),
-                  semanticFormatterCallback: (value) =>
-                      '${(value * 100).round()}%',
-                  onChangeStart: (_) => widget.onStart(),
-                  onChanged: widget.onStrength,
-                  onChangeEnd: (_) => widget.onEnd(),
-                )),
-                SizedBox(
-                    width: 34,
-                    child: Text('${(widget.strength * 100).round()}',
-                        textAlign: TextAlign.right,
-                        style: TextStyle(
-                            fontSize: 12, color: context.palette.muted))),
-              ]),
-            ),
+            if (widget.showStrength &&
+                (!widget.strip || widget.selected != null))
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(children: [
+                  Text('强度',
+                      style: TextStyle(
+                          fontSize: 12, color: context.palette.muted)),
+                  Expanded(
+                      child: Slider(
+                    key: const ValueKey('lut-strength'),
+                    value: widget.strength.clamp(0, 1),
+                    semanticFormatterCallback: (value) =>
+                        '${(value * 100).round()}%',
+                    onChangeStart: (_) => widget.onStart(),
+                    onChanged: widget.onStrength,
+                    onChangeEnd: (_) => widget.onEnd(),
+                  )),
+                  SizedBox(
+                      width: 34,
+                      child: Text('${(widget.strength * 100).round()}',
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                              fontSize: 12, color: context.palette.muted))),
+                ]),
+              ),
           ],
         );
 }
