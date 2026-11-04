@@ -17,6 +17,7 @@
 		59A890DB6DC70F84DD4BE9B1 /* DeviceApi.g.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BC346578EED0A4138E4120F /* DeviceApi.g.swift */; };
 		3A1B24A5DCE86662771A4890 /* MediaApi.g.swift in Sources */ = {isa = PBXBuildFile; fileRef = F99B64AFEE78AEC1DFF9BCB1 /* MediaApi.g.swift */; };
 		0D623693DFCF861A5C7EBB86 /* Native/CameraEndpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC791A8363C67BF31E6E7354 /* Native/CameraEndpoint.swift */; };
+		B774A3B65D041CC5D2E9A753 /* Native/CompanionHTTP.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF26882E67CAF934DF9C7DD1 /* Native/CompanionHTTP.swift */; };
 		D6947EE56FBBDF4E2E6CF9FF /* Native/RicohBluetooth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A9045F90C9754CD7890DD0B /* Native/RicohBluetooth.swift */; };
 		D6FF3069F76D9C1789814415 /* Native/GRemoteDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 666BED74178E62A0D105C084 /* Native/GRemoteDevice.swift */; };
 		AD50D2B3C950507BFEC2BB05 /* Native/GRemoteMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91DDE74D3E40A66DA2A31C75 /* Native/GRemoteMedia.swift */; };
@@ -68,6 +69,7 @@
 		8BC346578EED0A4138E4120F /* DeviceApi.g.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DeviceApi.g.swift"; sourceTree = "<group>"; };
 		F99B64AFEE78AEC1DFF9BCB1 /* MediaApi.g.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MediaApi.g.swift"; sourceTree = "<group>"; };
 		BC791A8363C67BF31E6E7354 /* Native/CameraEndpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Native/CameraEndpoint.swift"; sourceTree = "<group>"; };
+		DF26882E67CAF934DF9C7DD1 /* Native/CompanionHTTP.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Native/CompanionHTTP.swift"; sourceTree = "<group>"; };
 		7A9045F90C9754CD7890DD0B /* Native/RicohBluetooth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Native/RicohBluetooth.swift"; sourceTree = "<group>"; };
 		666BED74178E62A0D105C084 /* Native/GRemoteDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Native/GRemoteDevice.swift"; sourceTree = "<group>"; };
 		91DDE74D3E40A66DA2A31C75 /* Native/GRemoteMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Native/GRemoteMedia.swift"; sourceTree = "<group>"; };
@@ -138,6 +140,7 @@
 				8BC346578EED0A4138E4120F /* DeviceApi.g.swift */,
 				F99B64AFEE78AEC1DFF9BCB1 /* MediaApi.g.swift */,
 				BC791A8363C67BF31E6E7354 /* Native/CameraEndpoint.swift */,
+				DF26882E67CAF934DF9C7DD1 /* Native/CompanionHTTP.swift */,
 				7A9045F90C9754CD7890DD0B /* Native/RicohBluetooth.swift */,
 				666BED74178E62A0D105C084 /* Native/GRemoteDevice.swift */,
 				E0AB4F48B0FC4EE3849F1501 /* Native/FilmLibraryDocument.swift */,
@@ -302,6 +305,7 @@
 				59A890DB6DC70F84DD4BE9B1 /* DeviceApi.g.swift in Sources */,
 				3A1B24A5DCE86662771A4890 /* MediaApi.g.swift in Sources */,
 				0D623693DFCF861A5C7EBB86 /* Native/CameraEndpoint.swift in Sources */,
+				B774A3B65D041CC5D2E9A753 /* Native/CompanionHTTP.swift in Sources */,
 				D6947EE56FBBDF4E2E6CF9FF /* Native/RicohBluetooth.swift in Sources */,
 				D6FF3069F76D9C1789814415 /* Native/GRemoteDevice.swift in Sources */,
 				E0AB4F48B0FC4EE3849F1502 /* Native/FilmLibraryDocument.swift in Sources */,

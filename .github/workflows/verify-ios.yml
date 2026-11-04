@@ -19,6 +19,10 @@ jobs:
           printf '%s  %s\n' ca9624a6de7a1a8962f2f0a3e2a57b16434ca34f1137b8d9dc68c5ca1f187133 "$RUNNER_TEMP/flutter.zip" | shasum -a 256 -c
           unzip -q "$RUNNER_TEMP/flutter.zip" -d "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - name: Verify camera HTTP framing on macOS
+        run: |
+          xcrun swiftc ios/Runner/Native/CompanionHTTP.swift ios/Tests/CompanionWireTests.swift -o "$RUNNER_TEMP/companion-wire-tests"
+          "$RUNNER_TEMP/companion-wire-tests"
       - name: Build and inspect unsigned iPhone app
         run: |
           set -euo pipefail

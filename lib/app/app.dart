@@ -23,6 +23,7 @@ class GRemoteApp extends ConsumerStatefulWidget {
 class _GRemoteAppState extends ConsumerState<GRemoteApp> {
   late final AppLifecycleListener _lifecycle;
   Timer? _wifiAdoption;
+  bool get _supportsWifiAdoption => Platform.isAndroid || Platform.isIOS;
 
   @override
   void initState() {
@@ -33,7 +34,7 @@ class _GRemoteAppState extends ConsumerState<GRemoteApp> {
               state == AppLifecycleState.inactive;
       if (state == AppLifecycleState.resumed) _adoptWifi();
     });
-    if (Platform.isAndroid && !useFakeCamera) {
+    if (_supportsWifiAdoption && !useFakeCamera) {
       _wifiAdoption =
           Timer.periodic(const Duration(seconds: 5), (_) => _adoptWifi());
       WidgetsBinding.instance.addPostFrameCallback((_) => _adoptWifi());
@@ -42,7 +43,7 @@ class _GRemoteAppState extends ConsumerState<GRemoteApp> {
 
   void _adoptWifi() {
     if (!mounted ||
-        !Platform.isAndroid ||
+        !_supportsWifiAdoption ||
         useFakeCamera ||
         !ref.read(appForegroundProvider)) return;
     unawaited(

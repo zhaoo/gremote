@@ -1,5 +1,6 @@
 import Flutter
 import Foundation
+import Network
 import NetworkExtension
 import Photos
 import UIKit
@@ -19,6 +20,7 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
   private lazy var session: URLSession = makeSession()
   private func makeSession() -> URLSession {
     let config = URLSessionConfiguration.ephemeral
+    config.allowsCellularAccess = false
     config.timeoutIntervalForRequest = 30; config.timeoutIntervalForResource = 300
     config.requestCachePolicy = .reloadIgnoringLocalCacheData
     return URLSession(configuration: config, delegate: self, delegateQueue: .main)
@@ -32,13 +34,27 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
   private weak var filmExportPicker: UIDocumentPickerViewController?
   private var companionFileLimit = 0
   private var companionFileGeneration = UUID()
+  private let wifiMonitor = NWPathMonitor(requiredInterfaceType: .wifi)
+  private var wifiPath: NWPath?
+  private var cameraWiFi: CameraWiFi?
+  private var companionRequests: [UUID: CompanionHTTP] = [:]
   private var connected = false
   private var generation = 0
   init(flutter: CameraDeviceFlutterApi) {
     self.flutter = flutter
     super.init()
     bluetooth.event = { [weak self] type, payload in self?.emit(type, payload) }
+    wifiMonitor.pathUpdateHandler = { [weak self] path in
+      guard let self = self else { return }
+      self.wifiPath = path
+      if let bound = self.cameraWiFi, CameraWiFi.current(path) != bound {
+        self.closeTransport(notifyLost: true)
+      }
+    }
+    wifiMonitor.start(queue: .main)
   }
+  deinit { wifiMonitor.cancel() }
+
   func emit(_ type: String, _ payload: [String: Any]) {
     guard let data = try? JSONSerialization.data(withJSONObject: payload), let json = String(data: data, encoding: .utf8) else { return }
     DispatchQueue.main.async { self.flutter.onNativeEvent(type: type, jsonPayload: json) { _ in } }
@@ -47,12 +63,15 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
   func androidSdkInt() throws -> Int64 { 0 }
   func scan(timeoutMs: Int64, completion: @escaping (Result<[NativeBleDevice?], Error>) -> Void) { bluetooth.scan(milliseconds: timeoutMs, completion: completion) }
   func connectBle(deviceId: String, completion: @escaping (Result<Void, Error>) -> Void) { bluetooth.connect(deviceId, completion: completion) }
-  private func closeTransport() {
+  private func closeTransport(notifyLost: Bool = false) {
     let wasConnected = connected
-    generation += 1; connected = false
+    generation += 1; connected = false; cameraWiFi = nil
+    let pending = Array(companionRequests.values)
+    companionRequests.removeAll()
+    pending.forEach { $0.cancel() }
     stream?.cancel(); stream = nil; socket?.cancel(with: .goingAway, reason: nil); socket = nil
     let oldSession = session; session = makeSession(); oldSession.invalidateAndCancel()
-    if wasConnected { emit("wifiState", ["state":"lost"]) }
+    if wasConnected && notifyLost { emit("wifiState", ["state":"lost"]) }
   }
   func disconnectBle(completion: @escaping (Result<Void, Error>) -> Void) {
     closeTransport()
@@ -73,15 +92,31 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
   }
   func connectCameraWifi(ssid: String, passphrase: String, completion: @escaping (Result<Void, Error>) -> Void) {
     closeTransport(); let token = generation
-    func probe() {
+    func probe(retries: Int = 0) {
       guard self.generation == token else { completion(.failure(nativeError("wifiCancelled", "连接已取消"))); return }
-      let request = URLRequest(url: try! CameraEndpoint.url("/v1/props"))
+      guard let wifi = CameraWiFi.current(self.wifiPath) else {
+        if retries > 0 {
+          DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { probe(retries: retries - 1) }
+        } else {
+          completion(.failure(nativeError("cameraWifiNotJoined", "尚未连接相机 Wi-Fi")))
+        }
+        return
+      }
+      let url = try! CameraEndpoint.url("/v1/props")
+      let request = URLRequest(url: url, timeoutInterval: 2)
       self.session.dataTask(with: request) { _, response, error in
         DispatchQueue.main.async {
-          guard self.generation == token else { completion(.failure(nativeError("wifiCancelled", "连接已取消"))); return }
+          guard self.generation == token, CameraWiFi.current(self.wifiPath) == wifi else {
+            completion(.failure(nativeError("wifiCancelled", "连接已变化"))); return
+          }
           if let error = error { completion(.failure(error)); return }
-          guard (response as? HTTPURLResponse)?.statusCode == 200 else { completion(.failure(nativeError("cameraUnavailable", "请确认已连接相机 Wi-Fi，并允许本地网络访问"))); return }
-          self.connected = true; self.emit("wifiState", ["state":"connected"]); completion(.success(()))
+          guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+            completion(.failure(nativeError("cameraUnavailable", "请确认已连接相机 Wi-Fi，并允许本地网络访问"))); return
+          }
+          self.cameraWiFi = wifi
+          self.connected = true
+          self.emit("wifiState", ["state":"connected"])
+          completion(.success(()))
         }
       }.resume()
     }
@@ -94,13 +129,43 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
         if let error = error as NSError?, !(error.domain == NEHotspotConfigurationErrorDomain && error.code == NEHotspotConfigurationError.alreadyAssociated.rawValue) {
           completion(.failure(nativeError("wifiConnectFailed", "请在系统设置连接相机 Wi-Fi 后重试"))); return
         }
-        probe()
+        probe(retries: 10)
       }
     }
   }
-  // Network binding for the companion service has not been proven on iOS.
   func companionRequest(method: String, path: String, headers: [String?: String?], body: FlutterStandardTypedData?, completion: @escaping (Result<NativeHttpResponse, Error>) -> Void) {
-    completion(.failure(nativeError("companionUnsupported", "iOS 暂不支持相机伴侣网络；仍可离线试卷与整理数字胶卷")))
+    let bytes: Data
+    do {
+      bytes = try CompanionWire.request(method: method, path: path, headers: headers, body: body?.data ?? Data())
+    } catch {
+      completion(.failure(nativeError("invalidCompanionTarget", "无效伴侣请求目标")))
+      return
+    }
+    guard connected, let wifi = cameraWiFi, CameraWiFi.current(wifiPath) == wifi else {
+      closeTransport(notifyLost: true)
+      completion(.failure(nativeError("companionSessionChanged", "相机连接已变化")))
+      return
+    }
+
+    let token = generation, id = UUID()
+    let transport = CompanionHTTP(wifi: wifi, request: bytes)
+    companionRequests[id] = transport
+    transport.start { [weak self] result in
+      self?.companionRequests.removeValue(forKey: id)
+      guard let self = self, self.generation == token, CameraWiFi.current(self.wifiPath) == wifi else {
+        completion(.failure(nativeError("companionSessionChanged", "相机连接已变化")))
+        return
+      }
+      switch result {
+      case .success(let response):
+        var fields: [String?: String?] = [:]
+        for (name, value) in response.headers { fields[name] = value }
+        completion(.success(NativeHttpResponse(statusCode: Int64(response.status), headers: fields,
+          body: FlutterStandardTypedData(bytes: response.body))))
+      case .failure:
+        completion(.failure(nativeError("companionUnavailable", "无法读取 M10V 相机服务")))
+      }
+    }
   }
   func pickCompanionFile(kind: String, completion: @escaping (Result<FlutterStandardTypedData?, Error>) -> Void) {
     guard ["pairing", "film"].contains(kind), companionFileResult == nil, filmExportResult == nil else { completion(.failure(nativeError("companionPickerBusy", "文件选择暂不可用"))); return }
