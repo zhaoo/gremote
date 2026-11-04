@@ -1,5 +1,23 @@
 [
   {
+    "version": "1.2.3",
+    "build": 22,
+    "date": "2026-11-05",
+    "platform": "Android · 正式签名",
+    "title": "新版修图工作台",
+    "changes": [
+      "照片居中，底部横滑切换工具，样式、工具和导出都有独立入口。",
+      "在照片上左右拖动调节数值，上下拖动切换参数；曲线叠加在照片上，拖动控制点时面板保持固定。",
+      "裁切加入角度刻度和横滑比例条，遥控拍摄页的组合方案和设置按钮靠右排列。"
+    ],
+    "evidence": "版本 1.2.3+22。Android 正式签名和自动化检查已通过，修图手感尚未进行本版真机复测。",
+    "url": "https://github.com/zhaoo/gremote/releases/tag/v1.2.3",
+    "download": "https://github.com/zhaoo/gremote/releases/download/v1.2.3/gremote-1.2.3-android-arm64.apk",
+    "checksums": "https://github.com/zhaoo/gremote/releases/download/v1.2.3/SHA256SUMS.txt",
+    "sha256": "e45f19a6e32d48e2724a1953c851d3c7d55b6dad2ca6aefb24ec71f7211d1879",
+    "bytes": 29076598
+  },
+  {
     "version": "1.2.1",
     "build": 20,
     "date": "2026-11-04",
