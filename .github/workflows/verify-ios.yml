@@ -22,7 +22,7 @@ jobs:
       - name: Build and inspect unsigned iPhone app
         run: |
           set -euo pipefail
-          flutter pub get --enforce-lockfile
+          flutter pub get
           bash scripts/build_ios_imaging.sh
           flutter build ios --release --no-codesign
           app=build/ios/iphoneos/Runner.app
@@ -30,9 +30,12 @@ jobs:
           test -f "$app/Frameworks/gremote_imaging.framework/gremote_imaging"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Info.plist" | grep -Fx com.izhaoo.gremote
           ditto -c -k --keepParent "$app" "$RUNNER_TEMP/gremote-ios-unsigned.zip"
+          cp pubspec.lock "$RUNNER_TEMP/ios-pubspec.lock"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: gremote-ios-unsigned
-          path: ${{ runner.temp }}/gremote-ios-unsigned.zip
+          path: |
+            ${{ runner.temp }}/gremote-ios-unsigned.zip
+            ${{ runner.temp }}/ios-pubspec.lock
           if-no-files-found: error
           retention-days: 7
