@@ -1,5 +1,22 @@
 [
   {
+    "version": "1.2.4",
+    "build": 23,
+    "date": "2026-11-05",
+    "platform": "Android · 正式签名",
+    "title": "适配新版 M10V 无线连接包",
+    "changes": [
+      "兼容 M10V 2026.11.05.1 生成的 GR III 2.10 无线连接包。",
+      "继续支持旧版 M10V 连接包，保留原有胶卷和配方。"
+    ],
+    "evidence": "版本 1.2.4+23。已通过自动化测试并核对正式签名。无线联动待实机验证。",
+    "url": "https://github.com/zhaoo/gremote/releases/tag/v1.2.4",
+    "download": "https://github.com/zhaoo/gremote/releases/download/v1.2.4/gremote-1.2.4-android-arm64.apk",
+    "checksums": "https://github.com/zhaoo/gremote/releases/download/v1.2.4/SHA256SUMS.txt",
+    "sha256": "b80583bf5d5521185f89d6d9956b50d48b2afca50d15bd43b684e697d818ebbe",
+    "bytes": 29076598
+  },
+  {
     "version": "1.2.3",
     "build": 22,
     "date": "2026-11-05",
