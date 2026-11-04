@@ -1,5 +1,22 @@
 [
   {
+    "version": "1.2.1",
+    "build": 20,
+    "date": "2026-11-04",
+    "platform": "Android · 正式签名",
+    "title": "连接相机 Wi-Fi，自动同步。",
+    "changes": [
+      "支持自动识别已连接的相机 Wi-Fi，与兼容 M10V 固件建立会话，无需导入配对文件。",
+      "相机重启后可直接读取机内设置，支持无线装卷和扩展调整。"
+    ],
+    "evidence": "GR III 街拍版 2.10 候选与此 Android APK 已获用户真机验收。iOS 暂无 TestFlight 发布。",
+    "url": "https://github.com/zhaoo/gremote/releases/tag/v1.2.1",
+    "download": "https://github.com/zhaoo/gremote/releases/download/v1.2.1/gremote-1.2.1-android-arm64.apk",
+    "checksums": "https://github.com/zhaoo/gremote/releases/download/v1.2.1/SHA256SUMS.txt",
+    "sha256": "8a8fc1f7614c271e6d172461f7d5fb5fda16738ad97ee10b0f10d4f206f07c46",
+    "bytes": 29076550
+  },
+  {
     "version": "1.2.0",
     "build": 19,
     "date": "2026-11-03",

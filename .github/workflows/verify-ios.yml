@@ -1,0 +1,38 @@
+name: Verify iOS build
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  unsigned:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Use Xcode and the pinned Flutter SDK
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+          curl --fail --retry 3 --location https://storage.googleapis.com/flutter_infra_release/releases/stable/macos/flutter_macos_arm64_3.24.5-stable.zip -o "$RUNNER_TEMP/flutter.zip"
+          printf '%s  %s\n' ca9624a6de7a1a8962f2f0a3e2a57b16434ca34f1137b8d9dc68c5ca1f187133 "$RUNNER_TEMP/flutter.zip" | shasum -a 256 -c
+          unzip -q "$RUNNER_TEMP/flutter.zip" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - name: Build and inspect unsigned iPhone app
+        run: |
+          set -euo pipefail
+          flutter pub get --enforce-lockfile
+          bash scripts/build_ios_imaging.sh
+          flutter build ios --release --no-codesign
+          app=build/ios/iphoneos/Runner.app
+          test -x "$app/Runner"
+          test -f "$app/Frameworks/gremote_imaging.framework/gremote_imaging"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Info.plist" | grep -Fx com.izhaoo.gremote
+          ditto -c -k --keepParent "$app" "$RUNNER_TEMP/gremote-ios-unsigned.zip"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: gremote-ios-unsigned
+          path: ${{ runner.temp }}/gremote-ios-unsigned.zip
+          if-no-files-found: error
+          retention-days: 7
