@@ -36,6 +36,13 @@ List<dynamic> _freezeList(List value) =>
             ? _freezeList(v)
             : v));
 
+// This M10V release changes the renderer while retaining the camera catalog
+// entries and companion parameter contract.
+const coordinatedCameraCatalogHash =
+    'cf7032d8db4c13c266229084f323e231bfea0fc50e3ad1e9966f25d2f4ddfb99';
+const coordinatedCameraRendererHash =
+    '8860d923d8a0bb65ac9530c52d89d140a5345505230c165e0c0c78f9f1972fba';
+
 const installedCameraCatalogHash =
     '653acf3c1b04db0ea2dd10114a1306b78bb4b584534945be8f9de9da25ebab4a';
 const installedCameraRendererHash =
@@ -43,6 +50,8 @@ const installedCameraRendererHash =
 final List<CameraFilmProfile> trustedCameraFilmProfiles = List.unmodifiable([
   CameraFilmProfile._(
       cameraCatalogHash, cameraRendererHash, cameraContract, '机身版本 · 当前配套'),
+  CameraFilmProfile._(coordinatedCameraCatalogHash,
+      coordinatedCameraRendererHash, cameraContract, '机身版本 · 2026.11.05.1'),
   CameraFilmProfile._(
       installedCameraCatalogHash,
       installedCameraRendererHash,

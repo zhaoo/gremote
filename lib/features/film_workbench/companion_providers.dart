@@ -22,9 +22,12 @@ import '../../camera/companion/companion_operation_gate.dart';
 
 /// Bundled current profile is independent of the connected controller.
 final latestBundledCameraCatalogProvider = FutureProvider<CameraFilmCatalog>(
-    (ref) async => CameraFilmCatalog.fromJson(jsonDecode(
-            await rootBundle.loadString('assets/films/camera-catalog.json'))
-        as Map<String, dynamic>));
+    (ref) async =>
+        CameraFilmCatalog.fromJson(await _readBundledCameraCatalog()));
+
+Future<Map<String, dynamic>> _readBundledCameraCatalog() async =>
+    jsonDecode(await rootBundle.loadString('assets/films/camera-catalog.json'))
+        as Map<String, dynamic>;
 final bundledCameraCatalogsProvider =
     FutureProvider<List<CameraFilmCatalog>>((ref) async {
   final latest = await ref.watch(latestBundledCameraCatalogProvider.future);
@@ -32,7 +35,11 @@ final bundledCameraCatalogsProvider =
           await rootBundle.loadString(
               'assets/films/camera-profiles/installed-03db1c70-catalog.json'))
       as Map<String, dynamic>);
-  return List.unmodifiable([latest, installed]);
+  final coordinated =
+      CameraFilmCatalog.fromJson((await _readBundledCameraCatalog())
+        ..['hash'] = coordinatedCameraCatalogHash
+        ..['rendererHash'] = coordinatedCameraRendererHash);
+  return List.unmodifiable([latest, coordinated, installed]);
 });
 
 /// UI selection follows the authenticated camera profile. Disconnected/unknown
