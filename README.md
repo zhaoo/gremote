@@ -35,7 +35,7 @@ GRemote 想把拍摄现场和照片后期放在一处：通过蓝牙与相机 Wi
 
 最低 Android 8.0。v1.0.1 改用专用正式签名，不能直接覆盖旧 v1.0.0；卸载前先备份本地数据。见 [1.0.1 发布记录](docs/releases/v1.0.1.md)。
 
-官网源码位于 `website/`，部署说明见 [宝塔部署](deploy/README.md)。iOS 为代码准备阶段，尚未通过 iOS SDK 编译及真机验收，见 [TestFlight 准备说明](docs/releases/ios-testflight.md)。
+官网源码位于 `website/`，部署说明见 [宝塔部署](deploy/README.md)。iOS 的未签名构建和 M10V 联动交接说明见 [TestFlight 准备说明](docs/releases/ios-testflight.md)。
 
 ## 快速开始
 
