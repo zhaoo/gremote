@@ -117,19 +117,24 @@ final class CompanionHTTP {
 
   init(wifi: CameraWiFi, request: Data) {
     let parameters = NWParameters.tcp
+    parameters.preferNoProxies = true
     parameters.requiredInterface = wifi.interface
     parameters.requiredLocalEndpoint = .hostPort(host: NWEndpoint.Host(wifi.address), port: .any)
     connection = NWConnection(host: "192.168.0.1", port: 18743, using: parameters)
     self.request = request
   }
 
-  func start(completion: @escaping (Result<CompanionWire.Response, Error>) -> Void) {
+  func start(isCurrent: @escaping () -> Bool, completion: @escaping (Result<CompanionWire.Response, Error>) -> Void) {
     self.completion = completion
     connection.stateUpdateHandler = { [weak self] state in
       guard let self = self else { return }
       switch state {
       case .ready:
         guard !self.sent else { return }
+        guard isCurrent() else {
+          self.finish(.failure(CompanionWire.Failure.disconnected))
+          return
+        }
         self.sent = true
         self.connection.send(content: self.request, completion: .contentProcessed { error in
           if let error = error { self.finish(.failure(error)) }

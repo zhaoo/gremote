@@ -46,14 +46,14 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
     bluetooth.event = { [weak self] type, payload in self?.emit(type, payload) }
     wifiMonitor.pathUpdateHandler = { [weak self] path in
       guard let self = self else { return }
+      let previous = self.wifiPath
       self.wifiPath = path
-      if let bound = self.cameraWiFi, CameraWiFi.current(path) != bound {
+      if let bound = self.cameraWiFi, previous != path || CameraWiFi.current(path) != bound {
         self.closeTransport(notifyLost: true)
       }
     }
     wifiMonitor.start(queue: .main)
   }
-  deinit { wifiMonitor.cancel() }
 
   func emit(_ type: String, _ payload: [String: Any]) {
     guard let data = try? JSONSerialization.data(withJSONObject: payload), let json = String(data: data, encoding: .utf8) else { return }
@@ -77,6 +77,11 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
     closeTransport()
     bluetooth.disconnect(); completion(.success(()))
   }
+  func enterBackground() {
+    cancelCompanionFileRead()
+    closeTransport(notifyLost: true)
+    bluetooth.disconnect()
+  }
   func readBootstrap(completion: @escaping (Result<NativeCameraBootstrap, Error>) -> Void) { bluetooth.bootstrap(completion: completion) }
   func setCameraPower(value: Int64, completion: @escaping (Result<Void, Error>) -> Void) {
     guard (0...2).contains(value) else { completion(.failure(nativeError("invalidArgument", "无效电源参数"))); return }
@@ -92,27 +97,28 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
   }
   func connectCameraWifi(ssid: String, passphrase: String, completion: @escaping (Result<Void, Error>) -> Void) {
     closeTransport(); let token = generation
-    func probe(retries: Int = 0) {
+    func probe(until deadline: DispatchTime = .now()) {
       guard self.generation == token else { completion(.failure(nativeError("wifiCancelled", "连接已取消"))); return }
-      guard let wifi = CameraWiFi.current(self.wifiPath) else {
-        if retries > 0 {
-          DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { probe(retries: retries - 1) }
+      func retryOrFail() {
+        if self.generation == token && DispatchTime.now() < deadline {
+          DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { probe(until: deadline) }
         } else {
-          completion(.failure(nativeError("cameraWifiNotJoined", "尚未连接相机 Wi-Fi")))
+          completion(.failure(nativeError("cameraUnavailable", "请确认已连接相机 Wi-Fi，并允许本地网络访问")))
         }
-        return
       }
+
+      guard let wifi = CameraWiFi.current(self.wifiPath) else { retryOrFail(); return }
+      let path = self.wifiPath
       let url = try! CameraEndpoint.url("/v1/props")
       let request = URLRequest(url: url, timeoutInterval: 2)
-      self.session.dataTask(with: request) { _, response, error in
+      self.session.dataTask(with: request) { data, response, _ in
         DispatchQueue.main.async {
-          guard self.generation == token, CameraWiFi.current(self.wifiPath) == wifi else {
-            completion(.failure(nativeError("wifiCancelled", "连接已变化"))); return
-          }
-          if let error = error { completion(.failure(error)); return }
-          guard (response as? HTTPURLResponse)?.statusCode == 200 else {
-            completion(.failure(nativeError("cameraUnavailable", "请确认已连接相机 Wi-Fi，并允许本地网络访问"))); return
-          }
+          guard self.generation == token, self.wifiPath == path, CameraWiFi.current(self.wifiPath) == wifi,
+                (response as? HTTPURLResponse)?.statusCode == 200, let data = data,
+                let props = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+                let model = props["model"] as? String,
+                model.trimmingCharacters(in: .whitespacesAndNewlines) == "RICOH GR III"
+          else { retryOrFail(); return }
           self.cameraWiFi = wifi
           self.connected = true
           self.emit("wifiState", ["state":"connected"])
@@ -129,7 +135,7 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
         if let error = error as NSError?, !(error.domain == NEHotspotConfigurationErrorDomain && error.code == NEHotspotConfigurationError.alreadyAssociated.rawValue) {
           completion(.failure(nativeError("wifiConnectFailed", "请在系统设置连接相机 Wi-Fi 后重试"))); return
         }
-        probe(retries: 10)
+        probe(until: .now() + 6)
       }
     }
   }
@@ -150,7 +156,11 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
     let token = generation, id = UUID()
     let transport = CompanionHTTP(wifi: wifi, request: bytes)
     companionRequests[id] = transport
-    transport.start { [weak self] result in
+    let path = wifiPath
+    transport.start(isCurrent: { [weak self] in
+      guard let self = self else { return false }
+      return self.generation == token && self.wifiPath == path && CameraWiFi.current(path) == wifi
+    }) { [weak self] result in
       self?.companionRequests.removeValue(forKey: id)
       guard let self = self, self.generation == token, CameraWiFi.current(self.wifiPath) == wifi else {
         completion(.failure(nativeError("companionSessionChanged", "相机连接已变化")))
@@ -210,6 +220,7 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
     filmExportDirectory = nil
   }
   deinit {
+    wifiMonitor.cancel()
     if let directory = filmExportDirectory { try? FileManager.default.removeItem(at: directory) }
   }
   func cancelCompanionFileRead() {
@@ -389,7 +400,8 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
     if stream === task { stream = nil; if error != nil { emit("liveView", ["state":"failed"]) } }
   }
   func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
-    guard let url = request.url, (try? CameraEndpoint.url(url.absoluteString)) != nil else { completionHandler(nil); return }
+    guard task.originalRequest?.url?.path != "/v1/props",
+          let url = request.url, (try? CameraEndpoint.url(url.absoluteString)) != nil else { completionHandler(nil); return }
     completionHandler(request)
   }
 }

@@ -48,7 +48,7 @@
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>用于连接 GR 相机并读取无线连接信息。</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>用于实时取景、遥控拍摄和从 GR 相机传输照片。</string>
+	<string>用于连接 GR 相机、传输照片、遥控拍摄和同步 M10V 设置。</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>用于浏览本机照片并进行暗房创作。</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
