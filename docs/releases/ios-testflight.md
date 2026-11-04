@@ -1,6 +1,6 @@
 # iOS TestFlight 准备
 
-当前状态：**代码准备，尚未通过 iOS SDK 编译或真机验收，不可作为可用版本分发。**
+当前状态：**GRemote 1.2.1+20 已通过 Xcode 26.3 的 iPhone Release 构建，尚未签名、真机验收或上传 TestFlight。** [构建记录和未签名产物](https://github.com/zhaoo/gremote/actions/runs/41767040247)。
 
 ## 已加入
 
@@ -11,16 +11,16 @@
 - Dart 的 iOS 蓝牙权限分流、禁止扫描 Wi-Fi 的明确提示；iOS 原生图像 framework 加载路径。
 - CMake iOS framework / XCFramework 构建脚本、CocoaPods 接入。
 
-以上为实现清单，**不是已通过的功能清单**。当前机器没有完整 Xcode，Swift 的完整编译测试还被 Command Line Tools 的 SwiftBridging 模块冲突阻塞。只完成 `swiftc -frontend -parse -parse-stdlib` 语法解析、plist/工程语法检查及 Dart 权限分支自动化测试；纯 Swift 测试二进制执行以 exit 137 终止，未取得运行通过结果；这些不能验证 Apple SDK 类型或运行行为。
+GitHub Actions 已编译设备和模拟器的图像框架，并将设备框架嵌入未签名 App。发布时需要 Apple Developer 团队和签名。iOS 的 M10V 扩展设置及自动连接尚未接入，Android 版的真机验收不覆盖 iOS。
 
 ## 在具备 Xcode 的 Mac 上继续
 
 1. 安装完整 Xcode，并在系统设置选择该开发目录，接受 Xcode 许可；安装 CocoaPods 与 CMake。
 2. 执行 `flutter pub get`、`python3 scripts/generate_ios_bridges.py`。
-3. 执行 `bash scripts/build_ios_imaging.sh` 生成 dist/ios/gremote_imaging.xcframework；该脚本当前未通过 iOS SDK 实际构建。
-4. `cd ios && pod install`，打开 Runner.xcworkspace。选择团队并核对包名 `com.izhaoo.gremote`、Hotspot Configuration 能力、iOS 14 最低版本和权限文案。
-5. 先 `flutter build ios --no-codesign` 修正 SDK 编译错误，再用 iPhone / GR III 验收下列项目。
-6. 注册付费 Apple Developer 后创建 App Store Connect 应用，配置签名。完成 `flutter build ipa`、签名核验、上传、处理和测试组配置，再公布真实 TestFlight 邀请链接。
+3. 执行 `bash scripts/build_ios_imaging.sh` 生成 dist/ios/gremote_imaging.xcframework；该脚本已在 GitHub Actions 验证。
+4. `cd ios && pod install`，打开 Runner.xcworkspace。由团队账号选择签名团队并核对包名 `com.izhaoo.gremote`、Hotspot Configuration 能力、iOS 14 最低版本和权限文案。
+5. 用签名的开发构建在 iPhone / GR III 上验收下列项目。
+6. 在获授权的 Apple Developer 团队中注册 Bundle ID、创建 App Store Connect 应用并配置签名。完成 `flutter build ipa`、签名核验、上传、处理和测试组配置，再公布真实 TestFlight 邀请链接。
 
 ## 必须完成的设备验收
 
