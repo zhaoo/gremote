@@ -123,7 +123,7 @@ if(ANDROID)
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
-  target_sources(gremote_imaging PRIVATE src/ios_framework_anchor.c)
+  target_sources(gremote_imaging PRIVATE src/ios_framework_anchor.cpp)
   set_target_properties(gremote_imaging PROPERTIES
     FRAMEWORK TRUE
     FRAMEWORK_VERSION A
