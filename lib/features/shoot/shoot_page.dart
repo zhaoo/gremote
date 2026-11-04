@@ -49,7 +49,6 @@ class ShootPage extends ConsumerStatefulWidget {
 }
 
 class _ShootPageState extends ConsumerState<ShootPage> {
-  late final AppLifecycleListener _lifecycle;
   late final LiveViewController _liveViewController;
   late final StateController<bool> _shootVisible;
   ShootMode _mode = ShootMode.photo;
@@ -86,11 +85,6 @@ class _ShootPageState extends ConsumerState<ShootPage> {
       if (!mounted) return;
       _exitHandler.state = _prepareExit;
       _activate();
-    });
-    _lifecycle = AppLifecycleListener(onStateChange: (lifecycle) {
-      ref.read(appForegroundProvider.notifier).state =
-          lifecycle == AppLifecycleState.resumed ||
-              lifecycle == AppLifecycleState.inactive;
     });
   }
 
@@ -130,7 +124,6 @@ class _ShootPageState extends ConsumerState<ShootPage> {
   void dispose() {
     _router?.routeInformationProvider.removeListener(_routeChanged);
     _histogramTimer?.cancel();
-    _lifecycle.dispose();
     if (_attached) {
       Future.microtask(() {
         try {

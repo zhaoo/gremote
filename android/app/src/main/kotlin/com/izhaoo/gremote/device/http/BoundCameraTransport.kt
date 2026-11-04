@@ -30,6 +30,7 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.net.Proxy
 import okhttp3.Response
 import okio.Buffer
 import org.json.JSONArray
@@ -60,6 +61,7 @@ class BoundCameraTransport(
     private var liveViewCall: Call? = null
     private val client = OkHttpClient.Builder()
         .socketFactory(network.socketFactory)
+        .proxy(Proxy.NO_PROXY)
         .dns(object : Dns {
             override fun lookup(hostname: String): List<InetAddress> =
                 if (hostname == "camera.m10v") {
@@ -81,8 +83,10 @@ class BoundCameraTransport(
         emitEvent = emitEvent,
     )
 
-    suspend fun probeCamera(): String {
-        val selected = CameraProbeOrder(this).findBaseUrl()
+    suspend fun probeCamera(onlyHotspot: Boolean = false): String {
+        val order = if (onlyHotspot) CameraProbeOrder(this, listOf("http://192.168.0.1"))
+            else CameraProbeOrder(this)
+        val selected = order.findBaseUrl()
         cameraIp = selected.substringAfter("http://")
         baseUrl = selected
         return selected

@@ -14,7 +14,7 @@ import '../library/camera_gallery.dart';
 final cameraExtensionsControllerProvider =
     Provider<CameraExtensionsController?>((ref) {
   final sync = ref.watch(companionSyncControllerProvider),
-      identity = ref.watch(companionPairingIdentityProvider);
+      identity = ref.watch(effectiveCompanionIdentityProvider);
   if (sync == null || identity == null || sync.api is! CompanionExtensionsApi) {
     return null;
   }

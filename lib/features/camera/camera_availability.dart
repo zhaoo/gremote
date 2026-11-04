@@ -45,7 +45,7 @@ class CameraAvailability {
     final hint = !connected
         ? '连接相机后装卷'
         : !paired
-            ? '配对 M10V 后可装卷'
+            ? '等待 M10V 连接'
             : sync?.pending == true
                 ? '装卷结果待核对'
                 : sync?.connectionStatus == SyncConnectionStatus.connecting
@@ -66,7 +66,7 @@ class CameraAvailability {
 final cameraAvailabilityProvider =
     Provider.autoDispose<CameraAvailability>((ref) {
   final connected = ref.watch(connectionControllerProvider) is ConnectionReady;
-  final identity = ref.watch(companionPairingIdentityProvider);
+  final identity = ref.watch(effectiveCompanionIdentityProvider);
   final controller = ref.watch(companionSyncControllerProvider);
   void changed() => ref.invalidateSelf();
   controller?.addListener(changed);

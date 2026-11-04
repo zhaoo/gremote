@@ -32,6 +32,37 @@ class NativePairingStore implements PairingStore {
       _api.signCompanionRequest(id, bytes);
 }
 
+/// A credential provided by the camera hotspot lives only for this connection.
+class HotspotPairingStore implements PairingStore {
+  Uint8List? _key;
+  String? _id;
+
+  @override
+  Future<void> save(String id, Uint8List key) async {
+    clear();
+    _id = id;
+    _key = Uint8List.fromList(key);
+  }
+
+  @override
+  Future<void> remove(String id) async {
+    if (_id == id) clear();
+  }
+
+  void clear() {
+    _key?.fillRange(0, _key!.length, 0);
+    _key = null;
+    _id = null;
+  }
+
+  @override
+  Future<Uint8List> sign(String id, Uint8List bytes) async {
+    final key = _key;
+    if (_id != id || key == null) throw StateError('相机连接已断开');
+    return Uint8List.fromList(Hmac(sha256, key).convert(bytes).bytes);
+  }
+}
+
 Future<PairingIdentity> importPairing(
     Uint8List bytes, PairingStore store) async {
   if (bytes.isEmpty || bytes.length > 4096) {

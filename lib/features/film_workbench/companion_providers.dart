@@ -63,25 +63,105 @@ final companionIdentityHydrationProvider = FutureProvider<void>((ref) async {
     ref.read(companionPairingIdentityProvider.notifier).state = loaded;
   }
 });
+final companionHotspotTransportProvider =
+    Provider<CompanionTransport>((ref) => NativeCompanionTransport());
+
+final _hotspotPairingProvider =
+    FutureProvider<({PairingIdentity identity, HotspotPairingStore keys})?>(
+        (ref) async {
+  final connection = ref.watch(connectionControllerProvider.select((value) =>
+      value is ConnectionReady ? (true, value.cameraKey) : (false, null)));
+  if (!connection.$1) return null;
+  var linked = false;
+  ref.listen(appForegroundProvider, (_, foreground) {
+    if (foreground && !linked) ref.invalidateSelf();
+  });
+  if (!ref.read(appForegroundProvider)) return null;
+
+  final keys = HotspotPairingStore();
+  final transport = ref.watch(companionHotspotTransportProvider);
+  var alive = true;
+  Timer? retry;
+  Completer<void>? pause;
+  ref.onDispose(() {
+    alive = false;
+    retry?.cancel();
+    final pending = pause;
+    if (pending != null && !pending.isCompleted) pending.complete();
+    keys.clear();
+  });
+  for (final delay in [0, 1, 2, 4]) {
+    if (delay != 0) {
+      final next = pause = Completer<void>();
+      retry = Timer(Duration(seconds: delay), next.complete);
+      await next.future;
+      if (!alive || !ref.read(appForegroundProvider)) return null;
+    }
+    try {
+      final response = await transport.request(
+          method: 'GET',
+          path: '/m10v/v1/hotspot',
+          body: Uint8List(0),
+          headers: const {'X-M10V-Hotspot': '1'});
+      if (!alive || response.statusCode == 401 || response.statusCode == 404) {
+        return null; // Legacy service.
+      }
+      if (response.statusCode != 200) continue;
+      final identity = await importPairing(response.body, keys);
+      if (!alive) {
+        keys.clear();
+        return null;
+      }
+      linked = true;
+      return (identity: identity, keys: keys);
+    } on PlatformException catch (e) {
+      if (!alive ||
+          {
+            'companionUnsupported',
+            'invalidCompanionTarget',
+            'companionSessionChanged'
+          }.contains(e.code)) return null;
+    } on MissingPluginException {
+      return null;
+    } on Exception {
+      return null;
+    }
+  }
+  if (alive) retry = Timer(const Duration(seconds: 20), ref.invalidateSelf);
+  return null;
+});
+
+final effectiveCompanionIdentityProvider = Provider<PairingIdentity?>((ref) {
+  final automatic = ref.watch(_hotspotPairingProvider);
+  final legacy = ref.watch(companionPairingIdentityProvider);
+  // A previously imported file may target a different camera. First give the
+  // current connection a chance to advertise its own identity.
+  return automatic.isLoading
+      ? null
+      : automatic.asData?.value?.identity ?? legacy;
+});
+
 final companionFilePickerProvider =
     Provider<Future<Uint8List?> Function(String)>(
         (ref) => CameraDeviceHostApi().pickCompanionFile);
 final companionApiFactoryProvider =
     Provider<CompanionApi Function(PairingIdentity)>((ref) {
   final keys = ref.watch(companionPairingStoreProvider);
+  final automatic = ref.watch(_hotspotPairingProvider).asData?.value;
   return (identity) => CompanionClient(
       transport: NativeCompanionTransport(),
-      pairingStore: keys,
+      pairingStore:
+          identical(automatic?.identity, identity) ? automatic!.keys : keys,
       identity: identity,
       contract: cameraContract);
 });
 final companionNetworkReadyProvider = Provider<bool>((ref) {
-  if (ref.watch(companionPairingIdentityProvider) == null) return false;
+  if (ref.watch(effectiveCompanionIdentityProvider) == null) return false;
   return ref.watch(connectionControllerProvider) is ConnectionReady;
 });
 final companionSyncControllerProvider =
     Provider.autoDispose<CompanionSyncController?>((ref) {
-  final identity = ref.watch(companionPairingIdentityProvider),
+  final identity = ref.watch(effectiveCompanionIdentityProvider),
       catalogs = ref.watch(bundledCameraCatalogsProvider).valueOrNull;
   if (identity == null || catalogs == null) return null;
   final catalog = catalogs.first;

@@ -47,7 +47,7 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
       return controller?.pending == true
           ? '结果待核对 · 重新连接后核对'
           : controller == null
-              ? '未连接 · 配对 M10V 后可设置'
+              ? '等待 M10V 连接'
               : '未连接 · 连接相机后读取机身设置';
     }
     if (controller.working && controller.pending) return '设置处理中，请勿重复提交';

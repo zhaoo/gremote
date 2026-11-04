@@ -359,6 +359,57 @@ void main() {
     expect(harness.trace.where((entry) => entry == 'props'), hasLength(2));
   });
 
+  test('system Wi-Fi adoption is quiet, verifies camera and honors disconnect',
+      () async {
+    final harness = _Harness(permissionStatus: CameraPermissionStatus.denied)
+      ..transport.pingStatus = 503;
+    addTearDown(harness.container.dispose);
+    await harness.controller.adoptConnectedWifi();
+    expect(harness.state, isA<ConnectionIdle>());
+    expect(harness.trace, contains('disconnectWifi'));
+
+    harness.transport.pingStatus = 200;
+    await harness.controller.adoptConnectedWifi();
+    expect(harness.state, isA<ConnectionReady>());
+    expect((harness.state as ConnectionReady).wifiOnly, isTrue);
+    expect(harness.trace, isNot(contains('scan')));
+
+    await harness.controller.cancel();
+    final calls = harness.trace.length;
+    await harness.controller.adoptConnectedWifi();
+    expect(harness.state, isA<ConnectionIdle>());
+    expect(harness.trace, hasLength(calls));
+  });
+
+  test('explicit connect runs after an unsuccessful passive probe', () async {
+    final harness = _Harness()..transport.failPropsOnce = true;
+    addTearDown(harness.container.dispose);
+    final automatic = harness.controller.adoptConnectedWifi();
+    final manual = harness.controller.connect();
+    await Future.wait([automatic, manual]);
+    expect(
+        harness.trace, containsAllInOrder(['props', 'disconnectWifi', 'scan']));
+    expect(harness.state, isA<ConnectionReady>());
+  });
+
+  test('failed passive probe preserves BLE-assisted Wi-Fi recovery', () async {
+    final harness = _Harness();
+    addTearDown(harness.container.dispose);
+    await harness.controller.connect();
+    harness.ble.emit(const CameraDeviceEvent(
+        type: 'wifiState', jsonPayload: '{"state":"lost"}'));
+    await Future<void>.delayed(Duration.zero);
+
+    harness.wifi.failure = StateError('no matching system Wi-Fi');
+    await harness.controller.adoptConnectedWifi();
+    expect(harness.state, isA<ConnectionFailed>());
+
+    harness.wifi.failure = null;
+    await harness.controller.retry();
+    expect(harness.state, isA<ConnectionReady>());
+    expect(harness.trace.where((entry) => entry == 'scan'), hasLength(1));
+  });
+
   test('manual Wi-Fi reaches ready without BLE and uses camera identity',
       () async {
     final harness = _Harness();

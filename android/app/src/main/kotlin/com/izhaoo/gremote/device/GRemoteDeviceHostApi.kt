@@ -81,7 +81,12 @@ class GRemoteDeviceHostApi(
     ) = launchResult(callback) {
         transport?.close()
         transport = null
-        val network = networkManager.connect(ssid, passphrase)
+        val adopting = ssid.isEmpty() && passphrase.isEmpty()
+        val network = if (adopting) {
+            networkManager.adoptConnectedCameraWifi()
+        } else {
+            networkManager.connect(ssid, passphrase)
+        }
         val candidate = BoundCameraTransport(
             network = network,
             context = appContext,
@@ -89,7 +94,7 @@ class GRemoteDeviceHostApi(
             emitEvent = ::emitNativeEvent,
         )
         try {
-            candidate.probeCamera()
+            candidate.probeCamera(onlyHotspot = adopting)
             transport = candidate
         } catch (error: Throwable) {
             candidate.close()

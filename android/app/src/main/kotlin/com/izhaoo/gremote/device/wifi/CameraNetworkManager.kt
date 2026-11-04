@@ -39,21 +39,48 @@ class CameraNetworkManager(
     suspend fun connect(ssid: String, passphrase: String): Network {
         require(ssid.isNotBlank()) { "Camera SSID must not be blank" }
         require(passphrase.isNotBlank()) { "Camera passphrase must not be blank" }
-        disconnect()
-
         val specifier = WifiNetworkSpecifier.Builder()
             .setSsid(ssid)
             .setWpa2Passphrase(passphrase)
             .build()
+        return bind(
+            NetworkRequest.Builder()
+                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .setNetworkSpecifier(specifier)
+                .build(),
+            existing = null,
+        )
+    }
+
+    suspend fun adoptConnectedCameraWifi(): Network {
+        val existing = connectivityManager.allNetworks.filter { network ->
+            connectivityManager.getNetworkCapabilities(network)
+                ?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true &&
+                connectivityManager.getLinkProperties(network)?.linkAddresses?.any {
+                    val octets = it.address.address
+                    it.prefixLength == 24 && octets.size == 4 &&
+                        (octets[0].toInt() and 255) == 192 &&
+                        (octets[1].toInt() and 255) == 168 && octets[2].toInt() == 0 &&
+                        (octets[3].toInt() and 255) in 2..254
+                } == true
+        }.singleOrNull() ?: throw CameraNetworkException(
+            "cameraWifiNotJoined", "尚未连接相机 Wi-Fi",
+        )
         val request = NetworkRequest.Builder()
             .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
             .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            .setNetworkSpecifier(specifier)
             .build()
+        return bind(request, existing)
+    }
+
+    private suspend fun bind(request: NetworkRequest, existing: Network?): Network {
+        disconnect()
         val registration = synchronized(stateLock) {
             val attempt = lifecycle.begin()
             val callback = object : ConnectivityManager.NetworkCallback() {
                 override fun onAvailable(network: Network) {
+                    if (existing != null && network != existing) return
                     lifecycle.available(attempt, network) {
                         emitEvent("wifiState", "{\"state\":\"available\"}")
                     }
@@ -83,9 +110,10 @@ class CameraNetworkManager(
                 if (activeRegistration !== registration) {
                     throw CancellationException("Camera Wi-Fi request was cancelled")
                 }
-                connectivityManager.requestNetwork(request, registration.callback)
+                if (existing == null) connectivityManager.requestNetwork(request, registration.callback)
+                else connectivityManager.registerNetworkCallback(request, registration.callback)
             }
-            return withTimeout(timeoutMs) { registration.attempt.result.await() }
+            return withTimeout(if (existing == null) timeoutMs else 1500) { registration.attempt.result.await() }
         } catch (error: TimeoutCancellationException) {
             unregister(registration)
             throw CameraNetworkException(

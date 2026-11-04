@@ -295,8 +295,7 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
                 child: ListView(shrinkWrap: true, children: [
               ListTile(
                   title: const Text('胶卷与数据'),
-                  subtitle:
-                      Text(controller?.state.message ?? '请连接相机 Wi-Fi 并导入配对文件')),
+                  subtitle: Text(controller?.state.message ?? '请连接相机 Wi-Fi')),
               ListTile(
                   leading: const Icon(Icons.collections_bookmark_outlined),
                   title: const Text('相机目录'),
@@ -331,21 +330,25 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
                 ListTile(
                     title: const Text('恢复所选胶卷'),
                     onTap: () => Navigator.pop(context, 'reset')),
-              const Divider(),
-              ListTile(
-                  leading: const Icon(Icons.link),
-                  title: const Text('导入配对文件'),
-                  enabled: !_picking,
-                  onTap:
-                      _picking ? null : () => Navigator.pop(context, 'pair')),
-              if (identity != null)
+              if (identity == null ||
+                  identical(identity,
+                      ref.read(companionPairingIdentityProvider))) ...[
+                const Divider(),
                 ListTile(
-                    leading: const Icon(Icons.link_off_outlined),
-                    title: const Text('移除当前配对'),
+                    leading: const Icon(Icons.link),
+                    title: const Text('导入配对文件'),
                     enabled: !_picking,
-                    onTap: _picking
-                        ? null
-                        : () => Navigator.pop(context, 'unpair')),
+                    onTap:
+                        _picking ? null : () => Navigator.pop(context, 'pair')),
+                if (ref.read(companionPairingIdentityProvider) != null)
+                  ListTile(
+                      leading: const Icon(Icons.link_off_outlined),
+                      title: const Text('移除当前配对'),
+                      enabled: !_picking,
+                      onTap: _picking
+                          ? null
+                          : () => Navigator.pop(context, 'unpair')),
+              ],
             ])));
     if (!mounted) return;
     switch (action) {
@@ -402,7 +405,7 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
     ref.watch(companionIdentityHydrationProvider);
     final controller = ref.watch(companionSyncControllerProvider),
         cameraCatalog = ref.watch(cameraFilmCatalogProvider).valueOrNull,
-        identity = ref.watch(companionPairingIdentityProvider);
+        identity = ref.watch(effectiveCompanionIdentityProvider);
     final FilmCatalog? catalog =
         cameraCatalog ?? ref.watch(filmCatalogProvider).valueOrNull;
     _configure(controller, ref.watch(companionNetworkReadyProvider),
@@ -472,7 +475,7 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
                             : state?.connectionStatus ==
                                     SyncConnectionStatus.connecting
                                 ? '正在读取机身配置'
-                                : state?.message ?? '请连接相机 Wi-Fi 并在更多中导入配对文件。',
+                                : state?.message ?? '请连接相机 Wi-Fi。',
                         style: TextStyle(
                             color: context.palette.muted, height: 1.5))),
               if (state?.stale == true && snapshot != null)

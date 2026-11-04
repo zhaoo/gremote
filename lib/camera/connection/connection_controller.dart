@@ -90,6 +90,8 @@ class ConnectionController extends Notifier<CameraConnectionState> {
   CameraSnapshot? _snapshot;
   Future<void>? _focusInFlight;
   Future<void>? _connectionInFlight;
+  bool _autoAdopt = true;
+  Future<void>? _wifiAdoptionInFlight;
 
   @override
   CameraConnectionState build() {
@@ -112,7 +114,16 @@ class ConnectionController extends Notifier<CameraConnectionState> {
       _providedTransport == null;
 
   Future<void> connect({String? deviceId}) =>
-      _startConnection(() => _connect(deviceId));
+      _startUserConnection(() => _connect(deviceId));
+
+  Future<void> _startUserConnection(Future<void> Function() action) {
+    final adoption = _wifiAdoptionInFlight;
+    if (adoption == null) return _startConnection(action);
+    final generation = _generation;
+    return adoption.then((_) {
+      if (generation == _generation) return _startConnection(action);
+    });
+  }
 
   Future<void> _startConnection(Future<void> Function() action) {
     final pending = _connectionInFlight;
@@ -126,6 +137,7 @@ class ConnectionController extends Notifier<CameraConnectionState> {
   }
 
   Future<void> _connect(String? deviceId) async {
+    _autoAdopt = true;
     final generation = ++_generation;
     _selectedDevice = null;
     _bootstrap = null;
@@ -144,26 +156,55 @@ class ConnectionController extends Notifier<CameraConnectionState> {
     await _run(++_generation, _ConnectionStep.pairing);
   }
 
+  Future<void> adoptConnectedWifi() async {
+    final current = state;
+    if (!_autoAdopt ||
+        _connectionInFlight != null ||
+        (current is! ConnectionIdle &&
+            !(current is ConnectionFailed &&
+                current.failure.code == 'wifiLost'))) {
+      return;
+    }
+    final attempt =
+        _startConnection(() => _connectWifiManually('', '', adopt: true));
+    _wifiAdoptionInFlight = attempt;
+    try {
+      await attempt;
+    } finally {
+      if (identical(_wifiAdoptionInFlight, attempt)) {
+        _wifiAdoptionInFlight = null;
+      }
+    }
+  }
+
   Future<void> connectWifiManually({
     required String ssid,
     required String passphrase,
   }) =>
-      _startConnection(() => _connectWifiManually(ssid, passphrase));
+      _startUserConnection(() => _connectWifiManually(ssid, passphrase));
 
-  Future<void> _connectWifiManually(String ssid, String passphrase) async {
+  Future<void> _connectWifiManually(String ssid, String passphrase,
+      {bool adopt = false}) async {
     final generation = ++_generation;
-    _selectedDevice = null;
-    _bootstrap = null;
-    _snapshot = null;
-    _retryCount = 0;
+    if (!adopt) {
+      _autoAdopt = true;
+      _selectedDevice = null;
+      _bootstrap = null;
+      _snapshot = null;
+      _retryCount = 0;
+    }
+    var attached = false;
     try {
-      _setState(generation, const ConnectionPermissions());
-      await _permissionGate.ensureWifiGranted();
-      _check(generation);
-      _setState(generation, const ConnectionWifiManualRequesting());
+      if (!adopt) {
+        _setState(generation, const ConnectionPermissions());
+        await _permissionGate.ensureWifiGranted();
+        _check(generation);
+        _setState(generation, const ConnectionWifiManualRequesting());
+      }
       await _wifi.connect(ssid: ssid, passphrase: passphrase);
+      attached = true;
       _check(generation);
-      _setState(generation, const ConnectionWifiManualProbing());
+      if (!adopt) _setState(generation, const ConnectionWifiManualProbing());
       await _api.ping();
       final props = await _api.props();
       _check(generation);
@@ -176,7 +217,7 @@ class ConnectionController extends Notifier<CameraConnectionState> {
         throw const _ConnectionFault('unsupportedCamera');
       }
       final battery = parseProps(props).status.battery ?? props['batteryLevel'];
-      _snapshot = CameraSnapshot(
+      final snapshot = CameraSnapshot(
         identity: identity,
         battery: CameraBattery(
           level:
@@ -184,23 +225,32 @@ class ConnectionController extends Notifier<CameraConnectionState> {
           acPowered: false,
         ),
       );
+      _snapshot = snapshot;
+      if (adopt) {
+        _selectedDevice = null;
+        _bootstrap = null;
+        _retryCount = 0;
+      }
       _setState(
           generation,
           ConnectionReady(
-            snapshot: _snapshot!,
+            snapshot: snapshot,
             firmwareWarning: !identity.isVerifiedFirmware,
             wifiOnly: true,
-            cameraKey: sha256.convert(utf8.encode('wifi:$ssid')).toString(),
+            cameraKey: adopt
+                ? null
+                : sha256.convert(utf8.encode('wifi:$ssid')).toString(),
           ));
     } on _StaleAttempt {
       return;
     } catch (error) {
-      if (generation != _generation) return;
+      if (generation != _generation || (adopt && !attached)) return;
       try {
         await _wifi.disconnect();
       } catch (_) {
         // Preserve the original connection failure.
       }
+      if (adopt) return;
       final failure = _mapFailure(_activeStage, error);
       state = ConnectionFailed(ConnectionFailure(
         stage: failure.stage,
@@ -213,12 +263,12 @@ class ConnectionController extends Notifier<CameraConnectionState> {
     }
   }
 
-  Future<void> retry() async {
-    final current = state;
-    if (current is! ConnectionFailed || !current.failure.retryable) return;
-    _retryCount++;
-    await _run(++_generation, _retryStep);
-  }
+  Future<void> retry() => _startUserConnection(() async {
+        final current = state;
+        if (current is! ConnectionFailed || !current.failure.retryable) return;
+        _retryCount++;
+        await _run(++_generation, _retryStep);
+      });
 
   /// Uses the firmware-derived lens API, never a capture operation or fallback.
   Future<void> focus({int x = 50, int y = 50}) {
@@ -275,6 +325,8 @@ class ConnectionController extends Notifier<CameraConnectionState> {
   }
 
   Future<void> cancel() async {
+    _autoAdopt = false;
+    _wifiAdoptionInFlight = null;
     final generation = ++_generation;
     _connectionInFlight = null;
     _retryStep = _ConnectionStep.permissions;

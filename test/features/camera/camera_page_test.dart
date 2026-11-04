@@ -46,7 +46,7 @@ void main() {
       expect(tester.takeException(), isNull);
       await tester.tap(find.text('扩展'));
       await tester.pumpAndSettle();
-      expect(find.text('未连接 · 配对 M10V 后可设置'), findsOneWidget);
+      expect(find.text('等待 M10V 连接'), findsOneWidget);
       expect(find.text('HDF'), findsNothing);
       expect(find.widgetWithText(TextButton, '重新读取'), findsNothing);
       for (final group in ['功能', '效果', '水印', '焦距', '画幅']) {
@@ -71,9 +71,7 @@ void main() {
           tester.widget<ListTile>(find.widgetWithText(ListTile, '相机连接')).onTap,
           isNotNull);
       expect(
-          tester
-              .widget<ListTile>(find.widgetWithText(ListTile, '配对与机内胶卷'))
-              .onTap,
+          tester.widget<ListTile>(find.widgetWithText(ListTile, '机内胶卷')).onTap,
           isNotNull);
       expect(tester.takeException(), isNull);
     });

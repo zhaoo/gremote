@@ -106,7 +106,7 @@ class _CameraPageState extends ConsumerState<CameraPage> {
                 context.go('/home');
               }),
           ListTile(
-              title: const Text('配对与机内胶卷'),
+              title: const Text('机内胶卷'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.pop(sheet);
