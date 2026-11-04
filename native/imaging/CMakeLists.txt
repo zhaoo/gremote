@@ -41,6 +41,11 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     -DCMAKE_OSX_SYSROOT=${CMAKE_OSX_SYSROOT}
     -DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}
     -DWITH_SIMD=OFF)
+  # The iOS library does not ship the vendor's command-line executables.
+  set(LJT_EXTERNAL_COMMANDS
+    BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --config Release --target jpeg-static
+    INSTALL_COMMAND ${CMAKE_COMMAND} --install <BINARY_DIR> --config Release --component lib
+    COMMAND ${CMAKE_COMMAND} --install <BINARY_DIR> --config Release --component include)
 endif()
 if(CMAKE_OSX_ARCHITECTURES)
   list(APPEND LJT_ARGS -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES})
@@ -50,6 +55,7 @@ ExternalProject_Add(libjpeg_turbo_external
   INSTALL_DIR ${LJT_INSTALL_DIR}
   CMAKE_GENERATOR ${CMAKE_GENERATOR}
   CMAKE_ARGS ${LJT_ARGS}
+  ${LJT_EXTERNAL_COMMANDS}
   BUILD_BYPRODUCTS ${LJT_LIBRARY})
 file(MAKE_DIRECTORY ${LJT_INSTALL_DIR}/include)
 add_library(gremote_jpeg STATIC IMPORTED)
