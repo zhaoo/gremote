@@ -35,7 +35,7 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
   private var companionFileLimit = 0
   private var companionFileGeneration = UUID()
   private let wifiMonitor = NWPathMonitor(requiredInterfaceType: .wifi)
-  private var wifiPath: NWPath?
+  private var wifiPath: Network.NWPath?
   private var cameraWiFi: CameraWiFi?
   private var companionRequests: [UUID: CompanionHTTP] = [:]
   private var connected = false
