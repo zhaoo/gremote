@@ -94,7 +94,7 @@ class CameraExtensionsController extends ChangeNotifier {
           'unsupportedProtocol': '扩展设置协议不兼容，暂不可设置',
           'revisionConflict': '机身设置已变化，请重新选择',
           'busy': '请结束拍摄、程序或原图传输后重试',
-          'unauthorized': '配对已失效，请重新配对',
+          'unauthorized': 'M10V 连接已失效，请重新连接相机 Wi-Fi',
           'identityMismatch': '相机身份不匹配',
           'sessionChanged': '连接已变化，请重新读取',
           'storeFailed': '保存失败，请重新读取',

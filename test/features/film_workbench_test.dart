@@ -125,7 +125,8 @@ void main() {
   testWidgets('camera page is explicitly unavailable before bridge evidence',
       (tester) async {
     await show(tester, section: 2);
-    expect(find.textContaining('尚未连接'), findsWidgets);
+    expect(find.text('相机未连接'), findsOneWidget);
+    expect(find.textContaining('GRemote 会自动连接 M10V'), findsOneWidget);
     expect(find.text('已同步'), findsNothing);
   });
   testWidgets('comparison drags never rerender while selecting a film does',

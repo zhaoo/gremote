@@ -73,7 +73,7 @@ final companionIdentityHydrationProvider = FutureProvider<void>((ref) async {
 final companionHotspotTransportProvider =
     Provider<CompanionTransport>((ref) => NativeCompanionTransport());
 
-final _hotspotPairingProvider =
+final companionHotspotPairingProvider =
     FutureProvider<({PairingIdentity identity, HotspotPairingStore keys})?>(
         (ref) async {
   final connection = ref.watch(connectionControllerProvider.select((value) =>
@@ -139,7 +139,7 @@ final _hotspotPairingProvider =
 });
 
 final effectiveCompanionIdentityProvider = Provider<PairingIdentity?>((ref) {
-  final automatic = ref.watch(_hotspotPairingProvider);
+  final automatic = ref.watch(companionHotspotPairingProvider);
   final legacy = ref.watch(companionPairingIdentityProvider);
   // A previously imported file may target a different camera. First give the
   // current connection a chance to advertise its own identity.
@@ -154,7 +154,7 @@ final companionFilePickerProvider =
 final companionApiFactoryProvider =
     Provider<CompanionApi Function(PairingIdentity)>((ref) {
   final keys = ref.watch(companionPairingStoreProvider);
-  final automatic = ref.watch(_hotspotPairingProvider).asData?.value;
+  final automatic = ref.watch(companionHotspotPairingProvider).asData?.value;
   return (identity) => CompanionClient(
       transport: NativeCompanionTransport(),
       pairingStore:

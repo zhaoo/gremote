@@ -365,10 +365,10 @@ void main() {
             .animationController!
             .duration,
         Duration.zero);
-    await tester.scrollUntilVisible(find.text('导入配对文件'), 150,
+    await tester.scrollUntilVisible(find.text('本地配方'), 150,
         scrollable: find.byType(Scrollable).last);
-    expect(find.text('导入配对文件').hitTestable(), findsOneWidget);
-    Navigator.of(tester.element(find.text('导入配对文件'))).pop();
+    expect(find.text('本地配方').hitTestable(), findsOneWidget);
+    Navigator.of(tester.element(find.text('本地配方'))).pop();
     await tester.pumpAndSettle();
     await tester.tap(find.text('写入槽位 01'));
     await tester.pumpAndSettle();
@@ -555,8 +555,7 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     controller.dispose();
   });
-  testWidgets(
-      'real five slots browse without writes; offline empty state has import action',
+  testWidgets('film data remains available without exposing manual pairing',
       (tester) async {
     final db = (await tester.runAsync(() => GRemoteDatabase.open(
         factory: databaseFactoryFfi, path: inMemoryDatabasePath)))!;
@@ -594,7 +593,7 @@ void main() {
     expect(api.operations, isEmpty);
     await tester.tap(find.byTooltip('更多胶卷操作'));
     await tester.pumpAndSettle();
-    expect(find.text('导入配对文件'), findsOneWidget);
+    expect(find.text('导入配对文件'), findsNothing);
     expect(find.text('导入胶卷数据'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());

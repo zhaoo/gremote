@@ -11,7 +11,8 @@ import '../../app/widgets/workspace_motion.dart';
 import '../../camera/companion/companion_protocol.dart';
 import '../../camera/companion/companion_sync_controller.dart';
 import '../../camera/companion/film_transfer.dart';
-import '../../camera/companion/pairing_store.dart';
+import '../../camera/connection/connection_controller.dart';
+import '../../camera/connection/connection_state.dart';
 import '../../camera/companion/sync_state.dart';
 import '../../camera/companion/three_way_merge.dart';
 import '../../film/catalog/film_catalog.dart';
@@ -120,25 +121,6 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
         content: Text(error is FormatException
             ? error.message
             : companionErrorMessage(error))));
-  }
-
-  Future<void> _pair() async {
-    if (_picking) return;
-    setState(() => _picking = true);
-    try {
-      final bytes = await ref.read(companionFilePickerProvider)('pairing');
-      if (bytes == null || !mounted) return;
-      final identity =
-          await importPairing(bytes, ref.read(companionPairingStoreProvider));
-      if (!mounted) return;
-      await ref.read(companionIdentityStorageProvider).save(identity);
-      if (!mounted) return;
-      ref.read(companionPairingIdentityProvider.notifier).state = identity;
-    } catch (error) {
-      _error(error);
-    } finally {
-      if (mounted) setState(() => _picking = false);
-    }
   }
 
   Future<void> _import(FilmCatalog catalog) async {
@@ -283,7 +265,8 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
   }
 
   Future<void> _more(CompanionSyncController? controller, FilmCatalog? catalog,
-      PairingIdentity? identity) async {
+      {required String connectionMessage,
+      required bool usingSavedPairing}) async {
     final action = await showModalBottomSheet<String>(
         context: context,
         showDragHandle: true,
@@ -295,7 +278,7 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
                 child: ListView(shrinkWrap: true, children: [
               ListTile(
                   title: const Text('胶卷与数据'),
-                  subtitle: Text(controller?.state.message ?? '请连接相机 Wi-Fi')),
+                  subtitle: Text(connectionMessage)),
               ListTile(
                   leading: const Icon(Icons.collections_bookmark_outlined),
                   title: const Text('相机目录'),
@@ -330,24 +313,15 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
                 ListTile(
                     title: const Text('恢复所选胶卷'),
                     onTap: () => Navigator.pop(context, 'reset')),
-              if (identity == null ||
-                  identical(identity,
-                      ref.read(companionPairingIdentityProvider))) ...[
+              if (usingSavedPairing) ...[
                 const Divider(),
                 ListTile(
-                    leading: const Icon(Icons.link),
-                    title: const Text('导入配对文件'),
+                    leading: const Icon(Icons.link_off_outlined),
+                    title: const Text('移除旧版配对'),
                     enabled: !_picking,
-                    onTap:
-                        _picking ? null : () => Navigator.pop(context, 'pair')),
-                if (ref.read(companionPairingIdentityProvider) != null)
-                  ListTile(
-                      leading: const Icon(Icons.link_off_outlined),
-                      title: const Text('移除当前配对'),
-                      enabled: !_picking,
-                      onTap: _picking
-                          ? null
-                          : () => Navigator.pop(context, 'unpair')),
+                    onTap: _picking
+                        ? null
+                        : () => Navigator.pop(context, 'unpair')),
               ],
             ])));
     if (!mounted) return;
@@ -375,8 +349,6 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
           _imported = null;
           _saved = null;
         });
-      case 'pair':
-        await _pair();
       case 'unpair':
         await _removePairing();
     }
@@ -406,6 +378,18 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
     final controller = ref.watch(companionSyncControllerProvider),
         cameraCatalog = ref.watch(cameraFilmCatalogProvider).valueOrNull,
         identity = ref.watch(effectiveCompanionIdentityProvider);
+    final connected = ref.watch(connectionControllerProvider
+        .select((connection) => connection is ConnectionReady));
+    final discovery = ref.watch(companionHotspotPairingProvider);
+    final saved = ref.watch(companionPairingIdentityProvider);
+    final usingSavedPairing = saved != null && identical(saved, identity);
+    final discovering = connected &&
+        (discovery.isLoading || (identity != null && controller == null));
+    final fallbackMessage = !connected
+        ? '连接相机 Wi-Fi 后，GRemote 会自动连接 M10V。'
+        : discovering
+            ? '正在自动连接 M10V…'
+            : '未检测到 M10V 服务。请确认已开启 GRemote 连接，并安装配套 SD 脚本。';
     final FilmCatalog? catalog =
         cameraCatalog ?? ref.watch(filmCatalogProvider).valueOrNull;
     _configure(controller, ref.watch(companionNetworkReadyProvider),
@@ -418,6 +402,12 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
                 : ref.watch(selectedFilmRecipeProvider));
     Widget content() {
       final state = controller?.state, snapshot = state?.snapshot;
+      final connectionMessage =
+          state?.connectionStatus == SyncConnectionStatus.busy
+              ? '相机正忙，请稍后写入'
+              : state?.connectionStatus == SyncConnectionStatus.connecting
+                  ? '正在读取机身配置'
+                  : state?.message ?? fallbackMessage;
       final canPrepare = controller != null &&
           state != null &&
           !state.readOnly &&
@@ -436,24 +426,33 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
               Expanded(
                   child: Text(
                       snapshot == null
-                          ? '尚未连接 M10V 胶卷桥'
+                          ? connected
+                              ? 'M10V 机内胶卷'
+                              : '相机未连接'
                           : state!.readOnly
                               ? '机身配置 · 只读'
                               : '机身 · ${snapshot.slots.length} 槽',
                       style: TextStyle(
                           color: context.palette.muted, fontSize: 12))),
               IconButton(
-                  tooltip: '读取机身配置',
-                  onPressed: controller == null || _picking
+                  tooltip: controller == null ? '重试 M10V 连接' : '读取机身配置',
+                  onPressed: _picking
                       ? null
-                      : () => unawaited(controller.refresh()),
+                      : controller != null
+                          ? () => unawaited(controller.refresh())
+                          : connected && !discovering
+                              ? () => ref
+                                  .invalidate(companionHotspotPairingProvider)
+                              : null,
                   icon: Icon(Icons.refresh,
                       color: context.palette.muted, size: 20)),
               IconButton(
                   tooltip: '更多胶卷操作',
                   onPressed: _preparing
                       ? null
-                      : () => _more(controller, catalog, identity),
+                      : () => _more(controller, catalog,
+                          connectionMessage: connectionMessage,
+                          usingSavedPairing: usingSavedPairing),
                   icon: Icon(Icons.more_horiz, color: context.palette.muted)),
             ])),
         Expanded(
@@ -469,13 +468,7 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
                   state.connectionStatus != SyncConnectionStatus.ready)
                 Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: Text(
-                        state?.connectionStatus == SyncConnectionStatus.busy
-                            ? '相机正忙，请稍后写入'
-                            : state?.connectionStatus ==
-                                    SyncConnectionStatus.connecting
-                                ? '正在读取机身配置'
-                                : state?.message ?? '请连接相机 Wi-Fi。',
+                    child: Text(connectionMessage,
                         style: TextStyle(
                             color: context.palette.muted, height: 1.5))),
               if (state?.stale == true && snapshot != null)
