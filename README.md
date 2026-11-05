@@ -31,7 +31,7 @@ GRemote 想把拍摄现场和照片后期放在一处：通过蓝牙与相机 Wi
 
 ## 下载
 
-[下载 GRemote 1.2.3 Android arm64 APK](https://github.com/zhaoo/gremote/releases/download/v1.2.3/gremote-1.2.3-android-arm64.apk) · [发布说明与校验文件](https://github.com/zhaoo/gremote/releases/tag/v1.2.3) · [GRemote 官网](https://gremote.izhaoo.com)
+[下载 GRemote 1.2.5 Android arm64 APK](https://github.com/zhaoo/gremote/releases/download/v1.2.5/gremote-1.2.5-android-arm64.apk) · [发布说明与校验文件](https://github.com/zhaoo/gremote/releases/tag/v1.2.5) · [GRemote 官网](https://gremote.izhaoo.com)
 
 最低 Android 8.0。v1.0.1 改用专用正式签名，不能直接覆盖旧 v1.0.0；卸载前先备份本地数据。见 [1.0.1 发布记录](docs/releases/v1.0.1.md)。
 
