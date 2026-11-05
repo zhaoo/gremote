@@ -1,5 +1,23 @@
 [
   {
+    "version": "1.2.5",
+    "build": 24,
+    "date": "2026-11-05",
+    "platform": "Android · 正式签名",
+    "title": "连接 M10V，自动同步。",
+    "changes": [
+      "移除机内胶卷页遗留的手动配对入口。",
+      "区分相机未连接、自动连接中和机内服务未就绪，支持重试连接。",
+      "连接失效时引导重新连接相机 Wi-Fi。"
+    ],
+    "evidence": "版本 1.2.5+24。自动化检查及正式签名验证通过，可覆盖安装 1.2.4。本版尚未真机复测。",
+    "url": "https://github.com/zhaoo/gremote/releases/tag/v1.2.5",
+    "download": "https://github.com/zhaoo/gremote/releases/download/v1.2.5/gremote-1.2.5-android-arm64.apk",
+    "checksums": "https://github.com/zhaoo/gremote/releases/download/v1.2.5/SHA256SUMS.txt",
+    "sha256": "5c7c0546df64f0132cdb286b5086988a7f81cee3de156f5434e509aaa4ead01b",
+    "bytes": 29076534
+  },
+  {
     "version": "1.2.4",
     "build": 23,
     "date": "2026-11-05",
