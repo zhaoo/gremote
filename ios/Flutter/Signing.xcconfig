@@ -1,0 +1,2 @@
+// Project-level settings are inherited by both the app and its tests.
+#include? "../LocalSigning.xcconfig"

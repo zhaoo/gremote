@@ -29,8 +29,8 @@ jobs:
           flutter pub get
           bash scripts/build_ios_imaging.sh
           flutter build ios --release --no-codesign
-          app=build/ios/iphoneos/Runner.app
-          test -x "$app/Runner"
+          app=build/ios/iphoneos/GRemote.app
+          test -x "$app/GRemote"
           test -f "$app/Frameworks/gremote_imaging.framework/gremote_imaging"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Info.plist" | grep -Fx com.izhaoo.gremote
           ditto -c -k --keepParent "$app" "$RUNNER_TEMP/gremote-ios-unsigned.zip"

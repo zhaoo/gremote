@@ -5,7 +5,7 @@
 - 目标：RICOH GR III 2.10（已由手机原厂GET接口确认）。
 - 来源：M10V main `a24ccc2618aff06baf9359808120ce6a4e881ab0`；远端fetch与服务器Git只读检查一致。原脏工作区保持原样。
 - 源码：该提交独立归档2102个文件，只有HDF调试日志字段条件编译修正；补丁和完整SHA清单在包内。未改菜单逻辑/存储ABI。
-- 包：[m10v-gr3-debug-20261101-e78dd1d7.zip](/Users/zhaoo/Desktop/code/zhaoo/gremote/dist/m10v-gr3-debug-20261101-e78dd1d7.zip)。
+- 包：`dist/m10v-gr3-debug-20261101-e78dd1d7.zip`（本地产物，不随仓库分发）。
 - ZIP SHA256：`e8cef66725e8969d2cbd4c0bc497ce5e00a3653e35531c4cfa3651b2627860fd`。
 - BIN SHA256：`ba11ed85bf28d75d7c9cac192c82ea33dcbc9b6f300198169e4623cf663e2a31`。
 - 官方输入SHA256：`d6a3c9c288d784080e7b283222ecdd8752adfeed6faa36dab44f73115354bfd4`。
@@ -24,4 +24,4 @@
 - Node全量518项：436通过、54失败、28条件跳过。针对全部29个失败文件，在未修改main和相同输入上执行134项，80通过、同样54失败；54个失败标题全部匹配，没有新增失败标题。未声称完整基线全绿，也未把标题匹配当作根因证明。
 - 早先额外边框/pure-ISP全组合未通过通用夹具，候选未交付；原始记录保留。
 
-全部检查和对照在包内CHECKS.md、BASELINE-COMPARISON.json及evidence；源码与构建临时目录保留在 `/Users/zhaoo/.codex/worktrees/film-companion/diagnostic-20261101`，用于继续调试。没有用模拟器结果替代安装/硬件验收。
+全部检查和对照在包内CHECKS.md、BASELINE-COMPARISON.json及evidence；源码与构建临时目录保留在本机私有候选目录，复现时通过 `M10V_PROBE_BASE` 指定。没有用模拟器结果替代安装/硬件验收。

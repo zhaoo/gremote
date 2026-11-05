@@ -4,8 +4,9 @@ import {mkdtemp,readFile,writeFile,rm} from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {syncContract} from './sync_m10v_contract.mjs';
-const sourceDir='/Users/zhaoo/.codex/worktrees/film-companion/m10v';
-test('generated catalog keeps stable film identity and detects snapshot corruption',async()=>{
+const sourceDir=process.env.M10V_SOURCE_DIR;
+const sourceRequired={skip:sourceDir?false:'Set M10V_SOURCE_DIR to the M10V source checkout'};
+test('generated catalog keeps stable film identity and detects snapshot corruption',sourceRequired,async()=>{
  const outputDir=await mkdtemp(path.join(os.tmpdir(),'gremote-catalog-'));
  try{
   const manifest=await syncContract({sourceDir,outputDir});
@@ -23,7 +24,7 @@ test('generated catalog keeps stable film identity and detects snapshot corrupti
  }finally{await rm(outputDir,{recursive:true,force:true});}
 });
 
-test('repeat generation observes changed renderer and failed publication rolls back',async()=>{
+test('repeat generation observes changed renderer and failed publication rolls back',sourceRequired,async()=>{
  const {cp}=await import('node:fs/promises');
  const {execFileSync}=await import('node:child_process');
  const root=await mkdtemp(path.join(os.tmpdir(),'gremote-snapshot-change-'));

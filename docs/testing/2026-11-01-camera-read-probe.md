@@ -15,10 +15,12 @@ Linux 不写 RAM 或 SD，不安装 Hook，不留后台服务。TTL 仅通过 RT
 2026-11-01 复核命令：
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 /Users/zhaoo/Desktop/code/zhaoo/m10v/.venv/bin/python -m unittest discover -s scripts/camera_probe_tests
+PYTHONDONTWRITEBYTECODE=1 "$M10V_PYTHON" -m unittest discover -s scripts/camera_probe_tests
 ```
 
-结果：16 项通过、无跳过。覆盖错误固件、只读映射、缓存/映射失败清理、数组及数据变化、无线接口/IP/歧义拒绝、超时、旧 App 路径隔离、错误方法拒绝、采集结果缺轮/混合运行/错误构建及包校验和。该结果不是相机运行结论。
+复现前将 `M10V_PYTHON` 设置为安装了测试依赖的 Python 可执行文件，并将 `M10V_PROBE_BASE` 设置为私有候选目录。
+
+历史结果：16 项通过、无跳过。覆盖错误固件、只读映射、缓存/映射失败清理、数组及数据变化、无线接口/IP/歧义拒绝、超时、旧 App 路径隔离、错误方法拒绝、采集结果缺轮/混合运行/错误构建及包校验和。该结果不是相机运行结论；未提供私有候选时封包测试会明确跳过。
 
 ## 设备安排
 

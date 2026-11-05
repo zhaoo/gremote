@@ -24,7 +24,7 @@
 - [ ] 写失败测试：保留所有稳定 ID（含 289），可见列表由源筛选生成；相同参数不同名称 fingerprint 相同；无效 grain/EI、未知 schema 拒绝；源在读取中变化则失败且不替换现有快照。 代表用例 `recipe_hash_ignores_display_name` 的核心断言：`expect(first.fingerprint, renamed.fingerprint)`（fixture 在该任务的测试文件中建立）。
 - [ ] 运行 `node --test scripts/sync_m10v_contract.test.mjs` 和 `flutter test test/film/film_catalog_test.dart`，确认红灯属于缺失的新接口。
 - [ ] 实现生成器及值对象，先临时目录生成、核对 source fingerprint 后整体发布；依赖闭包只复制纯算法和数据，保留 notices，记录是否 dirty，不复制相机固件。
-- [ ] 重跑上述命令及 `node scripts/sync_m10v_contract.mjs --source /Users/zhaoo/Desktop/code/zhaoo/m10v --check`；预期 ID/哈希一致，故意改源后 check 非零。
+- [ ] 将 `M10V_SOURCE_DIR` 设置为本机 M10V 源码目录，再重跑上述命令及 `node scripts/sync_m10v_contract.mjs --source "$M10V_SOURCE_DIR" --check`；预期 ID/哈希一致，故意改源后 check 非零。
 - [ ] 只提交生成器、目录/图标、合法纯源码快照、notices、模型与测试：`feat: share versioned M10V film catalog and recipes`。
 
 ## A2：胶卷仓储和 v4 数据迁移

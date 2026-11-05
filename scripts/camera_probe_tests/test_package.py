@@ -1,14 +1,14 @@
 import importlib.util,json,struct,tempfile,unittest,hashlib,os
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[2]
-BASE=Path(os.environ.get('M10V_PROBE_BASE','/Users/zhaoo/.codex/worktrees/film-companion/diagnostic-20261101'))
+BASE=Path(os.environ['M10V_PROBE_BASE']) if os.environ.get('M10V_PROBE_BASE') else None
 SPEC=importlib.util.spec_from_file_location('build_camera_probe',ROOT/'scripts/build_camera_probe.py')
 BUILDER=importlib.util.module_from_spec(SPEC);SPEC.loader.exec_module(BUILDER)
 
 class Package(unittest.TestCase):
  @classmethod
  def setUpClass(cls):
-  if not (BASE/'candidate-core-r2/fwdc239b.bin').is_file():raise unittest.SkipTest('Set M10V_PROBE_BASE to the exact private e78dd1d7 candidate directory')
+  if BASE is None or not (BASE/'candidate-core-r2/fwdc239b.bin').is_file():raise unittest.SkipTest('Set M10V_PROBE_BASE to the exact private e78dd1d7 candidate directory')
   cls.tmp=tempfile.TemporaryDirectory();cls.path=Path(cls.tmp.name);cls.out=cls.path/'probe'
   cls.manifest=BUILDER.build_probe(BASE/'candidate-core-r2/fwdc239b.bin',BASE/'candidate-core-r2/M10V-build-receipt.json',BASE/'source',cls.out)
  @classmethod

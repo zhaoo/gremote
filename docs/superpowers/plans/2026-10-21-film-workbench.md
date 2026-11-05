@@ -70,7 +70,7 @@
 
 - [ ] 核对三仓库 revision/dirty；记录 M10V 已跟踪 diff 和相关未跟踪文件的路径/哈希到私有基线清单，不提交固件、照片、配对密钥。
 - [ ] 使用可用的原生 worktree 工具创建 M10V 隔离工作区；安全应用所需源码快照并验证哈希。原工作区不 stash、不 reset、不切分支；不把未审阅的并发改动合入生产。
-- [ ] Python 测试命令先设置 `M10V_PYTHON=/Users/zhaoo/Desktop/code/zhaoo/m10v/.venv/bin/python` 并核实可用；隔离 checkout 不假设自带未跟踪 `.venv`，必要 fixture 通过显式只读路径提供，不复制进公开源码。
+- [ ] Python 测试命令先将 `M10V_PYTHON` 设置为本机 M10V 虚拟环境的 Python 可执行文件并核实可用；隔离 checkout 不假设自带未跟踪 `.venv`，必要 fixture 通过显式只读路径提供，不复制进公开源码。
 - [ ] 记录 Flutter、Dart、Node、Python、Clang/LLD、JDK17/Android SDK、Xcode 状态。当前有 Flutter/Dart/Clang/CMake，PATH 无 Cargo；方案使用已有 Node/Python/C 链，不自动安装 Rust，也不以此宣称桥可运行。
 - [ ] 在选定工作区运行已有针对性基线检查；已有失败单列根因，不修改断言掩盖，不把历史绿灯当当前结果。没有相机时继续离线，设备项明确 not-run。
 

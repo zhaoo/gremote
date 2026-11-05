@@ -7,24 +7,26 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0D623693DFCF861A5C7EBB86 /* CameraEndpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC791A8363C67BF31E6E7354 /* CameraEndpoint.swift */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
+		3A1B24A5DCE86662771A4890 /* MediaApi.g.swift in Sources */ = {isa = PBXBuildFile; fileRef = F99B64AFEE78AEC1DFF9BCB1 /* MediaApi.g.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
+		3BC6B37FC56508B59B8BD19C /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4D15F58F3D8CD5890A44854F /* Pods_RunnerTests.framework */; };
+		414D458A4445833FCC3E9669 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 6B4B41265ACDC283B53B52DD /* PrivacyInfo.xcprivacy */; };
+		59A890DB6DC70F84DD4BE9B1 /* DeviceApi.g.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BC346578EED0A4138E4120F /* DeviceApi.g.swift */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
+		84C7E435928A131C41757028 /* GRemoteLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E08AB59E75B8296918C201 /* GRemoteLocation.swift */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
-		59A890DB6DC70F84DD4BE9B1 /* DeviceApi.g.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BC346578EED0A4138E4120F /* DeviceApi.g.swift */; };
-		3A1B24A5DCE86662771A4890 /* MediaApi.g.swift in Sources */ = {isa = PBXBuildFile; fileRef = F99B64AFEE78AEC1DFF9BCB1 /* MediaApi.g.swift */; };
-		0D623693DFCF861A5C7EBB86 /* Native/CameraEndpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC791A8363C67BF31E6E7354 /* Native/CameraEndpoint.swift */; };
 		B774A3B65D041CC5D2E9A753 /* Native/CompanionHTTP.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF26882E67CAF934DF9C7DD1 /* Native/CompanionHTTP.swift */; };
-		D6947EE56FBBDF4E2E6CF9FF /* Native/RicohBluetooth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A9045F90C9754CD7890DD0B /* Native/RicohBluetooth.swift */; };
-		D6FF3069F76D9C1789814415 /* Native/GRemoteDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 666BED74178E62A0D105C084 /* Native/GRemoteDevice.swift */; };
-		AD50D2B3C950507BFEC2BB05 /* Native/GRemoteMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91DDE74D3E40A66DA2A31C75 /* Native/GRemoteMedia.swift */; };
-		84C7E435928A131C41757028 /* Native/GRemoteLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36E08AB59E75B8296918C201 /* Native/GRemoteLocation.swift */; };
-		F2637CE2809041ED6817213B /* Native/PhotoPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7510A05ED3D82C09664055AA; };
-		414D458A4445833FCC3E9669 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 6B4B41265ACDC283B53B52DD; };
-		E0AB4F48B0FC4EE3849F1502 /* Native/FilmLibraryDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0AB4F48B0FC4EE3849F1501 /* Native/FilmLibraryDocument.swift */; };
+		AD50D2B3C950507BFEC2BB05 /* GRemoteMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91DDE74D3E40A66DA2A31C75 /* GRemoteMedia.swift */; };
+		AD58CE45040128DC6C5F8B85 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0D71EE655FA42E1D701DE281 /* Pods_Runner.framework */; };
+		D6947EE56FBBDF4E2E6CF9FF /* RicohBluetooth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A9045F90C9754CD7890DD0B /* RicohBluetooth.swift */; };
+		D6FF3069F76D9C1789814415 /* GRemoteDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 666BED74178E62A0D105C084 /* GRemoteDevice.swift */; };
+		E0AB4F48B0FC4EE3849F1502 /* FilmLibraryDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0AB4F48B0FC4EE3849F1501 /* FilmLibraryDocument.swift */; };
+		F2637CE2809041ED6817213B /* PhotoPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7510A05ED3D82C09664055AA /* PhotoPolicy.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -51,32 +53,42 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		14AA5E99C4514DDA87F572A1 /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Signing.xcconfig; path = Flutter/Signing.xcconfig; sourceTree = "<group>"; };
+		0D71EE655FA42E1D701DE281 /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
 		331C807B294A618700263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
 		331C8081294A63A400263BE5 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		36E08AB59E75B8296918C201 /* GRemoteLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Native/GRemoteLocation.swift; sourceTree = "<group>"; };
 		3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = AppFrameworkInfo.plist; path = Flutter/AppFrameworkInfo.plist; sourceTree = "<group>"; };
+		3E988C785DB5B1717E7FB584 /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
+		4D15F58F3D8CD5890A44854F /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		4D79A2A364A272C3F7985612 /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
+		666BED74178E62A0D105C084 /* GRemoteDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Native/GRemoteDevice.swift; sourceTree = "<group>"; };
+		691DEE12A0B4A284B8D104B2 /* Pods-RunnerTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug.xcconfig"; sourceTree = "<group>"; };
+		6B4B41265ACDC283B53B52DD /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		7510A05ED3D82C09664055AA /* PhotoPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Native/PhotoPolicy.swift; sourceTree = "<group>"; };
+		7A9045F90C9754CD7890DD0B /* RicohBluetooth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Native/RicohBluetooth.swift; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
+		8BC346578EED0A4138E4120F /* DeviceApi.g.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceApi.g.swift; sourceTree = "<group>"; };
+		91DDE74D3E40A66DA2A31C75 /* GRemoteMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Native/GRemoteMedia.swift; sourceTree = "<group>"; };
+		943B6B0F83CA48BCA3F1BC04 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Flutter/Debug.xcconfig; sourceTree = "<group>"; };
 		9740EEB31CF90195004384FC /* Generated.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Generated.xcconfig; path = Flutter/Generated.xcconfig; sourceTree = "<group>"; };
-		97C146EE1CF9000F007C117D /* Runner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Runner.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		97C146EE1CF9000F007C117D /* GRemote.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GRemote.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		97C146FB1CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		97C146FD1CF9000F007C117D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		8BC346578EED0A4138E4120F /* DeviceApi.g.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DeviceApi.g.swift"; sourceTree = "<group>"; };
-		F99B64AFEE78AEC1DFF9BCB1 /* MediaApi.g.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MediaApi.g.swift"; sourceTree = "<group>"; };
-		BC791A8363C67BF31E6E7354 /* Native/CameraEndpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Native/CameraEndpoint.swift"; sourceTree = "<group>"; };
 		DF26882E67CAF934DF9C7DD1 /* Native/CompanionHTTP.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Native/CompanionHTTP.swift"; sourceTree = "<group>"; };
-		7A9045F90C9754CD7890DD0B /* Native/RicohBluetooth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Native/RicohBluetooth.swift"; sourceTree = "<group>"; };
-		666BED74178E62A0D105C084 /* Native/GRemoteDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Native/GRemoteDevice.swift"; sourceTree = "<group>"; };
-		91DDE74D3E40A66DA2A31C75 /* Native/GRemoteMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Native/GRemoteMedia.swift"; sourceTree = "<group>"; };
-		36E08AB59E75B8296918C201 /* Native/GRemoteLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Native/GRemoteLocation.swift"; sourceTree = "<group>"; };
-		7510A05ED3D82C09664055AA /* Native/PhotoPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Native/PhotoPolicy.swift"; sourceTree = "<group>"; };
-		6B4B41265ACDC283B53B52DD /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "PrivacyInfo.xcprivacy"; sourceTree = "<group>"; };
-		E0AB4F48B0FC4EE3849F1501 /* Native/FilmLibraryDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Native/FilmLibraryDocument.swift"; sourceTree = "<group>"; };
+		9EE97D4D40E9AA091F1CB0D2 /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
+		A16AEB7A41F54A48B4E92831 /* Profile.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Profile.xcconfig; path = Flutter/Profile.xcconfig; sourceTree = "<group>"; };
+		BC791A8363C67BF31E6E7354 /* CameraEndpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Native/CameraEndpoint.swift; sourceTree = "<group>"; };
+		D9E5792DA63797D843EFC9A4 /* Pods-RunnerTests.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.profile.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.profile.xcconfig"; sourceTree = "<group>"; };
+		E0AB4F48B0FC4EE3849F1501 /* FilmLibraryDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Native/FilmLibraryDocument.swift; sourceTree = "<group>"; };
+		F99B64AFEE78AEC1DFF9BCB1 /* MediaApi.g.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaApi.g.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -84,6 +96,15 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AD58CE45040128DC6C5F8B85 /* Pods_Runner.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F5D99BC8287AFE708C6CB497 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3BC6B37FC56508B59B8BD19C /* Pods_RunnerTests.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -98,12 +119,36 @@
 			path = RunnerTests;
 			sourceTree = "<group>";
 		};
+		5239935D2D68BA0BF61C3B93 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				4D79A2A364A272C3F7985612 /* Pods-Runner.debug.xcconfig */,
+				943B6B0F83CA48BCA3F1BC04 /* Pods-Runner.release.xcconfig */,
+				3E988C785DB5B1717E7FB584 /* Pods-Runner.profile.xcconfig */,
+				691DEE12A0B4A284B8D104B2 /* Pods-RunnerTests.debug.xcconfig */,
+				9EE97D4D40E9AA091F1CB0D2 /* Pods-RunnerTests.release.xcconfig */,
+				D9E5792DA63797D843EFC9A4 /* Pods-RunnerTests.profile.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		69E8901BB78D615E2B8FDB08 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				0D71EE655FA42E1D701DE281 /* Pods_Runner.framework */,
+				4D15F58F3D8CD5890A44854F /* Pods_RunnerTests.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		9740EEB11CF90186004384FC /* Flutter */ = {
 			isa = PBXGroup;
 			children = (
+				14AA5E99C4514DDA87F572A1 /* Signing.xcconfig */,
 				3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */,
 				9740EEB21CF90195004384FC /* Debug.xcconfig */,
 				7AFA3C8E1D35360C0083082E /* Release.xcconfig */,
+				A16AEB7A41F54A48B4E92831 /* Profile.xcconfig */,
 				9740EEB31CF90195004384FC /* Generated.xcconfig */,
 			);
 			name = Flutter;
@@ -116,13 +161,15 @@
 				97C146F01CF9000F007C117D /* Runner */,
 				97C146EF1CF9000F007C117D /* Products */,
 				331C8082294A63A400263BE5 /* RunnerTests */,
+				5239935D2D68BA0BF61C3B93 /* Pods */,
+				69E8901BB78D615E2B8FDB08 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
 		97C146EF1CF9000F007C117D /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				97C146EE1CF9000F007C117D /* Runner.app */,
+				97C146EE1CF9000F007C117D /* GRemote.app */,
 				331C8081294A63A400263BE5 /* RunnerTests.xctest */,
 			);
 			name = Products;
@@ -139,14 +186,14 @@
 				1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */,
 				8BC346578EED0A4138E4120F /* DeviceApi.g.swift */,
 				F99B64AFEE78AEC1DFF9BCB1 /* MediaApi.g.swift */,
-				BC791A8363C67BF31E6E7354 /* Native/CameraEndpoint.swift */,
 				DF26882E67CAF934DF9C7DD1 /* Native/CompanionHTTP.swift */,
-				7A9045F90C9754CD7890DD0B /* Native/RicohBluetooth.swift */,
-				666BED74178E62A0D105C084 /* Native/GRemoteDevice.swift */,
-				E0AB4F48B0FC4EE3849F1501 /* Native/FilmLibraryDocument.swift */,
-				91DDE74D3E40A66DA2A31C75 /* Native/GRemoteMedia.swift */,
-				36E08AB59E75B8296918C201 /* Native/GRemoteLocation.swift */,
-				7510A05ED3D82C09664055AA /* Native/PhotoPolicy.swift */,
+				BC791A8363C67BF31E6E7354 /* CameraEndpoint.swift */,
+				7A9045F90C9754CD7890DD0B /* RicohBluetooth.swift */,
+				666BED74178E62A0D105C084 /* GRemoteDevice.swift */,
+				E0AB4F48B0FC4EE3849F1501 /* FilmLibraryDocument.swift */,
+				91DDE74D3E40A66DA2A31C75 /* GRemoteMedia.swift */,
+				36E08AB59E75B8296918C201 /* GRemoteLocation.swift */,
+				7510A05ED3D82C09664055AA /* PhotoPolicy.swift */,
 				6B4B41265ACDC283B53B52DD /* PrivacyInfo.xcprivacy */,
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
@@ -161,8 +208,10 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 331C8087294A63A400263BE5 /* Build configuration list for PBXNativeTarget "RunnerTests" */;
 			buildPhases = (
+				2C4336DFF21D4080EBD4DF6C /* [CP] Check Pods Manifest.lock */,
 				331C807D294A63A400263BE5 /* Sources */,
 				331C807F294A63A400263BE5 /* Resources */,
+				F5D99BC8287AFE708C6CB497 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -178,20 +227,23 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 97C147051CF9000F007C117D /* Build configuration list for PBXNativeTarget "Runner" */;
 			buildPhases = (
+				352B6D6C8DF8BAB2E5DC0BCF /* [CP] Check Pods Manifest.lock */,
 				9740EEB61CF901F6004384FC /* Run Script */,
 				97C146EA1CF9000F007C117D /* Sources */,
 				97C146EB1CF9000F007C117D /* Frameworks */,
 				97C146EC1CF9000F007C117D /* Resources */,
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
+				40BC30EB7FBC8F4FDF5DD425 /* [CP] Embed Pods Frameworks */,
+				8A16B0B9B5D7FD94E7BC3FD2 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			name = Runner;
-			productName = Runner;
-			productReference = 97C146EE1CF9000F007C117D /* Runner.app */;
+			productName = GRemote;
+			productReference = 97C146EE1CF9000F007C117D /* GRemote.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -256,6 +308,50 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		2C4336DFF21D4080EBD4DF6C /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-RunnerTests-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		352B6D6C8DF8BAB2E5DC0BCF /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-Runner-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
 		3B06AD1E1E4923F5004D2608 /* Thin Binary */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
@@ -271,6 +367,40 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" embed_and_thin";
+		};
+		40BC30EB7FBC8F4FDF5DD425 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		8A16B0B9B5D7FD94E7BC3FD2 /* [CP] Copy Pods Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-resources-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Copy Pods Resources";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-resources.sh\"\n";
+			showEnvVarsInLog = 0;
 		};
 		9740EEB61CF901F6004384FC /* Run Script */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -304,14 +434,14 @@
 			files = (
 				59A890DB6DC70F84DD4BE9B1 /* DeviceApi.g.swift in Sources */,
 				3A1B24A5DCE86662771A4890 /* MediaApi.g.swift in Sources */,
-				0D623693DFCF861A5C7EBB86 /* Native/CameraEndpoint.swift in Sources */,
 				B774A3B65D041CC5D2E9A753 /* Native/CompanionHTTP.swift in Sources */,
-				D6947EE56FBBDF4E2E6CF9FF /* Native/RicohBluetooth.swift in Sources */,
-				D6FF3069F76D9C1789814415 /* Native/GRemoteDevice.swift in Sources */,
-				E0AB4F48B0FC4EE3849F1502 /* Native/FilmLibraryDocument.swift in Sources */,
-				AD50D2B3C950507BFEC2BB05 /* Native/GRemoteMedia.swift in Sources */,
-				84C7E435928A131C41757028 /* Native/GRemoteLocation.swift in Sources */,
-				F2637CE2809041ED6817213B /* Native/PhotoPolicy.swift in Sources */,
+				0D623693DFCF861A5C7EBB86 /* CameraEndpoint.swift in Sources */,
+				D6947EE56FBBDF4E2E6CF9FF /* RicohBluetooth.swift in Sources */,
+				D6FF3069F76D9C1789814415 /* GRemoteDevice.swift in Sources */,
+				E0AB4F48B0FC4EE3849F1502 /* FilmLibraryDocument.swift in Sources */,
+				AD50D2B3C950507BFEC2BB05 /* GRemoteMedia.swift in Sources */,
+				84C7E435928A131C41757028 /* GRemoteLocation.swift in Sources */,
+				F2637CE2809041ED6817213B /* PhotoPolicy.swift in Sources */,
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 			);
@@ -349,6 +479,7 @@
 /* Begin XCBuildConfiguration section */
 		249021D3217E4FDB00AE95B9 /* Profile */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 14AA5E99C4514DDA87F572A1 /* Signing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -401,20 +532,23 @@
 		};
 		249021D4217E4FDB00AE95B9 /* Profile */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 7AFA3C8E1D35360C0083082E /* Release.xcconfig */;
+			baseConfigurationReference = A16AEB7A41F54A48B4E92831 /* Profile.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = GRemote;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.izhaoo.gremote;
-				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = GRemote;
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -423,6 +557,7 @@
 		};
 		331C8088294A63A400263BE5 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 691DEE12A0B4A284B8D104B2 /* Pods-RunnerTests.debug.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
@@ -434,12 +569,13 @@
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Runner.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Runner";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/GRemote.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/GRemote";
 			};
 			name = Debug;
 		};
 		331C8089294A63A400263BE5 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9EE97D4D40E9AA091F1CB0D2 /* Pods-RunnerTests.release.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
@@ -449,12 +585,13 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.izhaoo.gremote.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Runner.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Runner";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/GRemote.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/GRemote";
 			};
 			name = Release;
 		};
 		331C808A294A63A400263BE5 /* Profile */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D9E5792DA63797D843EFC9A4 /* Pods-RunnerTests.profile.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
@@ -464,12 +601,13 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.izhaoo.gremote.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Runner.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Runner";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/GRemote.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/GRemote";
 			};
 			name = Profile;
 		};
 		97C147031CF9000F007C117D /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 14AA5E99C4514DDA87F572A1 /* Signing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -527,6 +665,7 @@
 		};
 		97C147041CF9000F007C117D /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 14AA5E99C4514DDA87F572A1 /* Signing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -585,16 +724,19 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = GRemote;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.izhaoo.gremote;
-				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = GRemote;
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -608,16 +750,19 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = GRemote;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.izhaoo.gremote;
-				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = GRemote;
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";

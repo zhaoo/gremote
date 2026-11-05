@@ -1,7 +1,7 @@
 # GRemote 工作区视觉与交互落地
 
 用户已于 2026-11-02 确认视觉稿并要求立即实现，补充必要的小动效。
-最终参考：`/Users/zhaoo/.codex/visualizations/2026/10/18/01a14e5a-190c-7c92-aa59-84c8bcad19f1/gr-camera-finish.html`。
+最终参考：用户确认的本地视觉稿 `gr-camera-finish.html`（视觉稿保存在本机，不随仓库分发）。
 
 ## 范围与已确认选择
 
