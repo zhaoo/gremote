@@ -25,6 +25,7 @@
 flutter pub get
 python3 scripts/generate_ios_bridges.py
 bash scripts/build_ios_imaging.sh
+flutter build ios --config-only --release --no-codesign
 cd ios && pod install
 ```
 
@@ -53,7 +54,7 @@ open ios/GRemote.xcworkspace
 ## 通过 Xcode 上传 TestFlight
 
 1. 在 Xcode 顶部选择 `GRemote` Scheme 和 `Any iOS Device (arm64)`。
-2. 上传新构建前先在根目录 `pubspec.yaml` 递增 `version` 或 `+build`，再执行官方 Flutter 的 `flutter pub get`；Xcode 会读取并显示该版本，不要只在 Xcode 中单独修改版本号。
+2. 上传新构建前先在根目录 `pubspec.yaml` 递增 `version` 或 `+build`，再执行官方 Flutter 的 `flutter build ios --config-only --release --no-codesign`，将版本写入本机生成配置；仅执行 `flutter pub get` 可能仍保留旧版本。Xcode 会读取生成配置中的版本，不要只在 Xcode 中单独修改版本号。
 3. 选择 Product → Archive。
 4. Archive 完成后在 Organizer 中选择 Distribute App → App Store Connect → Upload。
 5. 保持 Automatically manage signing，由 Xcode 使用本机签名配置中的团队完成正式签名。
