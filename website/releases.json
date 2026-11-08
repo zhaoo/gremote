@@ -1,5 +1,24 @@
 [
   {
+    "version": "1.2.6",
+    "build": 31,
+    "date": "2026-11-08",
+    "platform": "Android · 正式签名",
+    "title": "机内装卷与扩展，连接更顺畅。",
+    "changes": [
+      "适配新版 M10V 六十款胶卷目录与十槽，补齐胶卷印花等扩展控制。",
+      "修复连接已建立但胶卷库或设置显示不可用的问题。",
+      "移除官网手机预设版本造成的装卷误提示，统一使用机身胶卷装入相机。",
+      "确认装卷期间暂停轮询，避免页面与按钮反复刷新。"
+    ],
+    "evidence": "GR III 配套固件与 test30 已获用户验收；正式版仅更新版本标识。709 项 App 测试通过，6 项跳过，正式签名验证通过。",
+    "url": "https://github.com/zhaoo/gremote/releases/tag/v1.2.6",
+    "download": "https://github.com/zhaoo/gremote/releases/download/v1.2.6/gremote-1.2.6-android-arm64.apk",
+    "checksums": "https://github.com/zhaoo/gremote/releases/download/v1.2.6/SHA256SUMS.txt",
+    "sha256": "f8efa998d6c39903eb59e69062919250dc0702f7dc02ea40686922536bbcbaee",
+    "bytes": 29093806
+  },
+  {
     "version": "1.2.5",
     "build": 24,
     "date": "2026-11-05",

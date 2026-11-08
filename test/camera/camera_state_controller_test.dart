@@ -9,6 +9,7 @@ import 'package:gremote/camera/protocol/protocol_profile.dart';
 import 'package:gremote/camera/sync/camera_state.dart';
 
 import '../support/camera_harness.dart';
+import '../support/echo_camera_model.dart';
 
 void main() {
   late CameraHarness h;
@@ -101,6 +102,45 @@ void main() {
     await pumpEventQueue();
 
     expect(h.state.value(ParamKey.aperture), '5.6');
+  });
+
+  for (final (key, value) in [
+    (ParamKey.aperture, '4.0'),
+    (ParamKey.shutter, '1/125'),
+    (ParamKey.iso, '800'),
+    (ParamKey.exposureComp, '+0.7'),
+    (ParamKey.whiteBalance, 'daylight'),
+    (ParamKey.focusSetting, 'snap'),
+    (ParamKey.aspectRatio, '1:1'),
+    (ParamKey.drive, 'self2s'),
+    (ParamKey.effect, 'vivid'),
+  ]) {
+    test(
+        '${key.wireKey} updates state when HTTP echoes but socket stays silent',
+        () async {
+      h = await CameraHarness.create(camera: EchoCameraModel());
+      await h.connect();
+      expect(h.state.syncMode, SyncMode.webSocket);
+      final outcome = await h.controller.setParam(key.wireKey, value);
+      expect(outcome, isA<WriteConfirmed>());
+      expect(h.state.value(key), value);
+      expect(h.state.pending, isEmpty);
+      expect(h.camera.files, isEmpty);
+    });
+  }
+
+  test('write refreshes dependent values and option lists as well as its echo',
+      () async {
+    final camera = EchoCameraModel();
+    h = await CameraHarness.create(camera: camera);
+    await h.connect();
+    camera.afterWrite = () {
+      camera.props['tv'] = '1/60';
+      camera.props['avList'] = ['4.0'];
+    };
+    await h.controller.setParam('av', '4.0');
+    expect(h.state.value(ParamKey.shutter), '1/60');
+    expect(h.state.param(ParamKey.aperture)!.writable, isFalse);
   });
 
   test('no working encoding makes the session read-only', () async {

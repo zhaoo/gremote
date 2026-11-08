@@ -16,6 +16,7 @@ class _Harness {
   WriteEncoding encoding;
   final Set<WriteEncoding>? accept;
   final sent = <(String, WriteEncoding)>[];
+  final reads = <String>[];
   final camera = <String, String>{'av': '2.8', 'sv': '200'};
   final gates = <Completer<void>>[];
   bool gate = false;
@@ -39,7 +40,10 @@ class _Harness {
       camera[key] = correct?.call(key, value) ?? value;
       return echo ? {key: camera[key]} : {};
     },
-    refreshAndRead: (key) async => camera[key],
+    refreshAndRead: (key) async {
+      reads.add(key);
+      return camera[key];
+    },
     encoding: () => encoding,
     rememberEncoding: (e) async => encoding = e,
     disableWrites: () => disabled = true,
@@ -76,12 +80,36 @@ void main() {
     expect((outcome as WriteCorrected).actual, '3.5');
   });
 
-  test('response echo is used without a refresh', () async {
+  test('response echo still refreshes authoritative camera state', () async {
     final h = _Harness()
       ..echo = true
       ..correct = (_, __) => '5.6';
     final outcome = await h.writer.write(_av, '4.0');
     expect((outcome as WriteCorrected).actual, '5.6');
+    expect(h.reads, ['av']);
+  });
+
+  test('an echo cannot confirm a write whose readback failed', () async {
+    final writer = ParamWriter(
+        send: (_, __, ___) async => {'av': '4.0'},
+        refreshAndRead: (_) async => throw Exception('disconnected'),
+        encoding: () => WriteEncoding.query,
+        rememberEncoding: (_) async {},
+        disableWrites: () {});
+    expect(await writer.write(_av, '4.0'), isA<WriteTimedOut>());
+  });
+
+  test('readback wins when the response echoes a value not applied by camera',
+      () async {
+    final writer = ParamWriter(
+        send: (_, __, ___) async => {'av': '4.0'},
+        refreshAndRead: (_) async => '2.8',
+        encoding: () => WriteEncoding.query,
+        rememberEncoding: (_) async {},
+        disableWrites: () {});
+    final outcome = await writer.write(_av, '4.0');
+    expect(outcome, isA<WriteCorrected>());
+    expect((outcome as WriteCorrected).actual, '2.8');
   });
 
   test('one request in flight; newest queued value wins', () {

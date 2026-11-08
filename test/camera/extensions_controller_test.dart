@@ -91,7 +91,54 @@ class ReadFailureExtensionFake extends ExtensionFake {
   }
 }
 
+class LegacyExtensionFake extends ExtensionFake {
+  @override
+  Future<ExtensionCapabilities> extensionCapabilities() async {
+    final caps = extCaps()..['contractHash'] = legacyExtensionContractHash;
+    for (final field in caps['fields'] as List) {
+      if (field['key'] == 'leakPosition') field['max'] = 2;
+    }
+    caps['fields'] = (caps['fields'] as List)
+        .where((field) => field['key'] != 'imprint').toList();
+    return ExtensionCapabilities.fromJson(caps);
+  }
+  @override
+  Future<ExtensionSnapshot> extensionState() async =>
+      ExtensionSnapshot.fromJson(extSnapshot(hdf: value)
+        ..['contractHash'] = legacyExtensionContractHash);
+  @override
+  Future<ExtensionReceipt> submitExtension(Map<String, Object?> operation) async {
+    if (operation['contractHash'] != legacyExtensionContractHash) {
+      throw const CompanionException('incompatibleRenderer');
+    }
+    submissions++;
+    value = operation['value'] as int;
+    return ExtensionReceipt.fromJson({
+      'requestId': operation['requestId'], 'bootId': bootId,
+      'status': 'committed',
+      'snapshot': extSnapshot(hdf: value)
+        ..['contractHash'] = legacyExtensionContractHash
+    });
+  }
+}
+
 void main() {
+  test('legacy writes use the negotiated contract and never submit imprint',
+      () async {
+    final api = LegacyExtensionFake();
+    final controller = CameraExtensionsController(
+        api: api, store: MemoryPending(), instanceId: '01' * 16,
+        bootstrap: () async {}, blocked: () => false, onPending: (_) {});
+    addTearDown(controller.dispose);
+    await controller.refresh();
+    await controller.set('imprint', 7);
+    expect(api.submissions, 0);
+    await controller.set('hdf', 2);
+    expect(controller.snapshot!.values['hdf'], 2);
+    expect(controller.message, '已保存');
+    expect(controller.pending, isFalse);
+  });
+
   for (final (failure, expected) in <(Object, String)>[
     (StateError('GET failed'), '读取失败，请重新读取'),
     (const CompanionException('bridgeUnavailable'), '机内服务未就绪，请稍后重新读取'),

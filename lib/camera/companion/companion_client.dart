@@ -7,6 +7,7 @@ import 'companion_protocol.dart';
 import 'companion_transport.dart';
 import 'pairing_store.dart';
 import 'extensions_protocol.dart';
+import 'camera_film_catalog.dart';
 
 class CompanionException implements Exception {
   const CompanionException(this.code);
@@ -45,6 +46,8 @@ class CompanionClient implements CompanionApi, CompanionExtensionsApi {
   final PairingStore pairingStore;
   final PairingIdentity identity;
   String? _boot, _session, _capBuild;
+  CameraFilmProfile? _profile;
+  Map<String, dynamic> get _activeContract => _profile?.contract ?? contract;
   int _sequence = 0, _epoch = 0;
   Future<void> _tail = Future.value();
   @override
@@ -55,6 +58,7 @@ class CompanionClient implements CompanionApi, CompanionExtensionsApi {
     _boot = null;
     _session = null;
     _capBuild = null;
+    _profile = null;
     _sequence = 0;
   }
 
@@ -181,6 +185,7 @@ class CompanionClient implements CompanionApi, CompanionExtensionsApi {
         throw const CompanionException('identityMismatch');
       }
       _capBuild = caps.wire['buildId'] as String;
+      _profile = resolveCameraFilmProfile(caps.catalogHash, caps.rendererHash);
       _boot = boot;
       _session = session;
       _sequence = 0;
@@ -198,7 +203,7 @@ class CompanionClient implements CompanionApi, CompanionExtensionsApi {
   Future<CompanionCapabilities> capabilities() =>
       _serial(() async => CompanionCapabilities.fromJson(
           await _request('GET', '/m10v/v1/capabilities', bootstrap: true),
-          contract: contract));
+          contract: _activeContract));
   @override
   Future<CompanionSnapshot> state() => _serial(() async {
         final epoch = _epoch;
@@ -206,7 +211,7 @@ class CompanionClient implements CompanionApi, CompanionExtensionsApi {
           try {
             final value = CompanionSnapshot.fromJson(
                 await _request('GET', '/m10v/v1/state'),
-                contract: contract);
+                contract: _activeContract);
             _snapshotIdentity(value);
             return value;
           } on CompanionException catch (error) {
@@ -223,7 +228,7 @@ class CompanionClient implements CompanionApi, CompanionExtensionsApi {
       {Object? payload}) async {
     final value = CompanionOperationReceipt.fromJson(
         await _request(method, path, payload: payload),
-        contract: contract);
+        contract: _activeContract);
     if (value.requestId != id || value.bootId != _boot) {
       throw const CompanionException('identityMismatch');
     }

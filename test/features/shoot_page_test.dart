@@ -21,6 +21,7 @@ import 'package:gremote/camera/gateway/camera_transport.dart';
 import 'package:gremote/platform/camera_permission_gate.dart';
 
 import '../support/test_darkroom.dart';
+import '../support/echo_camera_model.dart';
 
 Future<({TestDarkroom env, FakeCameraGateways gateways})> pumpShoot(
   WidgetTester tester, {
@@ -63,6 +64,24 @@ Future<({TestDarkroom env, FakeCameraGateways gateways})> pumpShoot(
 }
 
 void main() {
+  testWidgets(
+      'aperture row and ruler follow HTTP readback without socket events',
+      (tester) async {
+    await pumpShoot(tester, connect: true, camera: EchoCameraModel());
+    await tester.tap(find.byKey(const Key('param-av')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(
+        of: find.byKey(const Key('ruler')), matching: find.text('4.0')));
+    await tester.pumpAndSettle();
+    expect(
+        find.descendant(
+            of: find.byKey(const Key('param-av')), matching: find.text('4.0')),
+        findsOneWidget);
+    final selected = tester.widget<Text>(find.descendant(
+        of: find.byKey(const Key('ruler')), matching: find.text('4.0')));
+    expect(selected.style!.fontWeight, FontWeight.w700);
+  });
+
   testWidgets(
       'shoot toolbar omits model name and groups controls at trailing edge',
       (tester) async {

@@ -134,9 +134,9 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
   Widget build(BuildContext context) {
     final catalog = ref.watch(cameraFilmCatalogProvider);
     final cache = ref.watch(officialFilmCacheProvider).valueOrNull;
-    final compatible = cache?.cameraCompatible ?? true;
     final local = catalog.valueOrNull;
     final availability = ref.watch(cameraAvailabilityProvider);
+    final sync = ref.watch(companionSyncControllerProvider);
     final films = cache?.films ??
         [
           for (final f in local?.entries ?? [])
@@ -266,16 +266,20 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
             child: Text(_error!,
                 style: TextStyle(color: context.palette.danger, fontSize: 12))),
-      if (!compatible && _group != '我的 LUT')
-        Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-            child: Text('官网版用于手机；装卷可选择机身版本',
-                style: TextStyle(color: context.palette.muted, fontSize: 12))),
       if (!availability.canInstallFilms && _group != '我的 LUT')
         Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-            child: Text(availability.hint,
-                style: TextStyle(color: context.palette.muted, fontSize: 12))),
+            child: Row(children: [
+              Expanded(
+                  child: Text(availability.hint,
+                      style: TextStyle(
+                          color: context.palette.muted, fontSize: 12))),
+              if (sync == null)
+                TextButton(
+                    onPressed: () =>
+                        ref.invalidate(companionHotspotPairingProvider),
+                    child: const Text('重试连接', style: TextStyle(fontSize: 12))),
+            ])),
       Expanded(
           child: catalog.isLoading && films.isEmpty && custom.isEmpty
               ? const Center(child: CircularProgressIndicator())
@@ -318,8 +322,7 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
                               available: cache?.phoneLuts
                                           .any((l) => l.filmId == film.id) ==
                                       true ||
-                                  compatible &&
-                                      availability.canInstallFilms &&
+                                  availability.canInstallFilms &&
                                       (local?.entries
                                               .any((f) => f.id == film.id) ??
                                           false),
@@ -332,8 +335,7 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
                                       fit: BoxFit.contain,
                                       errorBuilder: (_, __, ___) => const Icon(
                                           Icons.local_movies_outlined)),
-                              onTap: () => _details(film, local,
-                                  compatible: compatible));
+                              onTap: () => _details(film, local));
                         },
                       );
                     })),
@@ -368,9 +370,7 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
                         child: const Text('管理 LUT')),
                   ]))));
 
-  Future<void> _details(OfficialFilm film, CameraFilmCatalog? catalog,
-      {required bool compatible}) async {
-    final supported = catalog?.entries.any((f) => f.id == film.id) ?? false;
+  Future<void> _details(OfficialFilm film, CameraFilmCatalog? catalog) async {
     await showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
@@ -386,8 +386,6 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
                   .firstOrNull;
               final installed =
                   activeCatalog?.entries.any((f) => f.id == film.id) == true;
-              final versionMatches = currentCache == null ||
-                  currentCache.rendererHash == activeCatalog?.rendererHash;
               return DraggableScrollableSheet(
                   expand: false,
                   initialChildSize: .86,
@@ -429,8 +427,7 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
                               const SizedBox(height: 10),
                             ],
                             FilledButton(
-                                onPressed: versionMatches &&
-                                        installed &&
+                                onPressed: installed &&
                                         availability.canInstallFilms
                                     ? () {
                                         if (!ref
@@ -442,15 +439,7 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
                                                         cameraFilmCatalogProvider)
                                                     .valueOrNull
                                                     ?.hash !=
-                                                activeCatalog?.hash ||
-                                            (ref
-                                                        .read(
-                                                            officialFilmCacheProvider)
-                                                        .valueOrNull
-                                                        ?.rendererHash ??
-                                                    activeCatalog
-                                                        ?.rendererHash) !=
-                                                activeCatalog?.rendererHash) {
+                                                activeCatalog?.hash) {
                                           return;
                                         }
                                         Navigator.pop(sheet);
@@ -458,35 +447,13 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
                                       }
                                     : null,
                                 child: const Text('装入相机')),
-                            if (!versionMatches && installed)
-                              OutlinedButton(
-                                  onPressed: availability.canInstallFilms
-                                      ? () {
-                                          final selected = ref
-                                              .read(cameraFilmCatalogProvider)
-                                              .valueOrNull;
-                                          if (selected?.hash !=
-                                                  activeCatalog?.hash ||
-                                              !ref
-                                                  .read(
-                                                      cameraAvailabilityProvider)
-                                                  .canInstallFilms) return;
-                                          Navigator.pop(sheet);
-                                          _openSlots(context, filmId: film.id);
-                                        }
-                                      : null,
-                                  child: const Text('装入机身版本')),
-                            if (!versionMatches ||
-                                !supported ||
-                                !availability.canInstallFilms)
+                            if (!installed || !availability.canInstallFilms)
                               Padding(
                                   padding: const EdgeInsets.only(top: 12),
                                   child: Text(
-                                      !versionMatches
-                                          ? '胶卷版本与当前机身不匹配'
-                                          : supported
-                                              ? availability.hint
-                                              : '需要更新机身胶卷目录',
+                                      installed
+                                          ? availability.hint
+                                          : '需要更新机身胶卷目录',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                           color: context.palette.muted,

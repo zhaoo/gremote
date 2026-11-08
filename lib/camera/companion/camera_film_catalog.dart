@@ -3,6 +3,7 @@ import 'package:crypto/crypto.dart';
 import '../../film/catalog/film_catalog.dart';
 import '../../film/model/film_recipe.dart';
 import 'generated_camera_contract.dart';
+import 'generated_full_camera_contract.dart';
 
 final Map<String, dynamic> cameraContract =
     _freezeMap(jsonDecode(cameraContractJson) as Map);
@@ -43,6 +44,18 @@ const coordinatedCameraCatalogHash =
 const coordinatedCameraRendererHash =
     '8860d923d8a0bb65ac9530c52d89d140a5345505230c165e0c0c78f9f1972fba';
 
+// Public GR III GRemote package. Pinned to the firmware/service receipts and
+// the independently regenerated catalog; its wire contract still ends at 326.
+const publicGr3CameraCatalogHash =
+    'dec78e808816dd21e7e6225a7a3c539699bd0572bb018b719e7fcc5c328be696';
+const publicGr3CameraRendererHash =
+    'db7fdff7b13e23447f4a58c561b92813319acf249b8922f75b4ffdad3bb74f30';
+
+const fullGr3CameraCatalogHash =
+    '1b1b34c3da9b80de854eae3ad9fc3e85ffee5687f0e28fead0504129ff6294e8';
+const fullGr3CameraRendererHash =
+    'bcef872c4ff5789a34b47f4c1becc31303a55b95f381c032d9b73bc7cc4c1ae7';
+
 const installedCameraCatalogHash =
     '653acf3c1b04db0ea2dd10114a1306b78bb4b584534945be8f9de9da25ebab4a';
 const installedCameraRendererHash =
@@ -52,6 +65,11 @@ final List<CameraFilmProfile> trustedCameraFilmProfiles = List.unmodifiable([
       cameraCatalogHash, cameraRendererHash, cameraContract, '机身版本 · 当前配套'),
   CameraFilmProfile._(coordinatedCameraCatalogHash,
       coordinatedCameraRendererHash, cameraContract, '机身版本 · 2026.11.05.1'),
+  CameraFilmProfile._(publicGr3CameraCatalogHash, publicGr3CameraRendererHash,
+      cameraContract, '机身版本 · GR III 公开配套'),
+  CameraFilmProfile._(fullGr3CameraCatalogHash, fullGr3CameraRendererHash,
+      _freezeMap(jsonDecode(fullCameraContractJson) as Map),
+      '机身版本 · GR III 全功能 2026.11.08'),
   CameraFilmProfile._(
       installedCameraCatalogHash,
       installedCameraRendererHash,
@@ -76,15 +94,22 @@ CameraFilmProfile? cameraFilmProfileForContract(Map<String, dynamic> contract) {
 }
 
 Map<String, dynamic> _displayCatalog(Map<String, dynamic> value) {
-  if (value['hash'] != installedCameraCatalogHash) return value;
+  final profile =
+      resolveCameraFilmProfile(value['hash'], value['rendererHash']);
+  if (profile == null) return value;
+  // The raw catalog identity is checked separately. Only offer films that the
+  // matching service's write contract can actually represent.
   return {
     ...value,
     'entries': [
       for (final entry in value['entries'] as List)
-        {
-          ...entry as Map,
-          'icon': 'assets/films/camera-profiles/old-icons/${entry['id']}.png'
-        }
+        if (entry['id'] <= profile.contract['maximumFilmId'])
+          {
+            ...entry as Map,
+            if (value['hash'] == installedCameraCatalogHash)
+              'icon':
+                  'assets/films/camera-profiles/old-icons/${entry['id']}.png'
+          }
     ]
   };
 }

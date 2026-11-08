@@ -46,7 +46,8 @@ void main() {
       expect(tester.takeException(), isNull);
       await tester.tap(find.text('扩展'));
       await tester.pumpAndSettle();
-      expect(find.text('等待 M10V 连接'), findsOneWidget);
+      expect(find.textContaining('未连接 M10V 服务'), findsOneWidget);
+      expect(find.widgetWithText(TextButton, '重试连接'), findsOneWidget);
       expect(find.text('HDF'), findsNothing);
       expect(find.widgetWithText(TextButton, '重新读取'), findsNothing);
       for (final group in ['功能', '效果', '水印', '焦距', '画幅']) {

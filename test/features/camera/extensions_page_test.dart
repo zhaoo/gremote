@@ -13,6 +13,7 @@ import '../../camera/extensions_controller_test.dart';
 
 class AllExtensionsFake extends ExtensionFake {
   final settings = <String, int>{
+    'imprint': 0,
     'quickSwitch': 0,
     'quickSwitchA': 0,
     'quickSwitchB': 1,
@@ -117,6 +118,28 @@ CameraExtensionsController makeController(ExtensionFake api,
         onPending: (_) {});
 
 void main() {
+  testWidgets('imprint choice writes its raw value and shows native readback',
+      (tester) async {
+    final api = AllExtensionsFake();
+    final controller = makeController(api);
+    addTearDown(controller.dispose);
+    await pumpExtensions(tester, controller);
+    await tester.tap(find.text('效果'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('extension-field-imprint')));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('宝可梦'), 100,
+        scrollable: find.descendant(of: find.byType(BottomSheet),
+            matching: find.byType(Scrollable)).last);
+    await tester.tap(find.text('宝可梦').last);
+    await tester.pumpAndSettle();
+    expect(controller.snapshot!.values['imprint'], 7);
+    expect(controller.message, '已保存');
+    expect(api.operations, hasLength(1));
+    expect(api.operations.single['field'], 'imprint');
+    expect(api.operations.single['value'], 7);
+  });
+
   testWidgets(
       'groups start collapsed and retain all fields with one group open',
       (tester) async {

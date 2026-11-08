@@ -244,6 +244,17 @@ void main() {
     expect(
         await repository.baseline(api.caps['instanceId'] as String), isNotNull);
   });
+  test('background refresh keeps a fresh camera ready while reading', () async {
+    await controller.refresh();
+    expect(controller.state.connectionStatus, SyncConnectionStatus.ready);
+    api.waitRead = Completer<void>();
+    final pending = controller.refresh();
+    expect(controller.state.connectionStatus, SyncConnectionStatus.ready);
+    api.waitRead!.complete();
+    await pending;
+    expect(controller.state.connectionStatus, SyncConnectionStatus.ready);
+  });
+
   test('dispose suppresses in-flight refresh and all later writes', () async {
     api.waitRead = Completer<void>();
     final pending = controller.refresh();

@@ -1,7 +1,35 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gremote/camera/companion/extensions_protocol.dart';
+import 'extensions_controller_test.dart' show extCaps, extSnapshot;
 
 void main() {
+  test('legacy extensions remain readable without exposing imprint', () {
+    final caps = extCaps()..['contractHash'] = legacyExtensionContractHash;
+    for (final field in caps['fields'] as List) {
+      if (field['key'] == 'leakPosition') field['max'] = 2;
+    }
+    caps['fields'] = (caps['fields'] as List)
+        .where((field) => field['key'] != 'imprint').toList();
+    final legacy = ExtensionCapabilities.fromJson(caps);
+    expect(legacy.supported, contains('hdf'));
+    expect(legacy.supported, isNot(contains('imprint')));
+    final state = extSnapshot()..['contractHash'] = legacyExtensionContractHash;
+    expect(ExtensionSnapshot.fromJson(state).values['hdf'], 0);
+    state['supported'] = ['imprint'];
+    state['values'] = {'imprint': 1};
+    expect(() => ExtensionSnapshot.fromJson(state), throwsFormatException);
+  });
+
+  test('imprint exposes seven named styles and rejects out of range values', () {
+    final field = extensionFields['imprint'];
+    expect(field, isNotNull);
+    expect(field!.label, '胶卷印花');
+    expect(field.accepts(7), isTrue);
+    expect(field.accepts(8), isFalse);
+    expect(field.choices![0], '关闭');
+    expect(field.choices![7], '宝可梦');
+  });
+
   test('extension fields preserve raw aspect IDs and explicit ranges', () {
     expect(extensionFields['aspect']!.choices![6], 'Half 3:4');
     expect(extensionFields['aspect']!.choices![3], '1:1');

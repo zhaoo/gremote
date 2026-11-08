@@ -5,6 +5,9 @@ import '../../camera/connection/connection_controller.dart';
 import '../../camera/connection/connection_state.dart';
 import '../film_workbench/companion_providers.dart';
 
+const m10vServiceUnavailableHint =
+    '未连接 M10V 服务 · 请检查配套 SD 服务与脚本是否已启用';
+
 /// Presentation policy over authenticated, current-session evidence.
 /// Missing pairing and service timeouts never establish stock firmware.
 class CameraAvailability {
@@ -45,7 +48,7 @@ class CameraAvailability {
     final hint = !connected
         ? '连接相机后装卷'
         : !paired
-            ? '等待 M10V 连接'
+            ? m10vServiceUnavailableHint
             : sync?.pending == true
                 ? '装卷结果待核对'
                 : sync?.connectionStatus == SyncConnectionStatus.connecting

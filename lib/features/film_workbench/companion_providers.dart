@@ -39,7 +39,15 @@ final bundledCameraCatalogsProvider =
       CameraFilmCatalog.fromJson((await _readBundledCameraCatalog())
         ..['hash'] = coordinatedCameraCatalogHash
         ..['rendererHash'] = coordinatedCameraRendererHash);
-  return List.unmodifiable([latest, coordinated, installed]);
+  final publicGr3 = CameraFilmCatalog.fromJson(jsonDecode(
+          await rootBundle.loadString(
+              'assets/films/camera-profiles/public-gr3-20261105-catalog.json'))
+      as Map<String, dynamic>);
+  final fullGr3 = CameraFilmCatalog.fromJson(jsonDecode(
+          await rootBundle.loadString(
+              'assets/films/camera-profiles/full-gr3-20261108-catalog.json'))
+      as Map<String, dynamic>);
+  return List.unmodifiable([latest, coordinated, publicGr3, fullGr3, installed]);
 });
 
 /// UI selection follows the authenticated camera profile. Disconnected/unknown
@@ -97,6 +105,10 @@ final companionHotspotPairingProvider =
     if (pending != null && !pending.isCompleted) pending.complete();
     keys.clear();
   });
+  void retryDiscovery() {
+    if (alive) retry = Timer(const Duration(seconds: 20), ref.invalidateSelf);
+  }
+
   for (final delay in [0, 1, 2, 4]) {
     if (delay != 0) {
       final next = pause = Completer<void>();
@@ -110,8 +122,12 @@ final companionHotspotPairingProvider =
           path: '/m10v/v1/hotspot',
           body: Uint8List(0),
           headers: const {'X-M10V-Hotspot': '1'});
-      if (!alive || response.statusCode == 401 || response.statusCode == 404) {
-        return null; // Legacy service.
+      if (!alive) return null;
+      if (response.statusCode == 401 || response.statusCode == 404) {
+        // A legacy service may use imported credentials. Keep discovering:
+        // startup or replacement of the matching service can finish later.
+        if (ref.read(companionPairingIdentityProvider) == null) retryDiscovery();
+        return null;
       }
       if (response.statusCode != 200) continue;
       final identity = await importPairing(response.body, keys);
@@ -131,10 +147,10 @@ final companionHotspotPairingProvider =
     } on MissingPluginException {
       return null;
     } on Exception {
-      return null;
+      if (!alive) return null;
     }
   }
-  if (alive) retry = Timer(const Duration(seconds: 20), ref.invalidateSelf);
+  retryDiscovery();
   return null;
 });
 

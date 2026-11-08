@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gremote/app/app_presence.dart';
@@ -65,6 +66,53 @@ CameraResponse _pairing() {
 }
 
 void main() {
+  test('a failed discovery read is retried without reconnecting Wi-Fi', () {
+    fakeAsync((clock) {
+      final connection = _Connection();
+      final transport = _Transport();
+      final container = ProviderContainer(overrides: [
+        connectionControllerProvider.overrideWith(() => connection),
+        companionHotspotTransportProvider.overrideWithValue(transport),
+      ]);
+      container.listen(effectiveCompanionIdentityProvider, (_, __) {});
+      connection.change(_ready);
+      clock.elapse(Duration.zero);
+      transport.calls.single.completeError(const FormatException('bad read'));
+      clock.elapse(const Duration(seconds: 1));
+      expect(transport.calls, hasLength(2));
+      transport.calls.last.complete(_pairing());
+      clock.elapse(Duration.zero);
+      expect(container.read(effectiveCompanionIdentityProvider)?.instanceId,
+          'ab' * 16);
+      container.dispose();
+    });
+  });
+
+  test('discovery recovers when an unavailable service starts later', () {
+    fakeAsync((clock) {
+      final connection = _Connection();
+      final transport = _Transport();
+      final container = ProviderContainer(overrides: [
+        connectionControllerProvider.overrideWith(() => connection),
+        companionHotspotTransportProvider.overrideWithValue(transport),
+      ]);
+      container.listen(effectiveCompanionIdentityProvider, (_, __) {});
+      connection.change(_ready);
+      clock.elapse(Duration.zero);
+      transport.calls.single.complete(
+          CameraResponse(statusCode: 404, headers: {}, body: Uint8List(0)));
+      clock.elapse(Duration.zero);
+      expect(container.read(effectiveCompanionIdentityProvider), isNull);
+      clock.elapse(const Duration(seconds: 20));
+      expect(transport.calls, hasLength(2));
+      transport.calls.last.complete(_pairing());
+      clock.elapse(Duration.zero);
+      expect(container.read(effectiveCompanionIdentityProvider)?.instanceId,
+          'ab' * 16);
+      container.dispose();
+    });
+  });
+
   test('only the current network may complete automatic pairing', () async {
     final connection = _Connection();
     final transport = _Transport();

@@ -1,0 +1,25 @@
+{
+  "schema": "gremote.trusted-camera-profile/v1",
+  "model": "GR III",
+  "publicFirmwareVersion": "2.10",
+  "buildId": "eb01f53cba9b1e69d6505cb90d22277e5a1dcd331737d942c5906e4b68f2a34d",
+  "catalogHash": "dec78e808816dd21e7e6225a7a3c539699bd0572bb018b719e7fcc5c328be696",
+  "rendererHash": "db7fdff7b13e23447f4a58c561b92813319acf249b8922f75b4ffdad3bb74f30",
+  "firmwareSha256": "14310c9c4daaa3404202b3677462f59f8437389bb203bf28d5b360d9d7b93c1e",
+  "serviceSha256": "657faadef88a8d01e5a955d5ae4103495162a094db45b19f2eab972f3bb00c71",
+  "serviceReceiptSha256": "e7919e67dac36ab6008a91d2de884789e65c94763b886f1996b078bf575f2ea2",
+  "contractSourceSha256": "65fd172e7d9d1db82866659ddbb058cc557c0bfb046fd1638d328b21dff2486b",
+  "sourceRepository": "https://github.com/zhaoo/m10v",
+  "sourceCommit": "35d4235c5805f42405b6aeb0cc45654ba3eefd0f",
+  "generationCommand": "node scripts/read_gr3_gremote_camera_metadata.mjs --catalog",
+  "contractSource": "contracts/companion-v1.json",
+  "files": {
+    "public-gr3-20261105-catalog.json": "36c908dbc87445cab9eab98be0d0cc3a2427eed147a342dd2c125cbf1d0f1405"
+  },
+  "rawCatalogEntries": 57,
+  "writableCatalogEntries": 56,
+  "maximumFilmId": 326,
+  "excludedFromWrites": [327],
+  "cameraTested": false,
+  "notes": "Identity verified against the user-supplied m10v-gr3-gremote firmware and service receipts. Regenerated raw catalog matches catalogHash. The source contract equals GRemote camera-contract.json. ID 327 is already present in catalog metadata but exceeds this service's generated wire contract. No firmware, pairing key or personal settings are bundled."
+}

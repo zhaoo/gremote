@@ -97,6 +97,7 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
         unawaited(controller.refresh());
         _timer = Timer.periodic(const Duration(seconds: 2), (_) {
           if (mounted &&
+              !_preparing &&
               widget.active &&
               _foreground &&
               ref.read(appForegroundProvider) &&

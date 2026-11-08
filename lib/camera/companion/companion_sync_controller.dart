@@ -187,7 +187,10 @@ class CompanionSyncController extends ChangeNotifier {
   Future<void> _refresh() async {
     if (_working) return;
     final epoch = _epoch;
-    _set(state.copyWith(connectionStatus: SyncConnectionStatus.connecting));
+    // Keep a fresh snapshot usable during routine background reads.
+    if (state.snapshot == null || state.stale) {
+      _set(state.copyWith(connectionStatus: SyncConnectionStatus.connecting));
+    }
     try {
       var caps = state.capabilities;
       if (caps == null || api.bootId == null) {

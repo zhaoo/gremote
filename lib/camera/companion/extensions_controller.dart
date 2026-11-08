@@ -77,7 +77,8 @@ class CameraExtensionsController extends ChangeNotifier {
   }
 
   void _identity(ExtensionSnapshot value) {
-    if (value.instanceId != instanceId || value.bootId != api.bootId) {
+    if (value.instanceId != instanceId || value.bootId != api.bootId ||
+        value.contractHash != capabilities?.contractHash) {
       throw const CompanionException('sessionChanged');
     }
   }
@@ -138,8 +139,9 @@ class CameraExtensionsController extends ChangeNotifier {
         }).isNotEmpty ||
         op.length != 6 ||
         key is! String ||
-        extensionFields[key]?.accepts(value) != true ||
-        op['contractHash'] != extensionContractHash ||
+        !extensionValueSupported('${op['contractHash']}', key, value) ||
+        !supportedExtensionContractHashes.contains(op['contractHash']) ||
+        (op['contractHash'] == legacyExtensionContractHash && key == 'imprint') ||
         !RegExp(r'^[a-f0-9]{32}$').hasMatch('${op['requestId']}') ||
         !RegExp(r'^[a-f0-9]{32}$').hasMatch('${op['bootId']}') ||
         !RegExp(r'^[a-f0-9]{64}$').hasMatch('${op['baseRevision']}')) {
@@ -201,7 +203,7 @@ class CameraExtensionsController extends ChangeNotifier {
         base == null ||
         capabilities?.supported.contains(field) != true ||
         !base.supported.contains(field) ||
-        extensionFields[field]?.accepts(value) != true) return;
+        capabilities?.accepts(field, value) != true) return;
     if (base.values[field] == value) return;
     working = true;
     _fresh = false;
@@ -227,7 +229,7 @@ class CameraExtensionsController extends ChangeNotifier {
                 .toRadixString(16)
                 .padLeft(2, '0')).join(),
         'bootId': current.bootId,
-        'contractHash': extensionContractHash,
+        'contractHash': current.contractHash,
         'baseRevision': current.revision,
         'field': field,
         'value': value

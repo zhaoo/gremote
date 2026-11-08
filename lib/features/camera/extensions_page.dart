@@ -6,6 +6,7 @@ import '../../camera/companion/extensions_controller.dart';
 import '../../camera/companion/extensions_protocol.dart';
 import '../film_workbench/companion_providers.dart';
 import 'extensions_providers.dart';
+import 'camera_availability.dart';
 
 class CameraExtensions extends ConsumerStatefulWidget {
   const CameraExtensions({super.key});
@@ -47,7 +48,7 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
       return controller?.pending == true
           ? '结果待核对 · 重新连接后核对'
           : controller == null
-              ? '等待 M10V 连接'
+              ? m10vServiceUnavailableHint
               : '未连接 · 连接相机后读取机身设置';
     }
     if (controller.working && controller.pending) return '设置处理中，请勿重复提交';
@@ -76,6 +77,10 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
             TextButton(
                 onPressed: controller.working ? null : controller.refresh,
                 child: const Text('重新读取', style: TextStyle(fontSize: 12))),
+          if (!available && controller == null)
+            TextButton(
+                onPressed: () => ref.invalidate(companionHotspotPairingProvider),
+                child: const Text('重试连接', style: TextStyle(fontSize: 12))),
         ]),
         if (available &&
             controller.working &&
@@ -141,7 +146,7 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
       case '功能':
         return '快切 · Half';
       case '效果':
-        return 'HDF · 边框 · 颗粒 · 漏光 · 模糊';
+        return '胶卷印花 · HDF · 边框 · 颗粒 · 漏光 · 模糊';
       case '水印':
         return '时间 · 胶卷名';
       case '焦距':
@@ -234,8 +239,10 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
   Future<void> _choose(CameraExtensionsController controller, String key,
       ExtensionField field) async {
     final revision = controller.snapshot!.revision;
-    final options = field.choices?.keys.toList() ??
-        [for (var i = field.min; i <= field.max; i++) i];
+    final options = (field.choices?.keys.toList() ??
+        [for (var i = field.min; i <= field.max; i++) i])
+        .where((value) => controller.capabilities?.accepts(key, value) == true)
+        .toList();
     final value = await showModalBottomSheet<int>(
         context: context,
         showDragHandle: true,

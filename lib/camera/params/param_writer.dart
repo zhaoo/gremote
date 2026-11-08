@@ -165,16 +165,14 @@ class ParamWriter {
       return const WriteRejected('transport');
     }
 
-    final echoed = response[key];
     String? actual;
-    if (echoed is String || echoed is num || echoed is bool) {
-      actual = '$echoed';
-    } else {
-      try {
-        actual = await _refreshAndRead(key);
-      } on Exception {
-        actual = null;
-      }
+    // A PUT echo does not update the shared camera state and may precede the
+    // camera's applied value. Always refresh props, including dependent values
+    // and option lists, before confirming a write to the caller.
+    try {
+      actual = await _refreshAndRead(key);
+    } on Exception {
+      actual = null;
     }
     if (actual == null) return const WriteTimedOut();
     return actual == job.value
