@@ -79,7 +79,8 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
                 child: const Text('重新读取', style: TextStyle(fontSize: 12))),
           if (!available && controller == null)
             TextButton(
-                onPressed: () => ref.invalidate(companionHotspotPairingProvider),
+                onPressed: () =>
+                    ref.invalidate(companionHotspotPairingProvider),
                 child: const Text('重试连接', style: TextStyle(fontSize: 12))),
         ]),
         if (available &&
@@ -146,7 +147,7 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
       case '功能':
         return '快切 · Half';
       case '效果':
-        return '胶卷印花 · HDF · 边框 · 颗粒 · 漏光 · 模糊';
+        return '暗角 · 胶卷印花 · HDF · 边框 · 颗粒 · 漏光 · 模糊';
       case '水印':
         return '时间 · 胶卷名';
       case '焦距':
@@ -185,6 +186,19 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
     final pairedEdit = (key == 'quickSwitchA' || key == 'quickSwitchB') &&
         controller?.snapshot?.values['quickSwitch'] == 1;
     final enabled = _editable(controller, key);
+    if (key == 'vignetteEnabled') {
+      return SwitchListTile(
+        key: const ValueKey('extension-field-vignetteEnabled'),
+        contentPadding: EdgeInsets.zero,
+        title: const Text('暗角'),
+        subtitle: !supported ? const Text('此项暂不支持') : null,
+        value: value == 1,
+        onChanged: enabled
+            ? (on) => _submit(controller!, key, on ? 1 : 0,
+                revision: controller.snapshot!.revision)
+            : null,
+      );
+    }
     return ListTile(
       key: ValueKey('extension-field-$key'),
       contentPadding: EdgeInsets.zero,
@@ -240,7 +254,7 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
       ExtensionField field) async {
     final revision = controller.snapshot!.revision;
     final options = (field.choices?.keys.toList() ??
-        [for (var i = field.min; i <= field.max; i++) i])
+            [for (var i = field.min; i <= field.max; i++) i])
         .where((value) => controller.capabilities?.accepts(key, value) == true)
         .toList();
     final value = await showModalBottomSheet<int>(

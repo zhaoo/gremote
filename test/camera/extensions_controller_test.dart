@@ -99,22 +99,28 @@ class LegacyExtensionFake extends ExtensionFake {
       if (field['key'] == 'leakPosition') field['max'] = 2;
     }
     caps['fields'] = (caps['fields'] as List)
-        .where((field) => field['key'] != 'imprint').toList();
+        .where((field) =>
+            field['key'] != 'imprint' &&
+            !(field['key'] as String).startsWith('vignette'))
+        .toList();
     return ExtensionCapabilities.fromJson(caps);
   }
+
   @override
   Future<ExtensionSnapshot> extensionState() async =>
       ExtensionSnapshot.fromJson(extSnapshot(hdf: value)
         ..['contractHash'] = legacyExtensionContractHash);
   @override
-  Future<ExtensionReceipt> submitExtension(Map<String, Object?> operation) async {
+  Future<ExtensionReceipt> submitExtension(
+      Map<String, Object?> operation) async {
     if (operation['contractHash'] != legacyExtensionContractHash) {
       throw const CompanionException('incompatibleRenderer');
     }
     submissions++;
     value = operation['value'] as int;
     return ExtensionReceipt.fromJson({
-      'requestId': operation['requestId'], 'bootId': bootId,
+      'requestId': operation['requestId'],
+      'bootId': bootId,
       'status': 'committed',
       'snapshot': extSnapshot(hdf: value)
         ..['contractHash'] = legacyExtensionContractHash
@@ -127,8 +133,12 @@ void main() {
       () async {
     final api = LegacyExtensionFake();
     final controller = CameraExtensionsController(
-        api: api, store: MemoryPending(), instanceId: '01' * 16,
-        bootstrap: () async {}, blocked: () => false, onPending: (_) {});
+        api: api,
+        store: MemoryPending(),
+        instanceId: '01' * 16,
+        bootstrap: () async {},
+        blocked: () => false,
+        onPending: (_) {});
     addTearDown(controller.dispose);
     await controller.refresh();
     await controller.set('imprint', 7);

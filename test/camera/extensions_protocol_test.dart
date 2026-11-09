@@ -3,13 +3,34 @@ import 'package:gremote/camera/companion/extensions_protocol.dart';
 import 'extensions_controller_test.dart' show extCaps, extSnapshot;
 
 void main() {
+  test('previous camera contract remains readable and cannot write vignette',
+      () {
+    final caps = extCaps()..['contractHash'] = previousExtensionContractHash;
+    caps['fields'] = (caps['fields'] as List)
+        .where((f) => !(f['key'] as String).startsWith('vignette'))
+        .toList();
+    expect(ExtensionCapabilities.fromJson(caps).supported, contains('hdf'));
+    expect(
+        extensionValueSupported(
+            previousExtensionContractHash, 'vignetteEnabled', 1),
+        isFalse);
+    expect(
+        extensionValueSupported(extensionContractHash, 'vignetteStrength', 0),
+        isFalse);
+    expect(
+        extensionValueSupported(extensionContractHash, 'vignetteStrength', 3),
+        isTrue);
+  });
   test('legacy extensions remain readable without exposing imprint', () {
     final caps = extCaps()..['contractHash'] = legacyExtensionContractHash;
     for (final field in caps['fields'] as List) {
       if (field['key'] == 'leakPosition') field['max'] = 2;
     }
     caps['fields'] = (caps['fields'] as List)
-        .where((field) => field['key'] != 'imprint').toList();
+        .where((field) =>
+            field['key'] != 'imprint' &&
+            !(field['key'] as String).startsWith('vignette'))
+        .toList();
     final legacy = ExtensionCapabilities.fromJson(caps);
     expect(legacy.supported, contains('hdf'));
     expect(legacy.supported, isNot(contains('imprint')));
@@ -20,7 +41,8 @@ void main() {
     expect(() => ExtensionSnapshot.fromJson(state), throwsFormatException);
   });
 
-  test('imprint exposes seven named styles and rejects out of range values', () {
+  test('imprint exposes seven named styles and rejects out of range values',
+      () {
     final field = extensionFields['imprint'];
     expect(field, isNotNull);
     expect(field!.label, '胶卷印花');

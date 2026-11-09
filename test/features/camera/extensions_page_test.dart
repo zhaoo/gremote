@@ -13,6 +13,8 @@ import '../../camera/extensions_controller_test.dart';
 
 class AllExtensionsFake extends ExtensionFake {
   final settings = <String, int>{
+    'vignetteEnabled': 0,
+    'vignetteStrength': 3,
     'imprint': 0,
     'quickSwitch': 0,
     'quickSwitchA': 0,
@@ -129,8 +131,10 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('extension-field-imprint')));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('宝可梦'), 100,
-        scrollable: find.descendant(of: find.byType(BottomSheet),
-            matching: find.byType(Scrollable)).last);
+        scrollable: find
+            .descendant(
+                of: find.byType(BottomSheet), matching: find.byType(Scrollable))
+            .last);
     await tester.tap(find.text('宝可梦').last);
     await tester.pumpAndSettle();
     expect(controller.snapshot!.values['imprint'], 7);
@@ -138,6 +142,28 @@ void main() {
     expect(api.operations, hasLength(1));
     expect(api.operations.single['field'], 'imprint');
     expect(api.operations.single['value'], 7);
+  });
+
+  testWidgets('vignette switch preserves independently selected strength',
+      (tester) async {
+    final api = AllExtensionsFake();
+    final controller = makeController(api);
+    addTearDown(controller.dispose);
+    await pumpExtensions(tester, controller);
+    await tester.tap(find.text('效果'));
+    await tester.pumpAndSettle();
+    final control =
+        find.byKey(const ValueKey('extension-field-vignetteEnabled'));
+    await tester.scrollUntilVisible(control, 150,
+        scrollable: find.byType(Scrollable).first);
+    await tester.ensureVisible(find.descendant(of: control, matching: find.byType(Switch)));
+    await tester.pumpAndSettle();
+    await tester
+        .tap(find.descendant(of: control, matching: find.byType(Switch)));
+    await tester.pumpAndSettle();
+    expect(api.operations.single['field'], 'vignetteEnabled');
+    expect(api.operations.single['value'], 1);
+    expect(controller.snapshot!.values['vignetteStrength'], 3);
   });
 
   testWidgets(
@@ -182,6 +208,8 @@ void main() {
       await tester.scrollUntilVisible(
           find.byKey(ValueKey('extension-group-${group.key}')), 160,
           scrollable: find.byType(Scrollable).first);
+      await tester.ensureVisible(find.byKey(ValueKey('extension-group-${group.key}')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(ValueKey('extension-group-${group.key}')));
       await tester.pumpAndSettle();
       for (final key in groupKeys[group.key]!) {

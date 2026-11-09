@@ -1,5 +1,23 @@
 [
   {
+    "version": "1.2.7",
+    "build": 32,
+    "date": "2026-11-09",
+    "platform": "Android · 正式签名",
+    "title": "机内暗角，独立调整。",
+    "changes": [
+      "效果新增暗角独立开关和弱、中、强三挡，关闭保留档位。",
+      "配合 M10V 原厂 ISP Shading 在相机内生成暗角，支持机身菜单与手机控制。",
+      "保留旧版扩展协议兼容。"
+    ],
+    "evidence": "用户确认 GR III R2 候选可用并授权发布。711 项 App 测试通过，6 项跳过；实际量化性能未测。",
+    "url": "https://github.com/zhaoo/gremote/releases/tag/v1.2.7",
+    "download": "https://github.com/zhaoo/gremote/releases/download/v1.2.7/gremote-1.2.7-android-arm64.apk",
+    "checksums": "https://github.com/zhaoo/gremote/releases/download/v1.2.7/SHA256SUMS.txt",
+    "sha256": "2e6c937bdf0b3320442a2b9d00c8f2abf556cb285aa4605cfea679ac7b3a86c4",
+    "bytes": 29095334
+  },
+  {
     "version": "1.2.6",
     "build": 31,
     "date": "2026-11-08",

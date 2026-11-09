@@ -1,10 +1,13 @@
 const extensionSchema = 'm10v.extensions/v1';
-const extensionContractHash =
+const previousExtensionContractHash =
     '8014c8d909a7427519c41c524088912a426bb27a1ec7168e82f4659c5ba113cd';
+const extensionContractHash =
+    'f1a60c6593fad7d22ffdbd168c9199567799b2153de15ab84064efcd215f93dc';
 const legacyExtensionContractHash =
     '9df047418574e23fd399a0c59491aecc9ea212dbf119a79ff29532aec6493628';
 const supportedExtensionContractHashes = {
   extensionContractHash,
+  previousExtensionContractHash,
   legacyExtensionContractHash
 };
 
@@ -47,8 +50,14 @@ const _tones = {
 };
 const extensionFields = <String, ExtensionField>{
   'imprint': ExtensionField('胶卷印花', '效果', 0, 7, choices: {
-    0: '关闭', 1: '猫鱼', 2: '樱花', 3: '彩虹', 4: '水母',
-    5: '爪印', 6: '鹅', 7: '宝可梦'
+    0: '关闭',
+    1: '猫鱼',
+    2: '樱花',
+    3: '彩虹',
+    4: '水母',
+    5: '爪印',
+    6: '鹅',
+    7: '宝可梦'
   }),
   'quickSwitch': ExtensionField('快切', '功能', 0, 1,
       choices: {0: '关闭', 1: '开启'}, runtime: true),
@@ -63,12 +72,15 @@ const extensionFields = <String, ExtensionField>{
       ExtensionField('颗粒尺寸', '效果', 0, 2, choices: {0: '细', 1: '标准', 2: '粗'}),
   'leakGain': ExtensionField('漏光', '效果', 0, 3, choices: _levels),
   'leakPosition':
-      ExtensionField('漏光位置', '效果', 0, 2,
-          choices: {0: '左侧', 1: '右侧', 2: '两侧'}),
+      ExtensionField('漏光位置', '效果', 0, 2, choices: {0: '左侧', 1: '右侧', 2: '两侧'}),
   'leakSpread':
       ExtensionField('漏光范围', '效果', 0, 2, choices: {0: '窄', 1: '中', 2: '宽'}),
   'blurGain': ExtensionField('模糊', '效果', 0, 3, choices: _levels),
   'blurRange': ExtensionField('模糊范围', '效果', 0, 2, choices: _sizes),
+  'vignetteEnabled':
+      ExtensionField('暗角', '效果', 0, 1, choices: {0: '关闭', 1: '开启'}),
+  'vignetteStrength':
+      ExtensionField('暗角强度', '效果', 1, 3, choices: {1: '弱', 2: '中', 3: '强'}),
   'stamp':
       ExtensionField('时间', '水印', 0, 2, choices: {0: '关闭', 1: '日期', 2: '日期与时间'}),
   'stampFormat': ExtensionField('日期格式', '水印', 0, 3, choices: {
@@ -106,6 +118,7 @@ void _need(bool value) {
 
 bool extensionValueSupported(String contract, String key, Object? value) =>
     extensionFields[key]?.accepts(value) == true &&
+    !(contract != extensionContractHash && key.startsWith('vignette')) &&
     !(contract == legacyExtensionContractHash &&
         (key == 'imprint' || key == 'leakPosition' && (value as int) > 2));
 
@@ -132,24 +145,32 @@ class ExtensionCapabilities {
       final expected = extensionFields[key];
       _need(key is String &&
           (contractHash != legacyExtensionContractHash || key != 'imprint') &&
+          (contractHash == extensionContractHash ||
+              !key.startsWith('vignette')) &&
           seen.add(key) &&
           expected != null &&
           field['min'] == expected.min &&
-          field['max'] == (contractHash == legacyExtensionContractHash &&
-              key == 'leakPosition' ? 2 : expected.max) &&
+          field['max'] ==
+              (contractHash == legacyExtensionContractHash &&
+                      key == 'leakPosition'
+                  ? 2
+                  : expected.max) &&
           field['supported'] is bool &&
           field['persistence'] ==
               (expected.runtime ? 'runtime' : 'persistent'));
       if (field['supported'] == true) supported.add(key as String);
     }
-    _need(seen.length == extensionFields.length -
-        (contractHash == legacyExtensionContractHash ? 1 : 0));
+    _need(seen.length ==
+        extensionFields.length -
+            (contractHash == legacyExtensionContractHash ? 1 : 0) -
+            (contractHash == extensionContractHash ? 0 : 2));
     this.supported = Set.unmodifiable(supported);
   }
   late final Set<String> supported;
   late final String contractHash;
   bool accepts(String key, Object? value) =>
-      supported.contains(key) && extensionValueSupported(contractHash, key, value);
+      supported.contains(key) &&
+      extensionValueSupported(contractHash, key, value);
 }
 
 class ExtensionSnapshot {
