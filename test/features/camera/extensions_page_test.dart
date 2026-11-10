@@ -13,6 +13,7 @@ import '../../camera/extensions_controller_test.dart';
 
 class AllExtensionsFake extends ExtensionFake {
   final settings = <String, int>{
+    'tornSession': 0,
     'vignetteEnabled': 0,
     'vignetteStrength': 3,
     'imprint': 0,
@@ -120,6 +121,33 @@ CameraExtensionsController makeController(ExtensionFake api,
         onPending: (_) {});
 
 void main() {
+  testWidgets('torn session offers commands, never writable native stages',
+      (tester) async {
+    final api = AllExtensionsFake();
+    final controller = makeController(api);
+    addTearDown(controller.dispose);
+    await pumpExtensions(tester, controller);
+    await tester.tap(find.text('功能'));
+    await tester.pumpAndSettle();
+    expect(find.text('撕纸叠映'), findsOneWidget);
+    await tester.tap(find.text('开始'));
+    await tester.pumpAndSettle();
+    expect(api.operations.single['field'], 'tornSession');
+    expect(api.operations.single['value'], 1);
+    expect(find.text('拍摄轮廓'), findsOneWidget);
+    await tester.tap(find.text('重新开始'));
+    await tester.pumpAndSettle();
+    expect(api.operations, hasLength(2));
+    api.settings['tornSession'] = 2;
+    await controller.refresh();
+    await tester.pumpAndSettle();
+    expect(find.text('拍摄素材'), findsOneWidget);
+    await controller.set('tornSession', 3);
+    expect(api.operations, hasLength(2));
+    await tester.tap(find.text('取消叠映'));
+    await tester.pumpAndSettle();
+    expect(api.operations.last['value'], 0);
+  });
   testWidgets('imprint choice writes its raw value and shows native readback',
       (tester) async {
     final api = AllExtensionsFake();
@@ -156,7 +184,8 @@ void main() {
         find.byKey(const ValueKey('extension-field-vignetteEnabled'));
     await tester.scrollUntilVisible(control, 150,
         scrollable: find.byType(Scrollable).first);
-    await tester.ensureVisible(find.descendant(of: control, matching: find.byType(Switch)));
+    await tester.ensureVisible(
+        find.descendant(of: control, matching: find.byType(Switch)));
     await tester.pumpAndSettle();
     await tester
         .tap(find.descendant(of: control, matching: find.byType(Switch)));
@@ -208,7 +237,8 @@ void main() {
       await tester.scrollUntilVisible(
           find.byKey(ValueKey('extension-group-${group.key}')), 160,
           scrollable: find.byType(Scrollable).first);
-      await tester.ensureVisible(find.byKey(ValueKey('extension-group-${group.key}')));
+      await tester
+          .ensureVisible(find.byKey(ValueKey('extension-group-${group.key}')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(ValueKey('extension-group-${group.key}')));
       await tester.pumpAndSettle();

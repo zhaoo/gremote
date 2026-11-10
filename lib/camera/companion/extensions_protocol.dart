@@ -2,11 +2,14 @@ const extensionSchema = 'm10v.extensions/v1';
 const previousExtensionContractHash =
     '8014c8d909a7427519c41c524088912a426bb27a1ec7168e82f4659c5ba113cd';
 const extensionContractHash =
+    'c5e4a67763f11333c72f40ceee652919b280ab83235b21a535bc9145b73a224d';
+const vignetteExtensionContractHash =
     'f1a60c6593fad7d22ffdbd168c9199567799b2153de15ab84064efcd215f93dc';
 const legacyExtensionContractHash =
     '9df047418574e23fd399a0c59491aecc9ea212dbf119a79ff29532aec6493628';
 const supportedExtensionContractHashes = {
   extensionContractHash,
+  vignetteExtensionContractHash,
   previousExtensionContractHash,
   legacyExtensionContractHash
 };
@@ -61,6 +64,9 @@ const extensionFields = <String, ExtensionField>{
   }),
   'quickSwitch': ExtensionField('快切', '功能', 0, 1,
       choices: {0: '关闭', 1: '开启'}, runtime: true),
+  'tornSession': ExtensionField('撕纸叠映', '功能', 0, 4,
+      choices: {0: '关闭', 1: '拍摄轮廓', 2: '拍摄素材', 3: '合成处理完成', 4: '本次未合成'},
+      runtime: true),
   'quickSwitchA': ExtensionField('快切 A', '功能', 0, 21, choices: _tones),
   'quickSwitchB': ExtensionField('快切 B', '功能', 0, 21, choices: _tones),
   'hdf': ExtensionField('HDF', '效果', 0, 3, choices: _levels),
@@ -118,9 +124,16 @@ void _need(bool value) {
 
 bool extensionValueSupported(String contract, String key, Object? value) =>
     extensionFields[key]?.accepts(value) == true &&
-    !(contract != extensionContractHash && key.startsWith('vignette')) &&
+    !(contract != extensionContractHash && key == 'tornSession') &&
+    !(!{extensionContractHash, vignetteExtensionContractHash}
+            .contains(contract) &&
+        key.startsWith('vignette')) &&
     !(contract == legacyExtensionContractHash &&
         (key == 'imprint' || key == 'leakPosition' && (value as int) > 2));
+
+bool extensionWriteSupported(String contract, String key, Object? value) =>
+    extensionValueSupported(contract, key, value) &&
+    (key != 'tornSession' || (value as int) <= 1);
 
 String _hex(Map<String, dynamic> v, String key, int length) {
   final value = v[key];
@@ -144,8 +157,10 @@ class ExtensionCapabilities {
       final field = Map<String, dynamic>.from(item as Map), key = field['key'];
       final expected = extensionFields[key];
       _need(key is String &&
+          (contractHash == extensionContractHash || key != 'tornSession') &&
           (contractHash != legacyExtensionContractHash || key != 'imprint') &&
-          (contractHash == extensionContractHash ||
+          ({extensionContractHash, vignetteExtensionContractHash}
+                  .contains(contractHash) ||
               !key.startsWith('vignette')) &&
           seen.add(key) &&
           expected != null &&
@@ -163,14 +178,18 @@ class ExtensionCapabilities {
     _need(seen.length ==
         extensionFields.length -
             (contractHash == legacyExtensionContractHash ? 1 : 0) -
-            (contractHash == extensionContractHash ? 0 : 2));
+            ({extensionContractHash, vignetteExtensionContractHash}
+                    .contains(contractHash)
+                ? 0
+                : 2) -
+            (contractHash == extensionContractHash ? 0 : 1));
     this.supported = Set.unmodifiable(supported);
   }
   late final Set<String> supported;
   late final String contractHash;
   bool accepts(String key, Object? value) =>
       supported.contains(key) &&
-      extensionValueSupported(contractHash, key, value);
+      extensionWriteSupported(contractHash, key, value);
 }
 
 class ExtensionSnapshot {

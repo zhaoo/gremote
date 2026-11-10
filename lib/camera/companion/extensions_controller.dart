@@ -47,14 +47,19 @@ class CameraExtensionsController extends ChangeNotifier {
       required this.bootstrap,
       required this.blocked,
       required this.onPending,
+      bool Function()? readBlocked,
+      this.tornStartRestriction,
       Future<void> Function()? wait})
-      : wait = wait ??
+      : readBlocked = readBlocked ?? blocked,
+        wait = wait ??
             (() => Future<void>.delayed(const Duration(milliseconds: 250)));
   final CompanionExtensionsApi api;
   final ExtensionPendingStore store;
   final String instanceId;
   final Future<void> Function() bootstrap, wait;
   final bool Function() blocked;
+  final bool Function() readBlocked;
+  final String? Function()? tornStartRestriction;
   final void Function(bool) onPending;
   bool _alive = true, working = false, unsupported = false, _fresh = false;
   Map<String, Object?>? _operation;
@@ -77,13 +82,19 @@ class CameraExtensionsController extends ChangeNotifier {
   }
 
   void _identity(ExtensionSnapshot value) {
-    if (value.instanceId != instanceId || value.bootId != api.bootId ||
+    if (value.instanceId != instanceId ||
+        value.bootId != api.bootId ||
         value.contractHash != capabilities?.contractHash) {
       throw const CompanionException('sessionChanged');
     }
   }
 
   bool _allowed() => _alive && !blocked();
+  bool _readAllowed() => _alive && !readBlocked();
+  void _readGuard() {
+    if (!_readAllowed()) throw const CompanionException('busy');
+  }
+
   void _guard() {
     if (!_allowed()) throw const CompanionException('busy');
   }
@@ -139,9 +150,10 @@ class CameraExtensionsController extends ChangeNotifier {
         }).isNotEmpty ||
         op.length != 6 ||
         key is! String ||
-        !extensionValueSupported('${op['contractHash']}', key, value) ||
+        !extensionWriteSupported('${op['contractHash']}', key, value) ||
         !supportedExtensionContractHashes.contains(op['contractHash']) ||
-        (op['contractHash'] == legacyExtensionContractHash && key == 'imprint') ||
+        (op['contractHash'] == legacyExtensionContractHash &&
+            key == 'imprint') ||
         !RegExp(r'^[a-f0-9]{32}$').hasMatch('${op['requestId']}') ||
         !RegExp(r'^[a-f0-9]{32}$').hasMatch('${op['bootId']}') ||
         !RegExp(r'^[a-f0-9]{64}$').hasMatch('${op['baseRevision']}')) {
@@ -150,7 +162,7 @@ class CameraExtensionsController extends ChangeNotifier {
   }
 
   Future<void> refresh() async {
-    if (working || !_allowed()) return;
+    if (working || !_readAllowed()) return;
     working = true;
     _fresh = false;
     message = null;
@@ -168,13 +180,13 @@ class CameraExtensionsController extends ChangeNotifier {
         onPending(true);
         rethrow;
       }
-      _guard();
+      _readGuard();
       await bootstrap();
-      _guard();
+      _readGuard();
       capabilities = await api.extensionCapabilities();
-      _guard();
+      _readGuard();
       final value = await api.extensionState();
-      _guard();
+      _readGuard();
       _identity(value);
       snapshot = value;
       _fresh = true;
@@ -204,7 +216,15 @@ class CameraExtensionsController extends ChangeNotifier {
         capabilities?.supported.contains(field) != true ||
         !base.supported.contains(field) ||
         capabilities?.accepts(field, value) != true) return;
-    if (base.values[field] == value) return;
+    if (base.values[field] == value && field != 'tornSession') return;
+    if (field == 'tornSession' && value == 1) {
+      final restriction = tornStartRestriction?.call();
+      if (restriction != null) {
+        message = restriction;
+        _changed();
+        return;
+      }
+    }
     working = true;
     _fresh = false;
     message = null;
@@ -217,6 +237,12 @@ class CameraExtensionsController extends ChangeNotifier {
       _identity(current);
       snapshot = current;
       if (current.busy) throw const CompanionException('busy');
+      if (field == 'tornSession' &&
+          value == 1 &&
+          current.values['aspect'] == 6) {
+        message = '请先关闭 Half 再开始撕纸叠映';
+        return;
+      }
       if (current.revision != (expectedRevision ?? base.revision) ||
           current.bootId != base.bootId) {
         throw const CompanionException('revisionConflict');
@@ -296,17 +322,28 @@ class CameraExtensionsController extends ChangeNotifier {
     if (committed.values[operation['field']] != operation['value']) {
       throw const CompanionException('readbackMismatch');
     }
-    _guard();
+    _readGuard();
     final fresh = await api.extensionState();
-    _guard();
+    _readGuard();
     _identity(fresh);
-    if (fresh.busy || fresh.values[operation['field']] != operation['value']) {
+    // The receipt proves the command completed. A runtime capture session may
+    // already have advanced while the client was disconnected or reading back;
+    // that is independent of this command's acknowledgement.
+    final stage = fresh.values['tornSession'];
+    final advancedTornStart = operation['field'] == 'tornSession' &&
+        operation['value'] == 1 &&
+        stage != null &&
+        stage >= 1 &&
+        stage <= 4;
+    if (!advancedTornStart &&
+        (fresh.busy ||
+            fresh.values[operation['field']] != operation['value'])) {
       throw const CompanionException('readbackMismatch');
     }
     snapshot = fresh;
     _fresh = true;
     await _clear();
-    message = '已保存';
+    message = operation['field'] == 'tornSession' ? '机身已确认叠映操作' : '已保存';
   }
 
   /// Only after explicit user acknowledgement; clears the draft, never writes.

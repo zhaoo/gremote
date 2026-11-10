@@ -36,6 +36,32 @@ final cameraExtensionsControllerProvider =
             .contains(ref.read(programControllerProvider).phase) ||
         ref.read(cameraGalleryServiceProvider).transferGate.savingOriginals ||
         sync.state.pending,
+    readBlocked: () =>
+        !ref.read(appForegroundProvider) ||
+        !ref.read(companionNetworkReadyProvider) ||
+        ref.read(cameraStateControllerProvider.notifier).isCapturing ||
+        {RunPhase.preparing, RunPhase.running}
+            .contains(ref.read(programControllerProvider).phase) ||
+        ref.read(cameraGalleryServiceProvider).transferGate.savingOriginals ||
+        sync.state.pending,
+    tornStartRestriction: () {
+      final params = ref.read(cameraStateControllerProvider).params;
+      final drive = params['shootMode']?.current;
+      if (drive != null && drive.toLowerCase() != 'single') {
+        return '请先切换为单张拍摄再开始撕纸叠映';
+      }
+      final effect = params['effect']?.current?.toLowerCase() ?? '';
+      if (effect.contains('hdr') ||
+          effect.contains('charmera') ||
+          effect.contains('pixel')) {
+        return '请先关闭 HDR 或特殊影像效果再开始撕纸叠映';
+      }
+      final capture = params['captureMode']?.current;
+      if (capture != null && capture != 'still') {
+        return '请先切换为照片拍摄再开始撕纸叠映';
+      }
+      return null;
+    },
     onPending: (pending) {
       if (alive) {
         ref

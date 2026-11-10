@@ -100,6 +100,7 @@ class LegacyExtensionFake extends ExtensionFake {
     }
     caps['fields'] = (caps['fields'] as List)
         .where((field) =>
+            field['key'] != 'tornSession' &&
             field['key'] != 'imprint' &&
             !(field['key'] as String).startsWith('vignette'))
         .toList();

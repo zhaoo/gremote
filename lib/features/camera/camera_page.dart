@@ -85,7 +85,7 @@ class _CameraPageState extends ConsumerState<CameraPage> {
                     child: IndexedStack(index: _tab, children: [
                   const FilmLibraryPage(),
                   if (_extensionsVisited)
-                    const CameraExtensions()
+                    CameraExtensions(active: _tab == 1)
                   else
                     const SizedBox.shrink(),
                 ])),

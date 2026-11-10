@@ -7,9 +7,11 @@ import '../../camera/companion/extensions_protocol.dart';
 import '../film_workbench/companion_providers.dart';
 import 'extensions_providers.dart';
 import 'camera_availability.dart';
+import 'torn_session_panel.dart';
 
 class CameraExtensions extends ConsumerStatefulWidget {
-  const CameraExtensions({super.key});
+  const CameraExtensions({super.key, this.active = true});
+  final bool active;
   @override
   ConsumerState<CameraExtensions> createState() => _CameraExtensionsState();
 }
@@ -30,7 +32,10 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
     ref.watch(companionIdentityHydrationProvider);
     final controller = ref.watch(cameraExtensionsControllerProvider),
         connected = ref.watch(companionNetworkReadyProvider);
-    if (controller != null && connected && !identical(_loaded, controller)) {
+    if (widget.active &&
+        controller != null &&
+        connected &&
+        !identical(_loaded, controller)) {
       _loaded = controller;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) unawaited(controller.refresh());
@@ -124,9 +129,11 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
             Padding(
               padding: const EdgeInsets.only(left: 28),
               child: Column(children: [
-                for (final field in extensionFields.entries
-                    .where((entry) => entry.value.group == group.key))
+                for (final field in extensionFields.entries.where((entry) =>
+                    entry.value.group == group.key &&
+                    entry.key != 'tornSession'))
                   _field(available ? controller : null, field.key, field.value),
+                if (group.key == '功能') TornSessionPanel(active: widget.active),
                 if (group.key == '功能') _half(available ? controller : null),
               ]),
             ),
@@ -145,7 +152,7 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
     final values = controller?.snapshot?.values;
     switch (group) {
       case '功能':
-        return '快切 · Half';
+        return '快切 · Half · 撕纸叠映';
       case '效果':
         return '暗角 · 胶卷印花 · HDF · 边框 · 颗粒 · 漏光 · 模糊';
       case '水印':

@@ -24,6 +24,7 @@ import '../../camera/sync/camera_state.dart';
 import '../../camera/sync/camera_state_controller.dart';
 import '../../darkroom/darkroom_providers.dart';
 import '../../location/location_recording.dart';
+import '../camera/torn_session_panel.dart';
 import 'shoot_mode.dart';
 import 'shoot_labels.dart';
 import 'widgets/bottom_bar.dart';
@@ -170,6 +171,7 @@ class _ShootPageState extends ConsumerState<ShootPage> {
           child: Stack(children: [
             ShootWorkspaceLayout(
                 header: [
+                  const TornSessionPanel(shooting: true),
                   ShootTopBar(
                     exposureMode: camera.value(ParamKey.exposureMode),
                     onBack: _goHome,
