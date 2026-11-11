@@ -84,8 +84,8 @@ class _TornSessionPanelState extends ConsumerState<TornSessionPanel> {
           if (widget.shooting) {
             final progress = connected && supported
                 ? switch (stage) {
-                    1 => '撕纸叠映 1/2 · 轮廓',
-                    2 => '撕纸叠映 2/2 · 素材',
+                    1 => '撕纸叠映已开启',
+                    2 => '撕纸叠映待拍素材',
                     4 => '撕纸叠映未完成',
                     _ => null,
                   }
@@ -111,11 +111,11 @@ class _TornSessionPanelState extends ConsumerState<TornSessionPanel> {
                   : controller.tornStartRestriction?.call()
               : null;
           final status = switch (stage) {
-            1 => '1/2 · 拍摄轮廓',
-            2 => '2/2 · 拍摄素材',
+            1 => '已开启',
+            2 => '待拍素材',
             3 => '合成处理完成',
             4 => '本次未合成',
-            _ => '两次拍摄叠映',
+            _ => '关闭',
           };
           final subtitle = controller.pending
               ? '结果待核对'

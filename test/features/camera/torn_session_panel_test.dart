@@ -221,7 +221,7 @@ void main() {
         child: const MaterialApp(
             home: Scaffold(body: TornSessionPanel(shooting: true)))));
     await tester.pumpAndSettle();
-    expect(find.text('撕纸叠映 1/2 · 轮廓'), findsOneWidget);
+    expect(find.text('撕纸叠映已开启'), findsOneWidget);
     expect(find.byType(TextButton), findsNothing);
     expect(find.byType(Switch), findsNothing);
     expect(controller.canWrite, isFalse);
@@ -236,7 +236,7 @@ void main() {
     api.hold!.complete();
     api.hold = null;
     await tester.pumpAndSettle();
-    expect(find.text('撕纸叠映 2/2 · 素材'), findsOneWidget);
+    expect(find.text('撕纸叠映待拍素材'), findsOneWidget);
     api.settings['tornSession'] = 3;
     await controller.refresh();
     await tester.pumpAndSettle();
