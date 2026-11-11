@@ -221,8 +221,9 @@ void main() {
         child: const MaterialApp(
             home: Scaffold(body: TornSessionPanel(shooting: true)))));
     await tester.pumpAndSettle();
-    expect(find.text('拍摄轮廓'), findsOneWidget);
-    expect(find.text('开始'), findsNothing);
+    expect(find.text('撕纸叠映 1/2 · 轮廓'), findsOneWidget);
+    expect(find.byType(TextButton), findsNothing);
+    expect(find.byType(Switch), findsNothing);
     expect(controller.canWrite, isFalse);
     final container = ProviderScope.containerOf(
         tester.element(find.byType(TornSessionPanel)));
@@ -235,7 +236,15 @@ void main() {
     api.hold!.complete();
     api.hold = null;
     await tester.pumpAndSettle();
-    expect(find.text('拍摄素材'), findsOneWidget);
+    expect(find.text('撕纸叠映 2/2 · 素材'), findsOneWidget);
+    api.settings['tornSession'] = 3;
+    await controller.refresh();
+    await tester.pumpAndSettle();
+    expect(find.textContaining('撕纸叠映'), findsNothing);
+    api.settings['tornSession'] = 4;
+    await controller.refresh();
+    await tester.pumpAndSettle();
+    expect(find.text('撕纸叠映未完成'), findsOneWidget);
     container.read(appForegroundProvider.notifier).state = false;
     await tester.pump();
     final before = api.reads;
@@ -271,22 +280,14 @@ void main() {
       companionNetworkReadyProvider.overrideWithValue(true),
     ], child: const MaterialApp(home: Scaffold(body: TornSessionPanel()))));
     await tester.pumpAndSettle();
-    expect(
-        tester
-            .widget<TextButton>(find.widgetWithText(TextButton, '开始'))
-            .onPressed,
-        isNull);
+    expect(tester.widget<Switch>(find.byType(Switch)).onChanged, isNull);
     await controller.set('tornSession', 1);
     expect(api.submissions, 0);
     api.settings['aspect'] = 0;
     api.busy = true;
     await controller.refresh();
     await tester.pumpAndSettle();
-    expect(
-        tester
-            .widget<TextButton>(find.widgetWithText(TextButton, '开始'))
-            .onPressed,
-        isNull);
+    expect(tester.widget<Switch>(find.byType(Switch)).onChanged, isNull);
     expect(api.submissions, 0);
   });
 
@@ -309,15 +310,11 @@ void main() {
       companionNetworkReadyProvider.overrideWith((_) => connected),
     ], child: const MaterialApp(home: Scaffold(body: TornSessionPanel()))));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('开始'));
+    await tester.tap(find.byType(Switch));
     await tester.pumpAndSettle();
     expect(controller.pending, isTrue);
     expect(api.submissions, 1);
-    expect(
-        tester
-            .widget<TextButton>(find.widgetWithText(TextButton, '开始'))
-            .onPressed,
-        isNull);
+    expect(tester.widget<Switch>(find.byType(Switch)).onChanged, isNull);
     final container = ProviderScope.containerOf(
         tester.element(find.byType(TornSessionPanel)));
     connected = false;

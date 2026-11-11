@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/app_presence.dart';
-import '../../camera/companion/extensions_protocol.dart';
 import '../film_workbench/companion_providers.dart';
 import 'extensions_providers.dart';
 
@@ -67,8 +66,12 @@ class _TornSessionPanelState extends ConsumerState<TornSessionPanel> {
     if (controller == null) {
       return widget.shooting
           ? const SizedBox.shrink()
-          : const ListTile(
-              title: Text('撕纸叠映'), subtitle: Text('连接支持此功能的机身后使用'));
+          : const SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text('撕纸叠映', style: TextStyle(fontSize: 14)),
+              subtitle: Text('连接相机后可用', style: TextStyle(fontSize: 11)),
+              value: false,
+              onChanged: null);
     }
     return ListenableBuilder(
         listenable: controller,
@@ -78,65 +81,63 @@ class _TornSessionPanelState extends ConsumerState<TornSessionPanel> {
                       .contains('tornSession') ==
                   true &&
               controller.snapshot?.supported.contains('tornSession') == true;
-          if (widget.shooting && (!supported || stage == null || stage == 0)) {
-            return const SizedBox.shrink();
+          if (widget.shooting) {
+            final progress = connected && supported
+                ? switch (stage) {
+                    1 => '撕纸叠映 1/2 · 轮廓',
+                    2 => '撕纸叠映 2/2 · 素材',
+                    4 => '撕纸叠映未完成',
+                    _ => null,
+                  }
+                : null;
+            return progress == null
+                ? const SizedBox.shrink()
+                : Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    child: Text(progress,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.labelSmall),
+                  );
           }
+          final armed = stage == 1 || stage == 2;
           final editable = visible &&
               connected &&
               foreground &&
               controller.canWrite &&
               supported;
-          final restriction =
-              supported ? controller.tornStartRestriction?.call() : null;
-          final half = controller.snapshot?.values['aspect'] == 6;
-          final status = !supported
-              ? '此机身暂不支持'
-              : extensionFields['tornSession']!.display(stage ?? 0);
-          final hint = switch (stage) {
-            1 => '先拍白底暗色撕纸轮廓，再拍素材；请手动按快门。',
-            2 => '轮廓已准备，请手动拍摄素材。',
-            3 => '合成处理完成，请在相机中核对成片与保存状态。',
-            4 => '本次未合成，请在扩展中重新开始。',
-            _ => '两次拍摄由机身处理；取景画面不预览合成效果。',
+          final restriction = supported && !armed
+              ? controller.snapshot?.values['aspect'] == 6
+                  ? '请先关闭 Half'
+                  : controller.tornStartRestriction?.call()
+              : null;
+          final status = switch (stage) {
+            1 => '1/2 · 拍摄轮廓',
+            2 => '2/2 · 拍摄素材',
+            3 => '合成处理完成',
+            4 => '本次未合成',
+            _ => '两次拍摄叠映',
           };
-          return Padding(
-            key: const ValueKey('torn-session-panel'),
-            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('撕纸叠映', style: Theme.of(context).textTheme.titleSmall),
-              Text(status),
-              if (!connected) const Text('连接已断开 · 阶段待重新读取'),
-              if (supported)
-                Text(hint, style: Theme.of(context).textTheme.bodySmall),
-              if (controller.pending) const Text('结果待核对，请勿重复提交'),
-              if (widget.shooting) ...[
-                const Text('取消或重新开始：返回「相机 → 扩展 → 功能」。',
-                    style: TextStyle(fontSize: 11)),
-                TextButton(
-                    onPressed: connected && foreground && !controller.working
-                        ? _refresh
-                        : null,
-                    child: const Text('重新读取叠映阶段')),
-              ] else ...[
-                if (supported && (half || restriction != null))
-                  Text(half ? '请先关闭 Half 再开始撕纸叠映' : restriction!),
-                Wrap(spacing: 8, children: [
-                  TextButton(
-                      onPressed: editable && !half && restriction == null
-                          ? () => controller.set('tornSession', 1,
-                              expectedRevision: controller.snapshot!.revision)
-                          : null,
-                      child: Text(stage == null || stage == 0 ? '开始' : '重新开始')),
-                  TextButton(
-                      onPressed: editable && stage != null && stage != 0
-                          ? () => controller.set('tornSession', 0,
-                              expectedRevision: controller.snapshot!.revision)
-                          : null,
-                      child: const Text('取消叠映')),
-                ]),
-              ],
-            ]),
+          final subtitle = controller.pending
+              ? '结果待核对'
+              : !connected
+                  ? '连接相机后可用'
+                  : controller.unsupported ||
+                          (controller.snapshot != null && !supported)
+                      ? '此机身暂不支持'
+                      : controller.snapshot == null
+                          ? '尚未读取机身状态'
+                          : restriction ?? status;
+          final revision = controller.snapshot?.revision;
+          return SwitchListTile(
+            key: const ValueKey('extension-torn-session'),
+            contentPadding: EdgeInsets.zero,
+            title: const Text('撕纸叠映', style: TextStyle(fontSize: 14)),
+            subtitle: Text(subtitle, style: const TextStyle(fontSize: 11)),
+            value: armed,
+            onChanged: editable && restriction == null && revision != null
+                ? (on) => controller.set('tornSession', on ? 1 : 0,
+                    expectedRevision: revision)
+                : null,
           );
         });
   }

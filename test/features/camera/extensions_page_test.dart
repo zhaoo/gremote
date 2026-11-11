@@ -121,7 +121,8 @@ CameraExtensionsController makeController(ExtensionFake api,
         onPending: (_) {});
 
 void main() {
-  testWidgets('torn session offers commands, never writable native stages',
+  testWidgets(
+      'torn switch stays on for both shots and resets at terminal stages',
       (tester) async {
     final api = AllExtensionsFake();
     final controller = makeController(api);
@@ -130,23 +131,32 @@ void main() {
     await tester.tap(find.text('功能'));
     await tester.pumpAndSettle();
     expect(find.text('撕纸叠映'), findsOneWidget);
-    await tester.tap(find.text('开始'));
+    final control = find.byKey(const ValueKey('extension-torn-session'));
+    final toggle = find.descendant(of: control, matching: find.byType(Switch));
+    expect(tester.widget<Switch>(toggle).value, isFalse);
+    await tester.tap(toggle);
     await tester.pumpAndSettle();
     expect(api.operations.single['field'], 'tornSession');
     expect(api.operations.single['value'], 1);
-    expect(find.text('拍摄轮廓'), findsOneWidget);
-    await tester.tap(find.text('重新开始'));
-    await tester.pumpAndSettle();
-    expect(api.operations, hasLength(2));
+    expect(tester.widget<Switch>(toggle).value, isTrue);
     api.settings['tornSession'] = 2;
     await controller.refresh();
     await tester.pumpAndSettle();
-    expect(find.text('拍摄素材'), findsOneWidget);
+    expect(tester.widget<Switch>(toggle).value, isTrue);
     await controller.set('tornSession', 3);
-    expect(api.operations, hasLength(2));
-    await tester.tap(find.text('取消叠映'));
+    expect(api.operations, hasLength(1));
+    await tester.tap(toggle);
     await tester.pumpAndSettle();
     expect(api.operations.last['value'], 0);
+    expect(tester.widget<Switch>(toggle).value, isFalse);
+    for (final stage in [3, 4]) {
+      api.settings['tornSession'] = stage;
+      await controller.refresh();
+      await tester.pumpAndSettle();
+      expect(tester.widget<Switch>(toggle).value, isFalse);
+      expect(tester.widget<Switch>(toggle).onChanged, isNotNull);
+    }
+    expect(api.operations, hasLength(2));
   });
   testWidgets('imprint choice writes its raw value and shows native readback',
       (tester) async {
@@ -268,19 +278,22 @@ void main() {
     expect(find.text('28 mm / 35 mm'), findsOneWidget);
     await tester.tap(find.text('功能'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(Switch));
+    final toggle = find.descendant(
+        of: find.byKey(const ValueKey('extension-half')),
+        matching: find.byType(Switch));
+    await tester.tap(toggle);
     await tester.pumpAndSettle();
     expect(api.submissions, 1);
     expect(api.operations.single['field'], 'aspect');
     expect(api.operations.single['value'], 6);
     expect(find.byType(AlertDialog), findsNothing);
     expect(controller.snapshot!.values['aspect'], 6);
-    expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
-    await tester.tap(find.byType(Switch));
+    expect(tester.widget<Switch>(toggle).value, isTrue);
+    await tester.tap(toggle);
     await tester.pumpAndSettle();
     expect(api.submissions, 2);
     expect(api.operations.last['value'], 0);
-    expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
+    expect(tester.widget<Switch>(toggle).value, isFalse);
   });
 
   testWidgets('selection waits for committed receipt and fresh readback',
@@ -451,7 +464,10 @@ void main() {
               .onTap,
           isNull);
       if (gate != 'snapshot') {
-        expect(tester.widget<Switch>(find.byType(Switch)).onChanged, isNull);
+        final toggle = find.descendant(
+            of: find.byKey(const ValueKey('extension-half')),
+            matching: find.byType(Switch));
+        expect(tester.widget<Switch>(toggle).onChanged, isNull);
       }
       if (gate == 'busy') expect(find.text('机身忙碌 · 暂不可设置'), findsOneWidget);
       expect(api.submissions, 0);
