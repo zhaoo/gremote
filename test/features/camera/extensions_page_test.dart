@@ -121,16 +121,16 @@ CameraExtensionsController makeController(ExtensionFake api,
         onPending: (_) {});
 
 void main() {
-  testWidgets(
-      'torn switch stays on for both shots and resets at terminal stages',
+  testWidgets('effects groups both switches and preserves torn protocol states',
       (tester) async {
     final api = AllExtensionsFake();
     final controller = makeController(api);
     addTearDown(controller.dispose);
     await pumpExtensions(tester, controller);
-    await tester.tap(find.text('功能'));
+    await tester.tap(find.text('效果'));
     await tester.pumpAndSettle();
-    expect(find.text('撕纸叠映'), findsOneWidget);
+    expect(find.text('撕纸效果'), findsOneWidget);
+    expect(find.text('暗角'), findsOneWidget);
     final control = find.byKey(const ValueKey('extension-torn-session'));
     final toggle = find.descendant(of: control, matching: find.byType(Switch));
     expect(tester.widget<Switch>(toggle).value, isFalse);
@@ -413,6 +413,8 @@ void main() {
       await pumpExtensions(tester, controller);
       await tester.tap(find.text('效果'));
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('HDF'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('HDF'));
       await tester.pumpAndSettle();
       final originalChoice = tester
@@ -494,6 +496,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(find.text('HDF'), 100,
           scrollable: find.byType(Scrollable).first);
+      await tester.ensureVisible(find.text('HDF'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('HDF'));
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(find.text('弱'), 80,
@@ -736,6 +740,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(find.text('HDF'), 200,
           scrollable: find.byType(Scrollable).first);
+      await tester.ensureVisible(find.text('HDF'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('HDF'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('弱'));

@@ -240,7 +240,7 @@ class CameraExtensionsController extends ChangeNotifier {
       if (field == 'tornSession' &&
           value == 1 &&
           current.values['aspect'] == 6) {
-        message = '请先关闭 Half 再开始撕纸叠映';
+        message = '请先关闭 Half 再开始撕纸效果';
         return;
       }
       if (current.revision != (expectedRevision ?? base.revision) ||
@@ -343,7 +343,7 @@ class CameraExtensionsController extends ChangeNotifier {
     snapshot = fresh;
     _fresh = true;
     await _clear();
-    message = operation['field'] == 'tornSession' ? '机身已确认叠映操作' : '已保存';
+    message = operation['field'] == 'tornSession' ? '机身已确认撕纸设置' : '已保存';
   }
 
   /// Only after explicit user acknowledgement; clears the draft, never writes.

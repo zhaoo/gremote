@@ -48,17 +48,17 @@ final cameraExtensionsControllerProvider =
       final params = ref.read(cameraStateControllerProvider).params;
       final drive = params['shootMode']?.current;
       if (drive != null && drive.toLowerCase() != 'single') {
-        return '请先切换为单张拍摄再开始撕纸叠映';
+        return '请先切换为单张拍摄再开始撕纸效果';
       }
       final effect = params['effect']?.current?.toLowerCase() ?? '';
       if (effect.contains('hdr') ||
           effect.contains('charmera') ||
           effect.contains('pixel')) {
-        return '请先关闭 HDR 或特殊影像效果再开始撕纸叠映';
+        return '请先关闭 HDR 或特殊影像效果再开始撕纸效果';
       }
       final capture = params['captureMode']?.current;
       if (capture != null && capture != 'still') {
-        return '请先切换为照片拍摄再开始撕纸叠映';
+        return '请先切换为照片拍摄再开始撕纸效果';
       }
       return null;
     },

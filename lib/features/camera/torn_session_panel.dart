@@ -68,7 +68,7 @@ class _TornSessionPanelState extends ConsumerState<TornSessionPanel> {
           ? const SizedBox.shrink()
           : const SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: Text('撕纸叠映', style: TextStyle(fontSize: 14)),
+              title: Text('撕纸效果', style: TextStyle(fontSize: 14)),
               subtitle: Text('连接相机后可用', style: TextStyle(fontSize: 11)),
               value: false,
               onChanged: null);
@@ -84,9 +84,9 @@ class _TornSessionPanelState extends ConsumerState<TornSessionPanel> {
           if (widget.shooting) {
             final progress = connected && supported
                 ? switch (stage) {
-                    1 => '撕纸叠映已开启',
-                    2 => '撕纸叠映待拍素材',
-                    4 => '撕纸叠映未完成',
+                    1 => '撕纸效果已开启',
+                    2 => '撕纸效果待拍素材',
+                    4 => '撕纸效果未完成',
                     _ => null,
                   }
                 : null;
@@ -131,7 +131,7 @@ class _TornSessionPanelState extends ConsumerState<TornSessionPanel> {
           return SwitchListTile(
             key: const ValueKey('extension-torn-session'),
             contentPadding: EdgeInsets.zero,
-            title: const Text('撕纸叠映', style: TextStyle(fontSize: 14)),
+            title: const Text('撕纸效果', style: TextStyle(fontSize: 14)),
             subtitle: Text(subtitle, style: const TextStyle(fontSize: 11)),
             value: armed,
             onChanged: editable && restriction == null && revision != null

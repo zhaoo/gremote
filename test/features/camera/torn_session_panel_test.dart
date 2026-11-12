@@ -183,7 +183,7 @@ void main() {
           ]);
         })))));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('功能'));
+    await tester.tap(find.text('效果'));
     await tester.pumpAndSettle();
     await tester.pump(const Duration(seconds: 2));
     final reads = api.reads;
@@ -221,7 +221,7 @@ void main() {
         child: const MaterialApp(
             home: Scaffold(body: TornSessionPanel(shooting: true)))));
     await tester.pumpAndSettle();
-    expect(find.text('撕纸叠映已开启'), findsOneWidget);
+    expect(find.text('撕纸效果已开启'), findsOneWidget);
     expect(find.byType(TextButton), findsNothing);
     expect(find.byType(Switch), findsNothing);
     expect(controller.canWrite, isFalse);
@@ -236,15 +236,15 @@ void main() {
     api.hold!.complete();
     api.hold = null;
     await tester.pumpAndSettle();
-    expect(find.text('撕纸叠映待拍素材'), findsOneWidget);
+    expect(find.text('撕纸效果待拍素材'), findsOneWidget);
     api.settings['tornSession'] = 3;
     await controller.refresh();
     await tester.pumpAndSettle();
-    expect(find.textContaining('撕纸叠映'), findsNothing);
+    expect(find.textContaining('撕纸效果'), findsNothing);
     api.settings['tornSession'] = 4;
     await controller.refresh();
     await tester.pumpAndSettle();
-    expect(find.text('撕纸叠映未完成'), findsOneWidget);
+    expect(find.text('撕纸效果未完成'), findsOneWidget);
     container.read(appForegroundProvider.notifier).state = false;
     await tester.pump();
     final before = api.reads;

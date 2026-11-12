@@ -129,11 +129,17 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
             Padding(
               padding: const EdgeInsets.only(left: 28),
               child: Column(children: [
+                if (group.key == '效果') ...[
+                  TornSessionPanel(active: widget.active),
+                  for (final key in ['vignetteEnabled', 'vignetteStrength'])
+                    _field(available ? controller : null, key,
+                        extensionFields[key]!),
+                ],
                 for (final field in extensionFields.entries.where((entry) =>
                     entry.value.group == group.key &&
-                    entry.key != 'tornSession'))
+                    !{'tornSession', 'vignetteEnabled', 'vignetteStrength'}
+                        .contains(entry.key)))
                   _field(available ? controller : null, field.key, field.value),
-                if (group.key == '功能') TornSessionPanel(active: widget.active),
                 if (group.key == '功能') _half(available ? controller : null),
               ]),
             ),
@@ -152,9 +158,9 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
     final values = controller?.snapshot?.values;
     switch (group) {
       case '功能':
-        return '快切 · Half · 撕纸叠映';
+        return '快切 · Half';
       case '效果':
-        return '暗角 · 胶卷印花 · HDF · 边框 · 颗粒 · 漏光 · 模糊';
+        return '撕纸效果 · 暗角 · 胶卷印花 · HDF · 边框 · 颗粒 · 漏光 · 模糊';
       case '水印':
         return '时间 · 胶卷名';
       case '焦距':

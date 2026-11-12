@@ -64,7 +64,7 @@ const extensionFields = <String, ExtensionField>{
   }),
   'quickSwitch': ExtensionField('快切', '功能', 0, 1,
       choices: {0: '关闭', 1: '开启'}, runtime: true),
-  'tornSession': ExtensionField('撕纸叠映', '功能', 0, 4,
+  'tornSession': ExtensionField('撕纸效果', '功能', 0, 4,
       choices: {0: '关闭', 1: '已开启', 2: '待拍素材', 3: '合成处理完成', 4: '本次未合成'},
       runtime: true),
   'quickSwitchA': ExtensionField('快切 A', '功能', 0, 21, choices: _tones),
