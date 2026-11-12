@@ -1,5 +1,22 @@
 [
   {
+    "version": "1.2.12",
+    "build": 37,
+    "date": "2026-11-12",
+    "platform": "Android · 正式签名",
+    "title": "四款莱卡风格加入胶卷库。",
+    "changes": [
+      "「影像」新增 Leica Chrome、Leica Brass、Leica Teal 和 Leica Classic。",
+      "GR III 2.10 安装配套 M10V 固件与 SD 服务后，可在 App 装卷，由机身 ISP 处理 JPEG 色彩。"
+    ],
+    "evidence": "App 732 项测试通过、3 项跳过，包含 M10V C 服务装卷回读验证。正式签名验证通过。",
+    "url": "https://github.com/zhaoo/gremote/releases/tag/v1.2.12",
+    "download": "https://github.com/zhaoo/gremote/releases/download/v1.2.12/gremote-1.2.12-android-arm64.apk",
+    "checksums": "https://github.com/zhaoo/gremote/releases/download/v1.2.12/SHA256SUMS.txt",
+    "sha256": "96ce592ded336ec5d6f0bd1733b2c4c9a1b3b5cd89926a8fbcdc8aed4e94287e",
+    "bytes": 29158400
+  },
+  {
     "version": "1.2.11",
     "build": 36,
     "date": "2026-11-12",
