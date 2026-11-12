@@ -20,7 +20,10 @@ const officialFilmColorSourcePaths = <String>[
   '/gr3/c41-luts.json',
   '/gr3/extra-films-luts.json',
   '/gr3/four-looks-luts.json',
+  '/gr3/leica-luts.json',
 ];
+
+const leicaFilmIds = <int>{331, 332, 333, 334};
 
 /// A portable, immutable RGB approximation for phone editing. This carries no
 /// camera renderer identity and cannot authorize an SD record or camera write.
@@ -90,7 +93,8 @@ List<OfficialColorLut> compileOfficialFilmLuts({
   required List<OfficialFilm> films,
   required Map<String, Map<String, dynamic>> sources,
 }) {
-  _need(films.length <= 256 && sources.length <= 12);
+  _need(films.length <= 256 &&
+      sources.length <= officialFilmColorSourcePaths.length);
   final metadata = <int, OfficialFilm>{};
   for (final film in films) {
     _need(!metadata.containsKey(film.id));
@@ -178,7 +182,7 @@ List<OfficialColorLut> compileOfficialFilmLuts({
     _geometry(day);
     table(66, 'default', day['values']);
   }
-  const families = <String, List<int>>{
+  const families = <String, Iterable<int>>{
     'harman': [67, 68],
     'curated': [69, 70, 71, 72],
     'newstocks': [73, 74, 75, 76, 77, 78],
@@ -189,6 +193,7 @@ List<OfficialColorLut> compileOfficialFilmLuts({
     'c41': [312, 313, 322, 323, 324, 325, 326],
     'extra-films': [314, 315, 316, 317],
     'four-looks': [318, 319, 320, 321],
+    'leica': leicaFilmIds,
   };
   for (final family in families.entries) {
     final source = sources['/gr3/${family.key}-luts.json'];
@@ -206,8 +211,13 @@ List<OfficialColorLut> compileOfficialFilmLuts({
             ei is int && (id == 67 ? [200, 120] : [125, 64, 250]).contains(ei));
         if (ei != (id == 67 ? 200 : 125)) variant = 'ei$ei';
       }
-      final native =
-          ['anime-e6', 'c41', 'extra-films', 'four-looks'].contains(family.key);
+      final native = const {
+        'anime-e6',
+        'c41',
+        'extra-films',
+        'four-looks',
+        'leica',
+      }.contains(family.key);
       table(id, variant, stock[native ? 'native_values' : 'values']);
     }
   }

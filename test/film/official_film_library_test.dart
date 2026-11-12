@@ -27,7 +27,7 @@ Uint8List samplePack({int filmId = 33}) {
   record.setRange(0, 8, ascii.encode('M10VREC1'));
   data.setUint32(8, filmId, Endian.little);
   record.fillRange(8448, 8480, 0xaa);
-  if (filmId == 326) {
+  if (filmId == 326 || filmId == 331) {
     record.setRange(64, 96, sha256.convert(List.filled(10125, 153)).bytes);
   }
   final crc = filmCrc(record.sublist(0, 12284));
@@ -53,6 +53,62 @@ Uint8List storedZip(Uint8List pack) {
 }
 
 void main() {
+  test(
+      'Leica sync binds phone preview to the SD record and preserves old cache',
+      () async {
+    final dir = Directory.systemTemp.createTempSync('leica-official-');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    var stocks = [
+      {'id': 331, 'native_values': List.filled(10125, 153)}
+    ];
+    final library = OfficialFilmLibrary(
+        directory: () async => dir,
+        client: MockClient((request) async {
+          switch (request.url.path) {
+            case '/api/gr3/native-library/catalog':
+              return http.Response.bytes(
+                  utf8.encode('{"film_count":1,"films":[{"id":331,'
+                      '"name":"Leica Chrome","group":"影像",'
+                      '"icon_url":"/gr3/film-icons/331.png"}]}'),
+                  200);
+            case '/api/status':
+              return http.Response('{"session_token":"fixture"}', 200);
+            case '/api/gr3/sd-library/export':
+              expect(jsonDecode(request.body)['ids'], [331]);
+              return http.Response.bytes(
+                  storedZip(samplePack(filmId: 331)), 200);
+            case '/gr3/leica-luts.json':
+              return http.Response(
+                  jsonEncode({
+                    'size': 15,
+                    'bits': 8,
+                    'order': 'RGB, blue fastest',
+                    'stocks': stocks,
+                  }),
+                  200);
+          }
+          throw StateError('unexpected ${request.url.path}');
+        }));
+
+    final result = await library.sync(expectedRenderer: 'bb' * 32);
+    expect(result.films.single.group, '影像');
+    expect(result.phoneLuts.single.id, startsWith('official:331:default:'));
+    expect(result.cameraCompatible, isFalse);
+    final cache = File('${dir.path}/official-library.json');
+    final before = cache.readAsStringSync();
+    for (final bad in [
+      <Map<String, Object>>[],
+      [
+        {'id': 331, 'native_values': List.filled(10125, 154)}
+      ],
+    ]) {
+      stocks = bad;
+      await expectLater(
+          library.sync(expectedRenderer: 'bb' * 32), throwsFormatException);
+      expect(cache.readAsStringSync(), before);
+    }
+  });
+
   test(
       'sync activates immutable phone color data independently of camera version',
       () async {

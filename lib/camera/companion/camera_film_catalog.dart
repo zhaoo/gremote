@@ -4,6 +4,7 @@ import '../../film/catalog/film_catalog.dart';
 import '../../film/model/film_recipe.dart';
 import 'generated_camera_contract.dart';
 import 'generated_full_camera_contract.dart';
+import 'generated_leica_camera_contract.dart';
 
 final Map<String, dynamic> cameraContract =
     _freezeMap(jsonDecode(cameraContractJson) as Map);
@@ -56,6 +57,11 @@ const fullGr3CameraCatalogHash =
 const fullGr3CameraRendererHash =
     'bcef872c4ff5789a34b47f4c1becc31303a55b95f381c032d9b73bc7cc4c1ae7';
 
+const _leicaRc1CatalogHash =
+    'acfdebf15b861f78afed4b7104e0d32ba2e9c5bb36beb513c9b8286891074e19';
+const _leicaRc1RendererHash =
+    '6a7f612c85cf05ebd9f293131fa3d578df62bb89e3cba23d25b059bedb29c6c1';
+
 const installedCameraCatalogHash =
     '653acf3c1b04db0ea2dd10114a1306b78bb4b584534945be8f9de9da25ebab4a';
 const installedCameraRendererHash =
@@ -70,6 +76,16 @@ final List<CameraFilmProfile> trustedCameraFilmProfiles = List.unmodifiable([
   CameraFilmProfile._(fullGr3CameraCatalogHash, fullGr3CameraRendererHash,
       _freezeMap(jsonDecode(fullCameraContractJson) as Map),
       '机身版本 · GR III 全功能 2026.11.08'),
+  CameraFilmProfile._(leicaCameraCatalogHash, leicaCameraRendererHash,
+      _freezeMap(jsonDecode(leicaCameraContractJson) as Map),
+      '机身版本 · GR III 莱卡效果测试版'),
+  // RC1 extends the 2026.11.08 wire contract only by adding film IDs.
+  CameraFilmProfile._(
+      _leicaRc1CatalogHash,
+      _leicaRc1RendererHash,
+      _freezeMap(
+          (jsonDecode(fullCameraContractJson) as Map)..['maximumFilmId'] = 334),
+      '机身版本 · GR III 莱卡效果 RC1'),
   CameraFilmProfile._(
       installedCameraCatalogHash,
       installedCameraRendererHash,

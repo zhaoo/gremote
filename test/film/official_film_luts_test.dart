@@ -55,6 +55,23 @@ void main() {
             }),
         throwsFormatException);
   });
+  test('compiles the four Leica native previews in catalog order', () {
+    final luts = compileOfficialFilmLuts(films: [
+      film(331),
+      film(332),
+      film(333),
+      film(334),
+    ], sources: {
+      '/gr3/leica-luts.json': source([
+        {'id': 334, 'native_values': table(255)},
+        {'id': 333, 'native_values': table(204)},
+        {'id': 332, 'native_values': table(102)},
+        {'id': 331, 'values': table(255), 'native_values': table(51)},
+      ]),
+    });
+    expect(luts.map((lut) => lut.filmId), [331, 332, 333, 334]);
+    expect(luts.map((lut) => rows(lut).first.first), [.2, .4, .8, 1]);
+  });
   test('preserves distinct Harman EI variants without rebinding identities',
       () {
     final luts = compileOfficialFilmLuts(films: [
@@ -204,7 +221,7 @@ void main() {
     expect(
         () => compileOfficialFilmLuts(
             films: [film(69)],
-            sources: {for (var i = 0; i < 13; i++) '/unknown/$i': {}}),
+            sources: {for (var i = 0; i < 14; i++) '/unknown/$i': {}}),
         throwsFormatException);
     expect(
         () => compileOfficialFilmLuts(films: [

@@ -194,6 +194,8 @@ Set<String> _colorSources(List<OfficialFilm> films) => {
           '/gr3/extra-films-luts.json'
         else if (f.id >= 318 && f.id <= 321)
           '/gr3/four-looks-luts.json'
+        else if (leicaFilmIds.contains(f.id))
+          '/gr3/leica-luts.json'
     };
 
 void _checkColorBindings(Uint8List pack,
@@ -214,12 +216,14 @@ void _checkColorBindings(Uint8List pack,
       '/gr3/c41-luts.json',
       '/gr3/extra-films-luts.json',
       '/gr3/four-looks-luts.json',
+      '/gr3/leica-luts.json',
     }.contains(entry.key)) continue;
     final native = const {
       '/gr3/anime-e6-luts.json',
       '/gr3/c41-luts.json',
       '/gr3/extra-films-luts.json',
       '/gr3/four-looks-luts.json',
+      '/gr3/leica-luts.json',
     }.contains(entry.key);
     for (final stock in entry.value['stocks'] as List) {
       if (entry.key == '/gr3/spectral-luts.json' && stock['id'] != 298) {
@@ -352,6 +356,12 @@ class OfficialFilmLibrary {
     }
     final colors = await Isolate.run(
         () => compileOfficialFilmLuts(films: films, sources: sources));
+    final colorIds = colors.map((color) => color.filmId).toSet();
+    for (final film in films) {
+      if (leicaFilmIds.contains(film.id) && !colorIds.contains(film.id)) {
+        throw FormatException('官网胶卷色彩数据缺失（${film.id}），请重新同步');
+      }
+    }
     await Isolate.run(() => _checkColorBindings(pack, sources, films));
     final phoneLuts =
         await OfficialLutCache(directory: _directory).stage(colors);

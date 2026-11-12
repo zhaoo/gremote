@@ -12,6 +12,7 @@ import 'camera_availability.dart';
 import 'widgets/film_library_tile.dart';
 import '../../camera/companion/camera_film_catalog.dart';
 import '../../film/catalog/official_film_library.dart';
+import '../../film/catalog/official_film_luts.dart';
 import '../../film/preview/film_preview_engine.dart';
 import '../../imaging/imaging_engine.dart';
 import '../../darkroom/darkroom_providers.dart';
@@ -137,11 +138,24 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
     final local = catalog.valueOrNull;
     final availability = ref.watch(cameraAvailabilityProvider);
     final sync = ref.watch(companionSyncControllerProvider);
-    final films = cache?.films ??
+    final existingFilms = cache?.films ??
         [
           for (final f in local?.entries ?? [])
             OfficialFilm(id: f.id, name: f.name, group: f.group, icon: f.icon)
         ];
+    final leicaCatalog =
+        ref.watch(bundledLeicaCameraCatalogProvider).valueOrNull;
+    final leica = {
+      for (final film in leicaCatalog?.entries ?? [])
+        if (leicaFilmIds.contains(film.id)) film.id: film
+    };
+    final existingIds = existingFilms.map((film) => film.id).toSet();
+    final films = [
+      ...existingFilms,
+      for (final f in leica.values)
+        if (!existingIds.contains(f.id))
+          OfficialFilm(id: f.id, name: f.name, group: f.group, icon: f.icon),
+    ];
     final imported = ref
             .watch(darkroomOverviewProvider)
             .valueOrNull
@@ -316,6 +330,7 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
                                   .where((f) => f.id == film.id)
                                   .firstOrNull
                                   ?.icon ??
+                              leica[film.id]?.icon ??
                               film.icon;
                           return FilmLibraryTile(
                               name: film.name,
@@ -462,7 +477,10 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
                               Padding(
                                   padding: const EdgeInsets.only(top: 8),
                                   child: Text(
-                                      currentCache == null
+                                      currentCache == null ||
+                                              (leicaFilmIds.contains(film.id) &&
+                                                  !currentCache.films.any(
+                                                      (f) => f.id == film.id))
                                           ? '同步官网后可用于修图'
                                           : '此胶卷暂不支持手机色彩预设',
                                       style: TextStyle(

@@ -1,0 +1,4405 @@
+{
+  "schemaVersion": 1,
+  "rendererHash": "d949f6917beb8261ab4ffe888e86aad1677c62d96a81cd2c3562a1d01d9aa851",
+  "entries": [
+    {
+      "id": 33,
+      "name": "800T",
+      "group": "ECN2",
+      "icon": "assets/films/camera-icons/33.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 66,
+      "name": "5207",
+      "group": "ECN2",
+      "icon": "assets/films/camera-icons/66.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 62,
+      "name": "5219",
+      "group": "ECN2",
+      "icon": "assets/films/camera-icons/62.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 78,
+      "name": "5203",
+      "group": "ECN2",
+      "icon": "assets/films/camera-icons/78.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 298,
+      "name": "5213",
+      "group": "ECN2",
+      "icon": "assets/films/camera-icons/298.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 77,
+      "name": "2460",
+      "group": "ECN2",
+      "icon": "assets/films/camera-icons/77.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 318,
+      "name": "2383",
+      "group": "ECN2",
+      "icon": "assets/films/camera-icons/318.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 69,
+      "name": "Portra 160",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/69.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 37,
+      "name": "Portra 400",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/37.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 70,
+      "name": "Fuji Industrial 100",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/70.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 73,
+      "name": "Fuji C200",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/73.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 56,
+      "name": "Fuji Superia 200",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/56.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 36,
+      "name": "Fuji Pro 400H",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/36.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 35,
+      "name": "Kodak Gold 200",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/35.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 58,
+      "name": "Kodak UltraMax 400",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/58.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 74,
+      "name": "ProImage 100",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/74.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 34,
+      "name": "Ektar 100",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/34.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 71,
+      "name": "Lucky C200",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/71.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 67,
+      "name": "Harman Phoenix II",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/67.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        },
+        "filmExposure": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "模拟曝光"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 68,
+      "name": "Harman Red",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/68.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        },
+        "filmExposure": {
+          "min": 0,
+          "max": 2,
+          "default": 0,
+          "label": "模拟曝光"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 292,
+      "name": "Lomography",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/292.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 312,
+      "name": "OptiColour 200",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/312.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 313,
+      "name": "NC500",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/313.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 322,
+      "name": "Harman Phoenix 200",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/322.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 323,
+      "name": "Kodak ColorPlus 200",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/323.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 324,
+      "name": "Fujifilm Natura 1600",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/324.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 325,
+      "name": "Lomo Redscale XR",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/325.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 326,
+      "name": "Agfa Vista 200",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/326.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 329,
+      "name": "Revolog KOLOR",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/329.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 330,
+      "name": "Pegasus",
+      "group": "C41",
+      "icon": "assets/films/camera-icons/330.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 294,
+      "name": "Fuji Velvia 50",
+      "group": "E6",
+      "icon": "assets/films/camera-icons/294.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 309,
+      "name": "Fuji Provia 100F",
+      "group": "E6",
+      "icon": "assets/films/camera-icons/309.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 310,
+      "name": "Kodak Ektachrome E100",
+      "group": "E6",
+      "icon": "assets/films/camera-icons/310.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 311,
+      "name": "5294",
+      "group": "E6",
+      "icon": "assets/films/camera-icons/311.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 75,
+      "name": "T-Max 100",
+      "group": "D76",
+      "icon": "assets/films/camera-icons/75.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 299,
+      "name": "Tri-X 400",
+      "group": "D76",
+      "icon": "assets/films/camera-icons/299.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 300,
+      "name": "Ilford Delta 100",
+      "group": "D76",
+      "icon": "assets/films/camera-icons/300.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 301,
+      "name": "Ilford Pan 400",
+      "group": "D76",
+      "icon": "assets/films/camera-icons/301.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 302,
+      "name": "Rollei Infrared 400",
+      "group": "D76",
+      "icon": "assets/films/camera-icons/302.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 303,
+      "name": "Ilford SFX 200",
+      "group": "D76",
+      "icon": "assets/films/camera-icons/303.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 304,
+      "name": "Fomapan 400",
+      "group": "D76",
+      "icon": "assets/films/camera-icons/304.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 305,
+      "name": "CatLABS X Film 80",
+      "group": "D76",
+      "icon": "assets/films/camera-icons/305.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 314,
+      "name": "ACROS II 100",
+      "group": "D76",
+      "icon": "assets/films/camera-icons/314.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 315,
+      "name": "Double-X 5222",
+      "group": "D76",
+      "icon": "assets/films/camera-icons/315.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 328,
+      "name": "SHD50",
+      "group": "D76",
+      "icon": "assets/films/camera-icons/328.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 289,
+      "name": "Kodak Charmera",
+      "group": "创意",
+      "icon": "assets/films/camera-icons/289.png",
+      "parameters": {
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "charmeraColor": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "机身颜色"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 72,
+      "name": "CCD",
+      "group": "创意",
+      "icon": "assets/films/camera-icons/72.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 293,
+      "name": "Polaroid",
+      "group": "创意",
+      "icon": "assets/films/camera-icons/293.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 296,
+      "name": "Cyanotype",
+      "group": "创意",
+      "icon": "assets/films/camera-icons/296.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 290,
+      "name": "Pixel Worlds",
+      "group": "创意",
+      "icon": "assets/films/camera-icons/290.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 76,
+      "name": "Aerochrome",
+      "group": "创意",
+      "icon": "assets/films/camera-icons/76.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 316,
+      "name": "LomoChrome Turquoise",
+      "group": "创意",
+      "icon": "assets/films/camera-icons/316.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 317,
+      "name": "Instax Color",
+      "group": "创意",
+      "icon": "assets/films/camera-icons/317.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 321,
+      "name": "LomoChrome Purple",
+      "group": "创意",
+      "icon": "assets/films/camera-icons/321.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 327,
+      "name": "Marlboro",
+      "group": "创意",
+      "icon": "assets/films/camera-icons/327.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 291,
+      "name": "Leica Monochrome",
+      "group": "影像",
+      "icon": "assets/films/camera-icons/291.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 297,
+      "name": "German Cool",
+      "group": "影像",
+      "icon": "assets/films/camera-icons/297.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 65,
+      "name": "GR2",
+      "group": "影像",
+      "icon": "assets/films/camera-icons/65.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": false
+    },
+    {
+      "id": 319,
+      "name": "Classic Negative",
+      "group": "影像",
+      "icon": "assets/films/camera-icons/319.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 320,
+      "name": "Classic Chrome",
+      "group": "影像",
+      "icon": "assets/films/camera-icons/320.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 331,
+      "name": "Leica Chrome",
+      "group": "影像",
+      "icon": "assets/films/camera-icons/331.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 332,
+      "name": "Leica Brass",
+      "group": "影像",
+      "icon": "assets/films/camera-icons/332.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 333,
+      "name": "Leica Teal",
+      "group": "影像",
+      "icon": "assets/films/camera-icons/333.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    },
+    {
+      "id": 334,
+      "name": "Leica Classic",
+      "group": "影像",
+      "icon": "assets/films/camera-icons/334.png",
+      "parameters": {
+        "grain": {
+          "min": 0,
+          "max": 3,
+          "default": 0,
+          "label": "颗粒"
+        },
+        "grainSize": {
+          "min": 0,
+          "max": 2,
+          "default": 1,
+          "label": "颗粒尺寸"
+        },
+        "haloGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "光晕强度"
+        },
+        "haloSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 3,
+          "label": "扩散范围"
+        },
+        "haloThreshold": {
+          "min": 0,
+          "max": 8,
+          "default": 5,
+          "label": "高光阈值"
+        },
+        "haloProfile": {
+          "min": 0,
+          "max": 6,
+          "default": 6,
+          "label": "光晕模式"
+        },
+        "leakGain": {
+          "min": 0,
+          "max": 8,
+          "default": 0,
+          "label": "漏光强度"
+        },
+        "leakPosition": {
+          "min": 0,
+          "max": 5,
+          "default": 0,
+          "label": "漏光位置"
+        },
+        "leakSpread": {
+          "min": 0,
+          "max": 8,
+          "default": 4,
+          "label": "漏光范围"
+        },
+        "leakVariation": {
+          "min": 0,
+          "max": 1,
+          "default": 0,
+          "label": "漏光变化"
+        }
+      },
+      "approximation": true
+    }
+  ],
+  "hash": "641428c8f8461c4ece0e87e98647b4424cbf2ee7cbe6e9162c51d208730bf921"
+}

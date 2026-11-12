@@ -69,11 +69,19 @@ class _Loopback implements CompanionTransport {
 
 void main() {
   final root = Platform.environment['M10V_CURRENT_HOST_ROOT'];
-  for (final profile in ['current', 'public-gr3-20261105', 'full-gr3-20261108']) {
+  const profiles = {
+    'current': 326,
+    'public-gr3-20261105': 326,
+    'full-gr3-20261108': 330,
+    'leica-gr3': 334,
+    'leica-gr3-rc1': 334,
+  };
+  for (final entry in profiles.entries) {
+    final profile = entry.key;
     test(
         '$profile real C HTTP reads ten slots and installs latest film without duplicates',
         () async {
-      final latestFilm = profile == 'full-gr3-20261108' ? 330 : 326;
+      final latestFilm = entry.value;
       final catalog = CameraFilmCatalog.fromJson(jsonDecode(File(
               profile == 'current'
                   ? 'assets/films/camera-catalog.json'

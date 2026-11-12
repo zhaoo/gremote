@@ -28,6 +28,12 @@ final latestBundledCameraCatalogProvider = FutureProvider<CameraFilmCatalog>(
 Future<Map<String, dynamic>> _readBundledCameraCatalog() async =>
     jsonDecode(await rootBundle.loadString('assets/films/camera-catalog.json'))
         as Map<String, dynamic>;
+
+final bundledLeicaCameraCatalogProvider = FutureProvider<CameraFilmCatalog>(
+    (ref) async => CameraFilmCatalog.fromJson(jsonDecode(await rootBundle
+            .loadString('assets/films/camera-profiles/leica-gr3-catalog.json'))
+        as Map<String, dynamic>));
+
 final bundledCameraCatalogsProvider =
     FutureProvider<List<CameraFilmCatalog>>((ref) async {
   final latest = await ref.watch(latestBundledCameraCatalogProvider.future);
@@ -47,7 +53,13 @@ final bundledCameraCatalogsProvider =
           await rootBundle.loadString(
               'assets/films/camera-profiles/full-gr3-20261108-catalog.json'))
       as Map<String, dynamic>);
-  return List.unmodifiable([latest, coordinated, publicGr3, fullGr3, installed]);
+  final leica = await ref.watch(bundledLeicaCameraCatalogProvider.future);
+  final leicaRc1 = CameraFilmCatalog.fromJson(jsonDecode(
+          await rootBundle.loadString(
+              'assets/films/camera-profiles/leica-gr3-rc1-catalog.json'))
+      as Map<String, dynamic>);
+  return List.unmodifiable(
+      [latest, coordinated, publicGr3, fullGr3, installed, leica, leicaRc1]);
 });
 
 /// UI selection follows the authenticated camera profile. Disconnected/unknown

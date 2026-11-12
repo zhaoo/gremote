@@ -19,6 +19,57 @@ import 'package:gremote/features/film_workbench/workbench_providers.dart';
 import 'package:gremote/film/catalog/official_film_library.dart';
 
 void main() {
+  testWidgets('Leica looks appear under 影像 with an older cache and camera',
+      (tester) async {
+    final catalog = CameraFilmCatalog.fromJson(jsonDecode(
+        File('assets/films/camera-catalog.json').readAsStringSync()));
+    final oldCache = OfficialFilmSnapshot(const [
+      OfficialFilm(
+          id: 33,
+          name: '800T',
+          group: 'ECN2',
+          icon: 'assets/films/camera-icons/33.png')
+    ], DateTime.utc(2026), 'aa' * 32,
+        rendererHash: catalog.rendererHash, cameraCompatible: true);
+    final container = ProviderContainer(overrides: [
+      cameraFilmCatalogProvider.overrideWith((_) async => catalog),
+      officialFilmCacheProvider.overrideWith((_) async => oldCache),
+      cameraAvailabilityProvider.overrideWithValue(const CameraAvailability(
+          canReadFilms: false, canInstallFilms: true, hint: '')),
+      darkroomOverviewProvider.overrideWith((_) async =>
+          const DarkroomOverview(edits: [], luts: [], presets: [])),
+      filmCatalogProvider.overrideWith(
+          (_) async => throw const FormatException('No local preview')),
+    ]);
+    addTearDown(container.dispose);
+    await tester.runAsync(
+        () => container.read(bundledLeicaCameraCatalogProvider.future));
+    await tester.pumpWidget(UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: Scaffold(body: FilmLibraryPage()))));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('胶卷来源'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('影像'));
+    await tester.pumpAndSettle();
+    for (final name in [
+      'Leica Chrome',
+      'Leica Brass',
+      'Leica Teal',
+      'Leica Classic',
+    ]) {
+      expect(find.text(name), findsOneWidget);
+    }
+    expect(find.text('800T'), findsNothing);
+    await tester.tap(find.text('Leica Chrome'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('装入相机'), 200,
+        scrollable: find.byType(Scrollable).last);
+    final install =
+        tester.widget<FilledButton>(find.widgetWithText(FilledButton, '装入相机'));
+    expect(install.onPressed, isNull);
+  });
+
   for (final scenario in [
     (false, 33),
     (false, 327),
@@ -58,7 +109,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(
           tester
-              .widget<FilmLibraryTile>(find.byType(FilmLibraryTile))
+              .widget<FilmLibraryTile>(
+                  find.widgetWithText(FilmLibraryTile, '800T'))
               .available,
           id == 33 || id == 326);
       await tester.tap(find.text('800T'));
@@ -126,7 +178,10 @@ void main() {
     ], child: MaterialApp.router(routerConfig: router)));
     await tester.pumpAndSettle();
     expect(
-        tester.widget<FilmLibraryTile>(find.byType(FilmLibraryTile)).available,
+        tester
+            .widget<FilmLibraryTile>(
+                find.widgetWithText(FilmLibraryTile, 'Vista 200'))
+            .available,
         true);
     await tester.tap(find.text('Vista 200'));
     await tester.pumpAndSettle();
