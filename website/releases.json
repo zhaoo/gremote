@@ -1,5 +1,22 @@
 [
   {
+    "version": "1.2.13",
+    "build": 38,
+    "date": "2026-11-15",
+    "platform": "Android · 正式签名",
+    "title": "从照片复用原拍配方。",
+    "changes": [
+      "GR III 2.10 配套 M10V 固件和 SD 连接服务后，GRemote 可从 JPG 或 DNG 应用原拍配方。",
+      "读回胶卷参数、白平衡偏移与色温，按内容校验自定义胶卷。拍摄配方支持保存、应用和撤销。"
+    ],
+    "evidence": "737 项 Flutter 测试通过，8 项跳过。57 项 Android 单元测试通过。已核对正式签名。",
+    "url": "https://github.com/zhaoo/gremote/releases/tag/v1.2.13",
+    "download": "https://github.com/zhaoo/gremote/releases/download/v1.2.13/gremote-1.2.13-android-arm64.apk",
+    "checksums": "https://github.com/zhaoo/gremote/releases/download/v1.2.13/SHA256SUMS.txt",
+    "sha256": "9393d6296ddabbf7474fef3789d94a43d3616b7dbfacac59cd70a738deac17c2",
+    "bytes": 29228036
+  },
+  {
     "version": "1.2.12",
     "build": 37,
     "date": "2026-11-12",
