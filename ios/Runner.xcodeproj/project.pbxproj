@@ -25,6 +25,7 @@
 		AD58CE45040128DC6C5F8B85 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0D71EE655FA42E1D701DE281 /* Pods_Runner.framework */; };
 		D6947EE56FBBDF4E2E6CF9FF /* RicohBluetooth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A9045F90C9754CD7890DD0B /* RicohBluetooth.swift */; };
 		D6FF3069F76D9C1789814415 /* GRemoteDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 666BED74178E62A0D105C084 /* GRemoteDevice.swift */; };
+		0A4918F65C38482C8EAE1F24 /* RicohRecordedFilm.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DB569039B6A4F6B8D10C186 /* RicohRecordedFilm.swift */; };
 		E0AB4F48B0FC4EE3849F1502 /* FilmLibraryDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0AB4F48B0FC4EE3849F1501 /* FilmLibraryDocument.swift */; };
 		F2637CE2809041ED6817213B /* PhotoPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7510A05ED3D82C09664055AA /* PhotoPolicy.swift */; };
 /* End PBXBuildFile section */
@@ -65,6 +66,7 @@
 		4D15F58F3D8CD5890A44854F /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		4D79A2A364A272C3F7985612 /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
 		666BED74178E62A0D105C084 /* GRemoteDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Native/GRemoteDevice.swift; sourceTree = "<group>"; };
+		7DB569039B6A4F6B8D10C186 /* RicohRecordedFilm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Native/RicohRecordedFilm.swift; sourceTree = "<group>"; };
 		691DEE12A0B4A284B8D104B2 /* Pods-RunnerTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug.xcconfig"; sourceTree = "<group>"; };
 		6B4B41265ACDC283B53B52DD /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -190,6 +192,7 @@
 				BC791A8363C67BF31E6E7354 /* CameraEndpoint.swift */,
 				7A9045F90C9754CD7890DD0B /* RicohBluetooth.swift */,
 				666BED74178E62A0D105C084 /* GRemoteDevice.swift */,
+				7DB569039B6A4F6B8D10C186 /* RicohRecordedFilm.swift */,
 				E0AB4F48B0FC4EE3849F1501 /* FilmLibraryDocument.swift */,
 				91DDE74D3E40A66DA2A31C75 /* GRemoteMedia.swift */,
 				36E08AB59E75B8296918C201 /* GRemoteLocation.swift */,
@@ -438,6 +441,7 @@
 				0D623693DFCF861A5C7EBB86 /* CameraEndpoint.swift in Sources */,
 				D6947EE56FBBDF4E2E6CF9FF /* RicohBluetooth.swift in Sources */,
 				D6FF3069F76D9C1789814415 /* GRemoteDevice.swift in Sources */,
+				0A4918F65C38482C8EAE1F24 /* RicohRecordedFilm.swift in Sources */,
 				E0AB4F48B0FC4EE3849F1502 /* FilmLibraryDocument.swift in Sources */,
 				AD50D2B3C950507BFEC2BB05 /* GRemoteMedia.swift in Sources */,
 				84C7E435928A131C41757028 /* GRemoteLocation.swift in Sources */,

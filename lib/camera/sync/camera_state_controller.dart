@@ -70,6 +70,8 @@ class CameraStateController extends Notifier<CameraState> {
   var _shooting = 0;
   bool get isCapturing =>
       _shooting > 0 || _session?.tracker.isDetecting == true;
+  bool get canAssociateAppShot =>
+      _shooting == 0 && _session?.tracker.canAssociateAppShot == true;
   Future<SettingsRestoreReport>? _restoring;
 
   CameraApi get api => _api;

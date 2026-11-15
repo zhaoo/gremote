@@ -42,6 +42,46 @@ class GalleryFixture extends CameraGalleryService {
 }
 
 void main() {
+  testWidgets('saved photo shows its recorded film and ignores another file',
+      (tester) async {
+    final harness = (await tester.runAsync(CameraHarness.create))!;
+    addTearDown(harness.dispose);
+    await tester.runAsync(harness.connect);
+    final events = StreamController<CameraDeviceEvent>.broadcast();
+    addTearDown(events.close);
+    final fixture = GalleryFixture(CameraApi(harness.gateways.transport),
+        events: events.stream)
+      ..pending = Completer<String>();
+    await tester.pumpWidget(UncontrolledProviderScope(
+        container: harness.container,
+        child: ProviderScope(
+            overrides: [
+              cameraGalleryServiceProvider.overrideWithValue(fixture)
+            ],
+            child: MaterialApp(
+                theme: GRemoteTheme.dark,
+                home: const Scaffold(body: CameraGallery())))));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('R001'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('下载 DNG'));
+    await tester.pump();
+    expect(fixture.downloaded, ['100RICOH/R001.DNG']);
+    events.add(const CameraDeviceEvent(
+        type: 'photoRecordedFilm',
+        jsonPayload: '{"id":"100RICOH/other.DNG","code":8193}'));
+    events.add(const CameraDeviceEvent(
+        type: 'photoRecordedFilm',
+        jsonPayload: '{"id":"100RICOH/R001.DNG","code":4427}'));
+    await tester.pump();
+    fixture.pending!.complete('content://saved-raw');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('R001'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('拍摄胶卷：'), findsOneWidget);
+    expect(find.textContaining('自定义胶卷'), findsNothing);
+  });
+
   testWidgets(
       'download finishing while local album is visible refreshes its grid',
       (tester) async {

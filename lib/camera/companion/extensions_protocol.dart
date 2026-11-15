@@ -3,15 +3,35 @@ const previousExtensionContractHash =
     '8014c8d909a7427519c41c524088912a426bb27a1ec7168e82f4659c5ba113cd';
 const extensionContractHash =
     'c5e4a67763f11333c72f40ceee652919b280ab83235b21a535bc9145b73a224d';
+const whiteBalanceExtensionContractHash =
+    '579e3f88435e8547435f61a2e7d9d5bf72b8b2379ee995097fe5576c863b59d0';
+const photoRecipeExtensionContractHash =
+    '23a5ca8eaa31e77be7a915270937c65968554df965d092c5372380739ecea81e';
 const vignetteExtensionContractHash =
     'f1a60c6593fad7d22ffdbd168c9199567799b2153de15ab84064efcd215f93dc';
 const legacyExtensionContractHash =
     '9df047418574e23fd399a0c59491aecc9ea212dbf119a79ff29532aec6493628';
 const supportedExtensionContractHashes = {
+  photoRecipeExtensionContractHash,
+  whiteBalanceExtensionContractHash,
   extensionContractHash,
   vignetteExtensionContractHash,
   previousExtensionContractHash,
   legacyExtensionContractHash
+};
+const whiteBalanceExtensionKeys = {'wbGreenMagenta', 'wbBlueAmber', 'wbKelvin'};
+const _whiteBalanceContracts = {
+  whiteBalanceExtensionContractHash,
+  photoRecipeExtensionContractHash,
+};
+const _tornContracts = {
+  photoRecipeExtensionContractHash,
+  extensionContractHash,
+  whiteBalanceExtensionContractHash
+};
+const _vignetteContracts = {
+  ..._tornContracts,
+  vignetteExtensionContractHash,
 };
 
 class ExtensionField {
@@ -52,6 +72,11 @@ const _tones = {
   21: '胶卷槽 10'
 };
 const extensionFields = <String, ExtensionField>{
+  'filmTexture': ExtensionField('逐卷颗粒、漏光与柔光', '胶卷', 0, 6143),
+  'wbGreenMagenta': ExtensionField('绿／洋红', '白平衡', 0, 28, runtime: true),
+  'wbBlueAmber': ExtensionField('蓝／琥珀', '白平衡', 0, 28, runtime: true),
+  'wbKelvin':
+      ExtensionField('色温', '白平衡', 2500, 10000, unit: 'K', runtime: true),
   'imprint': ExtensionField('胶卷印花', '效果', 0, 7, choices: {
     0: '关闭',
     1: '猫鱼',
@@ -124,10 +149,11 @@ void _need(bool value) {
 
 bool extensionValueSupported(String contract, String key, Object? value) =>
     extensionFields[key]?.accepts(value) == true &&
-    !(contract != extensionContractHash && key == 'tornSession') &&
-    !(!{extensionContractHash, vignetteExtensionContractHash}
-            .contains(contract) &&
-        key.startsWith('vignette')) &&
+    (_tornContracts.contains(contract) || key != 'tornSession') &&
+    (_vignetteContracts.contains(contract) || !key.startsWith('vignette')) &&
+    (_whiteBalanceContracts.contains(contract) ||
+        !whiteBalanceExtensionKeys.contains(key)) &&
+    (key != 'filmTexture' || contract == photoRecipeExtensionContractHash) &&
     !(contract == legacyExtensionContractHash &&
         (key == 'imprint' || key == 'leakPosition' && (value as int) > 2));
 
@@ -157,11 +183,14 @@ class ExtensionCapabilities {
       final field = Map<String, dynamic>.from(item as Map), key = field['key'];
       final expected = extensionFields[key];
       _need(key is String &&
-          (contractHash == extensionContractHash || key != 'tornSession') &&
+          (_tornContracts.contains(contractHash) || key != 'tornSession') &&
           (contractHash != legacyExtensionContractHash || key != 'imprint') &&
-          ({extensionContractHash, vignetteExtensionContractHash}
-                  .contains(contractHash) ||
+          (_vignetteContracts.contains(contractHash) ||
               !key.startsWith('vignette')) &&
+          (_whiteBalanceContracts.contains(contractHash) ||
+              !whiteBalanceExtensionKeys.contains(key)) &&
+          (key != 'filmTexture' ||
+              contractHash == photoRecipeExtensionContractHash) &&
           seen.add(key) &&
           expected != null &&
           field['min'] == expected.min &&
@@ -178,11 +207,10 @@ class ExtensionCapabilities {
     _need(seen.length ==
         extensionFields.length -
             (contractHash == legacyExtensionContractHash ? 1 : 0) -
-            ({extensionContractHash, vignetteExtensionContractHash}
-                    .contains(contractHash)
-                ? 0
-                : 2) -
-            (contractHash == extensionContractHash ? 0 : 1));
+            (_vignetteContracts.contains(contractHash) ? 0 : 2) -
+            (_tornContracts.contains(contractHash) ? 0 : 1) -
+            (_whiteBalanceContracts.contains(contractHash) ? 0 : 3) -
+            (contractHash == photoRecipeExtensionContractHash ? 0 : 1));
     this.supported = Set.unmodifiable(supported);
   }
   late final Set<String> supported;

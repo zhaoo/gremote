@@ -20,11 +20,14 @@ import '../../camera/program/program_runner.dart';
 import '../../camera/recipe/combo_recipe.dart';
 import '../../camera/recipe/recipe_session.dart';
 import '../../camera/recipe/recipe_store.dart';
+import '../../camera/recipe/shooting_recipe.dart';
 import '../../camera/sync/camera_state.dart';
 import '../../camera/sync/camera_state_controller.dart';
 import '../../darkroom/darkroom_providers.dart';
 import '../../location/location_recording.dart';
 import '../camera/torn_session_panel.dart';
+import '../camera/extensions_providers.dart';
+import '../film_workbench/companion_providers.dart';
 import 'shoot_mode.dart';
 import 'shoot_labels.dart';
 import 'widgets/bottom_bar.dart';
@@ -65,6 +68,7 @@ class _ShootPageState extends ConsumerState<ShootPage> {
   var _focusFailed = false;
   var _shutterHeld = false;
   var _shutterEpoch = 0;
+  ({ShootingRecipe recipe, int generation, String revision})? _exposureRecipe;
   GoRouter? _router;
   bool _leaving = false;
   bool _restoreRequired = false;
@@ -118,6 +122,7 @@ class _ShootPageState extends ConsumerState<ShootPage> {
     }
     _shootVisible.state = true;
     _liveViewController.attach();
+    unawaited(_refreshExposureReadback());
     unawaited(SystemChrome.setPreferredOrientations(DeviceOrientation.values));
   }
 
@@ -142,6 +147,12 @@ class _ShootPageState extends ConsumerState<ShootPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(companionSyncControllerProvider, (previous, next) {
+      if (next != null && _attached && !identical(previous, next)) {
+        unawaited(_refreshExposureReadback());
+      }
+    });
+    ref.watch(cameraExtensionsControllerProvider);
     ref.listen(connectionControllerProvider, (_, next) {
       if (next is ConnectionReady && _attached) _restoreRequired = true;
       if (next is! ConnectionReady) {
@@ -442,6 +453,12 @@ class _ShootPageState extends ConsumerState<ShootPage> {
     if (_focusing || _shutterHeld) return;
     final epoch = _shutterEpoch;
     setState(() => _shutterHeld = true);
+    final camera = ref.read(cameraStateControllerProvider.notifier);
+    final drive = ref.read(cameraStateControllerProvider).value(ParamKey.drive);
+    _exposureRecipe =
+        camera.canAssociateAppShot && drive?.toLowerCase() == 'single'
+            ? _readExposureRecipe()
+            : null;
     try {
       final operation =
           ref.read(connectionControllerProvider.notifier).pressShutter();
@@ -449,6 +466,7 @@ class _ShootPageState extends ConsumerState<ShootPage> {
       await operation;
       _pressInFlight = null;
     } catch (_) {
+      _exposureRecipe = null;
       if (mounted && epoch == _shutterEpoch) {
         setState(() => _shutterHeld = false);
         _feedback('拍摄请求失败，请检查相机连接');
@@ -463,18 +481,95 @@ class _ShootPageState extends ConsumerState<ShootPage> {
     if (!_shutterHeld) return;
     final epoch = _shutterEpoch;
     try {
+      await _pressInFlight;
+      if (!mounted || epoch != _shutterEpoch) return;
       await ref.read(connectionControllerProvider.notifier).releaseShutter();
       if (mounted &&
           epoch == _shutterEpoch &&
           ref.read(connectionControllerProvider) is ConnectionReady) {
-        unawaited(
-            ref.read(cameraStateControllerProvider.notifier).trackAppShot());
+        final connection =
+            ref.read(connectionControllerProvider) as ConnectionReady;
+        final controller = ref.read(cameraStateControllerProvider.notifier);
+        final recipe = _exposureRecipe;
+        final tracked = controller.trackAppShot();
+        if (recipe != null && connection.cameraKey != null) {
+          final store = ShootingRecipeStore(ref.read(databaseProvider));
+          unawaited(tracked.then((records) async {
+            // A diff with multiple exposures cannot identify which one came
+            // from this button. Leave those files eligible for film-only readback.
+            if (records.length != 1 ||
+                !mounted ||
+                controller.sessionGeneration != recipe.generation) {
+              return;
+            }
+            await _refreshExposureReadback();
+            if (!mounted) return;
+            final readback = _readExposureRecipe();
+            if (readback != null &&
+                readback.generation == recipe.generation &&
+                readback.revision == recipe.revision &&
+                readback.recipe.sameSettings(recipe.recipe)) {
+              await store.rememberCapture(
+                  connection.cameraKey!, records.single, recipe.recipe);
+            }
+          }).catchError((Object _) {}));
+        } else {
+          unawaited(tracked.then<void>((_) {}, onError: (Object _) {}));
+        }
       }
     } finally {
+      _exposureRecipe = null;
       if (mounted && epoch == _shutterEpoch) {
         setState(() => _shutterHeld = false);
       }
     }
+  }
+
+  Future<void> _refreshExposureReadback() async {
+    final sync = ref.read(companionSyncControllerProvider);
+    final extensions = ref.read(cameraExtensionsControllerProvider);
+    final camera = ref.read(cameraStateControllerProvider.notifier);
+    if (sync == null || extensions == null) return;
+    final generation = camera.sessionGeneration;
+    try {
+      await Future.wait([sync.refresh(), camera.refresh()]);
+      if (mounted &&
+          generation == camera.sessionGeneration &&
+          !camera.isCapturing) {
+        await extensions.refresh();
+      }
+    } on Exception {
+      // Optional metadata readback is separate from the shutter path.
+    }
+  }
+
+  ({ShootingRecipe recipe, int generation, String revision})?
+      _readExposureRecipe() {
+    final sync = ref.read(companionSyncControllerProvider);
+    final snapshot = sync?.state.snapshot;
+    final controller = ref.read(cameraExtensionsControllerProvider);
+    final extensions = controller?.snapshot;
+    if (sync == null ||
+        snapshot == null ||
+        sync.state.stale ||
+        !snapshot.fresh ||
+        snapshot.busy ||
+        sync.state.pending ||
+        controller?.hasFreshReadback != true ||
+        extensions == null ||
+        extensions.bootId != snapshot.bootId) return null;
+    final recipe = ShootingRecipe.fromCamera(
+        '手机记录的拍摄配方', snapshot, ref.read(cameraStateControllerProvider), {
+      for (final key in recipeEffectKeys)
+        if (extensions.values[key] case final int value) key: value,
+    });
+    if (recipe == null) return null;
+    return (
+      recipe: recipe,
+      revision: snapshot.revision,
+      generation:
+          ref.read(cameraStateControllerProvider.notifier).sessionGeneration
+    );
   }
 
   Future<void> _tapAf({Offset point = const Offset(.5, .5)}) async {

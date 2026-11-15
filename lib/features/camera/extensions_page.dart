@@ -137,8 +137,12 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
                 ],
                 for (final field in extensionFields.entries.where((entry) =>
                     entry.value.group == group.key &&
-                    !{'tornSession', 'vignetteEnabled', 'vignetteStrength'}
-                        .contains(entry.key)))
+                    !{
+                      'tornSession',
+                      'vignetteEnabled',
+                      'vignetteStrength',
+                      'filmTexture'
+                    }.contains(entry.key)))
                   _field(available ? controller : null, field.key, field.value),
                 if (group.key == '功能') _half(available ? controller : null),
               ]),

@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:io';
+import '../../camera/recipe/shooting_recipe.dart';
+import '../camera/shooting_recipes_page.dart';
 import 'package:crypto/crypto.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:path_provider/path_provider.dart';
@@ -192,6 +194,12 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
 
   Future<void> _photoActions(LocalMediaItem item) async {
     if (_busy) return;
+    final recorded = await ShootingRecipeStore(ref.read(databaseProvider))
+        .photoFilm(item.uri);
+    if (!mounted) return;
+    final body =
+        RecordedExposure.parse(recorded?.exposureRecipe, recorded?.code);
+    final filmId = body?.filmId ?? recordedBuiltinFilmId(recorded?.code);
     final action = await showModalBottomSheet<String>(
         context: context,
         showDragHandle: true,
@@ -206,11 +214,43 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                   title: const Text('分享'),
                   onTap: () => Navigator.pop(context, 'share')),
               ListTile(
+                  leading: const Icon(Icons.tune),
+                  title: Text(body != null
+                      ? '应用原拍配方'
+                      : recorded?.recipe == null
+                          ? '查看同款胶卷配方'
+                          : '应用手机记录的拍摄配方'),
+                  enabled: filmId != null,
+                  onTap: filmId == null
+                      ? null
+                      : () => Navigator.pop(context, 'filmRecipes')),
+              ListTile(
                   leading: const Icon(Icons.check_circle_outline),
                   title: const Text('选择照片'),
                   onTap: () => Navigator.pop(context, 'select')),
             ])));
     if (!mounted || action == null) return;
+    if (action == 'filmRecipes' && filmId != null && recorded != null) {
+      try {
+        if (await ref.read(mediaGatewayProvider).contentHash(item.id) !=
+            recorded.hash) {
+          if (mounted) _message('当前照片与保存记录不符');
+          return;
+        }
+      } on Exception {
+        if (mounted) _message('暂时无法核对这张原图');
+        return;
+      }
+      if (!mounted) return;
+      await Navigator.of(context, rootNavigator: true).push(
+          MaterialPageRoute<void>(
+              builder: (_) => ShootingRecipesPage(
+                  filmId: filmId,
+                  recordedRecipe: recorded.recipe,
+                  recordedExposure: body,
+                  applyOnOpen: body != null || recorded.recipe != null)));
+      return;
+    }
     if (action == 'select') {
       _controller.toggle(item.id);
       setState(() => _selectMode = true);

@@ -13,8 +13,11 @@ import com.izhaoo.gremote.device.NativeHttpResponse
 import com.izhaoo.gremote.device.wifi.CameraProbe
 import com.izhaoo.gremote.device.wifi.CameraProbeOrder
 import com.izhaoo.gremote.device.wifi.CameraProbeResult
+import com.izhaoo.gremote.media.RicohRecordedFilm
 import java.io.IOException
 import java.net.InetAddress
+import java.security.DigestOutputStream
+import java.security.MessageDigest
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
@@ -213,7 +216,8 @@ class BoundCameraTransport(
                             }.toString())
                         }
                         reportProgress(0)
-                        val copied = output.use { destination ->
+                        val digest = MessageDigest.getInstance("SHA-256")
+                        val copied = DigestOutputStream(output, digest).use { destination ->
                             body.byteStream().use { input ->
                                 copyPhotoStream(input, destination, ::reportProgress)
                             }
@@ -229,6 +233,18 @@ class BoundCameraTransport(
                         }
                         val elapsed = (SystemClock.elapsedRealtime() - started).coerceAtLeast(1)
                         Log.i("GRemotePhotoTransfer", "format=${if (isDng) "DNG" else "JPEG"} bytes=$copied elapsedMs=$elapsed bytesPerSecond=${copied * 1000 / elapsed}")
+                        val recordedFilm = runCatching {
+                            resolver.openInputStream(uri)?.use(RicohRecordedFilm::read)
+                        }.getOrNull()
+                        if (recordedFilm != null) {
+                            emitEvent("photoRecordedFilm", JSONObject().apply {
+                                put("id", "$directory/$fileName")
+                                put("code", recordedFilm.code)
+                                put("hash", digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xff) })
+                                recordedFilm.capturedAt?.let { put("capturedAt", it) }
+                                recordedFilm.exposureRecipe?.let { put("exposureRecipe", it) }
+                            }.toString())
+                        }
                         uri.toString()
                     } catch (error: Throwable) {
                         resolver.delete(uri, null, null)

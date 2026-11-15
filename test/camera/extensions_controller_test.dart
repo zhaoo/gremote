@@ -14,18 +14,21 @@ Map<String, dynamic> extSnapshot({int hdf = 0, String revision = '04'}) => {
       'supported': ['hdf'],
       'values': {'hdf': hdf}
     };
-Map<String, dynamic> extCaps() => {
+Map<String, dynamic> extCaps([String contract = extensionContractHash]) => {
       'schema': extensionSchema,
-      'contractHash': extensionContractHash,
+      'contractHash': contract,
       'fields': [
         for (final e in extensionFields.entries)
-          {
-            'key': e.key,
-            'min': e.value.min,
-            'max': e.value.max,
-            'supported': e.key == 'hdf',
-            'persistence': e.value.runtime ? 'runtime' : 'persistent'
-          }
+          if (contract == photoRecipeExtensionContractHash ||
+              (!whiteBalanceExtensionKeys.contains(e.key) &&
+                  e.key != 'filmTexture'))
+            {
+              'key': e.key,
+              'min': e.value.min,
+              'max': e.value.max,
+              'supported': e.key == 'hdf',
+              'persistence': e.value.runtime ? 'runtime' : 'persistent'
+            }
       ]
     };
 

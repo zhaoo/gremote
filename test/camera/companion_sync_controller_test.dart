@@ -179,6 +179,29 @@ void main() {
     controller.dispose();
     await db.close();
   });
+  test('recipe applies and restores slot settings using camera readback',
+      () async {
+    await controller.refresh();
+    final base = controller.state.snapshot!;
+    final saved = {
+      ...base.slots[1],
+      'parameters': {'grain': 2, 'grainSize': 1},
+    };
+    expect(await controller.restoreRecipeSlot(base, 1, saved), isTrue);
+    expect(controller.state.snapshot!.activeSlot, 1);
+    expect(controller.state.snapshot!.slots[1], saved);
+    expect(await controller.restoreRecipeSlot(base, 1, base.slots[1]), isFalse);
+    expect(
+        await controller.restoreRecipeSlot(
+            controller.state.snapshot!, 1, base.slots[1]),
+        isTrue);
+    expect(
+        await controller.restoreRecipeSlot(
+            controller.state.snapshot!, 0, base.slots[0]),
+        isTrue);
+    expect(controller.state.snapshot!.config, base.config);
+    expect(controller.state.snapshot!.activeSlot, base.activeSlot);
+  });
   test('lost_ack_remains_unknown_until_readback', () async {
     await controller.prepareLoad(slot: 0, recipe: recipe(), activate: false);
     api.lost = true;

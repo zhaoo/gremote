@@ -11,6 +11,7 @@ import '../film_workbench/companion_providers.dart';
 import '../film_workbench/camera_films_page.dart';
 import 'film_library_page.dart';
 import 'extensions_page.dart';
+import 'shooting_recipes_page.dart';
 
 class CameraPage extends ConsumerStatefulWidget {
   const CameraPage({super.key});
@@ -98,6 +99,15 @@ class _CameraPageState extends ConsumerState<CameraPage> {
         showDragHandle: true,
         builder: (sheet) => SafeArea(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(
+              title: const Text('拍摄配方'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.pop(sheet);
+                Navigator.of(context, rootNavigator: true).push(
+                    MaterialPageRoute<void>(
+                        builder: (_) => const ShootingRecipesPage()));
+              }),
           ListTile(
               title: const Text('相机连接'),
               trailing: const Icon(Icons.chevron_right),

@@ -68,6 +68,7 @@ class CameraExtensionsController extends ChangeNotifier {
   ExtensionSnapshot? snapshot;
   String? message;
   bool get pending => _operation != null || _unreadablePending;
+  bool get hasFreshReadback => _fresh && !working && !pending && !unsupported;
   bool get canWrite =>
       _alive &&
       !working &&

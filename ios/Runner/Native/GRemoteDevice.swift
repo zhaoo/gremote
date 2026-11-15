@@ -389,11 +389,38 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
     do { try FileManager.default.moveItem(at:location,to:copy) }
     catch { transfer.1(.failure(error)); return }
     let token = generation
-    GRemoteMedia.savePhoto(copy, name:name) { result in
-      try? FileManager.default.removeItem(at:copy)
-      guard self.generation == token else { transfer.1(.failure(nativeError("wifiCancelled", "连接已结束"))); return }
-      transfer.1(result)
+    DispatchQueue.global(qos: .utility).async {
+      let metadata = try? Self.recordedPhotoMetadata(copy, id: transfer.0)
+      GRemoteMedia.savePhoto(copy, name:name) { result in
+        try? FileManager.default.removeItem(at:copy)
+        guard self.generation == token else { transfer.1(.failure(nativeError("wifiCancelled", "连接已结束"))); return }
+        if case .success = result, let metadata {
+          self.emit("photoRecordedFilm", metadata)
+          DispatchQueue.main.async { transfer.1(result) }
+        } else {
+          transfer.1(result)
+        }
+      }
     }
+  }
+
+  private static func recordedPhotoMetadata(_ url: URL, id: String) throws -> [String: Any]? {
+    let file = try FileHandle(forReadingFrom: url)
+    defer { try? file.close() }
+    guard let recorded = try RicohRecordedFilm.read(file) else { return nil }
+    try file.seek(toOffset: 0)
+    var digest = SHA256()
+    while let chunk = try file.read(upToCount: 256 * 1024), !chunk.isEmpty {
+      digest.update(data: chunk)
+    }
+    var data: [String: Any] = [
+      "id": id,
+      "code": recorded.code,
+      "hash": digest.finalize().map { String(format: "%02x", $0) }.joined(),
+    ]
+    if let capturedAt = recorded.capturedAt { data["capturedAt"] = capturedAt }
+    if let recipe = recorded.exposureRecipe { data["exposureRecipe"] = recipe }
+    return data
   }
   func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
     if let transfer = downloads.removeValue(forKey:ObjectIdentifier(task)) { transfer.1(.failure(error ?? nativeError("downloadFailed", "下载未完成"))) }

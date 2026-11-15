@@ -96,6 +96,7 @@ class CaptureTracker {
   bool _disposed = false;
   Future<List<CaptureRecord>>? _inFlight;
   bool get isDetecting => _inFlight != null;
+  bool get canAssociateAppShot => _primed && !_disposed && _inFlight == null;
   CaptureContext? _context;
 
   Stream<CaptureRecord> get records => _records.stream;

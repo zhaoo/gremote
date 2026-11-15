@@ -450,6 +450,72 @@ class CompanionSyncController extends ChangeNotifier {
     return false;
   }
 
+  /// Apply a previously read recipe to an occupied slot without replacing its
+  /// film identity. Use the same journal and readback as wireless loading.
+  Future<bool> restoreRecipeSlot(
+      CompanionSnapshot expected, int slot, Map<String, Object?> saved,
+      {bool restoreTextureSeparately = false}) async {
+    if (!_alive ||
+        _working ||
+        _preparing ||
+        _hasPending ||
+        state.readOnly ||
+        _blocked() ||
+        slot < 0 ||
+        slot >= slotCount) {
+      return false;
+    }
+    _working = true;
+    final epoch = _epoch;
+    try {
+      final fresh = await api.state();
+      if (!_current(epoch) ||
+          !fresh.fresh ||
+          fresh.busy ||
+          fresh.hasUnknownFields ||
+          fresh.bootId != expected.bootId ||
+          fresh.instanceId != expected.instanceId ||
+          fresh.revision != expected.revision ||
+          fresh.activeSlot != expected.activeSlot ||
+          fresh.wire['catalogHash'] != catalogHash ||
+          fresh.wire['rendererHash'] != rendererHash) return false;
+      final current = fresh.slots[slot];
+      if (current['filmId'] == 0 ||
+          current['filmId'] != saved['filmId'] ||
+          current['customHash'] != saved['customHash']) return false;
+      final before = wireMap(current['parameters']);
+      final after = wireMap(saved['parameters']);
+      for (final field in (contract['readOnlyParameters'] as List? ?? [])) {
+        if (before[field] != after[field]) {
+          if (!restoreTextureSeparately) return false;
+          after[field as String] = before[field];
+        }
+      }
+      final desired = Map<String, Object?>.of(fresh.config);
+      final slots = List<Object?>.of(fresh.slots);
+      slots[slot] = {...saved, 'parameters': after};
+      desired['slots'] = slots;
+      if (!knownCompanionConfig(desired, contract: contract)) return false;
+      final patch = _patch(fresh.config, desired);
+      for (final change in patch) {
+        change.remove('customHash');
+      }
+      if (patch.isNotEmpty &&
+          !await _execute(fresh, desired, patch, null, 'install', epoch)) {
+        return false;
+      }
+      if (!_current(epoch)) return false;
+      if (fresh.activeSlot == slot) return true;
+      return await _execute(patch.isEmpty ? fresh : state.snapshot!, desired,
+          [], slot, 'activate', epoch);
+    } catch (_) {
+      if (_current(epoch) && _hasPending) await _unknown(epoch);
+      rethrow;
+    } finally {
+      _working = false;
+    }
+  }
+
   Future<void> confirm() async {
     if (!_alive ||
         _working ||

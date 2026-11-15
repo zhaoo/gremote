@@ -16,10 +16,15 @@ import '../../camera/gateway/ble_gateway.dart';
 import '../../camera/connection/connection_state.dart';
 import '../../camera/http/camera_api.dart';
 import '../../camera/http/camera_files.dart';
+import '../../diagnostics/diagnostic_event.dart';
+import '../../diagnostics/diagnostic_store.dart';
 import '../../platform/device_api.g.dart';
 import 'camera_transfer.dart';
 import 'library_controller.dart';
 import '../home/import_history.dart';
+import '../film_workbench/companion_providers.dart';
+import '../../camera/recipe/shooting_recipe.dart';
+import '../camera/shooting_recipes_page.dart';
 
 final cameraGalleryServiceProvider = Provider<CameraGalleryService>((ref) {
   final gateways = ref.read(cameraGatewaysProvider);
@@ -67,6 +72,12 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
   List<CameraFile> _files = const [];
   final _selected = <String>{};
   final _saved = <String>{};
+  final _recordedFilms = <String, int>{};
+  final _recordedHashes = <String, String>{};
+  final _recordedTimes = <String, int>{};
+  final _exposureRecipes = <String, String>{};
+  final _photoRecipes = <String, ShootingRecipe>{};
+  final _clock = Stopwatch()..start();
   final _thumbnails = <String, Future<Uint8List>>{};
   bool _loading = false;
   bool _downloading = false;
@@ -105,10 +116,37 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
     final connection = ref.read(connectionControllerProvider);
     if (connection is ConnectionReady) _cameraKey = connection.cameraKey;
     _progressSubscription = _service.events.listen((event) {
-      if (!mounted || !_downloading || event.type != 'photoProgress') return;
+      if (!mounted || !_downloading) return;
+      if (event.type != 'photoProgress' && event.type != 'photoRecordedFilm') {
+        return;
+      }
       try {
         final data = jsonDecode(event.jsonPayload);
         if (data is! Map || data['id'] != _currentId) return;
+        if (event.type == 'photoRecordedFilm') {
+          final code = data['code'];
+          if (code is int && code >= 0x1001 && code <= 0xffff) {
+            setState(() {
+              _recordedFilms[_currentId!] = code;
+              final hash = data['hash'];
+              if (hash is String && RegExp(r'^[a-f0-9]{64}$').hasMatch(hash)) {
+                _recordedHashes[_currentId!] = hash;
+              }
+              final time = data['capturedAt'];
+              if (time is String) {
+                final seconds = wallSecondsOf(time);
+                if (seconds != null) _recordedTimes[_currentId!] = seconds;
+              }
+              final exposure = data['exposureRecipe'];
+              if (exposure is String &&
+                  RegExp(r'^(4d435231[0-9a-f]{152}|4d435232[0-9a-f]{344})$')
+                      .hasMatch(exposure)) {
+                _exposureRecipes[_currentId!] = exposure;
+              }
+            });
+          }
+          return;
+        }
         final bytes = data['bytes'];
         final total = data['total'];
         if (bytes is! int || total is! int || bytes < 0 || bytes < _received) {
@@ -187,6 +225,11 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
           if (!mounted || session != _session || _stopAfterCurrent) break;
           if (ref.read(connectionControllerProvider) is! ConnectionReady) break;
           setState(() {
+            _recordedHashes.remove(file.remoteId);
+            _recordedFilms.remove(file.remoteId);
+            _recordedTimes.remove(file.remoteId);
+            _exposureRecipes.remove(file.remoteId);
+            _photoRecipes.remove(file.remoteId);
             _currentFile = file.file;
             _currentId = file.remoteId;
             _received = 0;
@@ -194,6 +237,43 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
           });
           try {
             final uri = await service.download(file);
+            final metadataStart = _clock.elapsedMicroseconds;
+            final code = _recordedFilms[file.remoteId];
+            final hash = _recordedHashes[file.remoteId];
+            if (code != null &&
+                hash != null &&
+                mounted &&
+                session == _session) {
+              try {
+                final store = ShootingRecipeStore(ref.read(databaseProvider));
+                final seconds = _recordedTimes[file.remoteId];
+                final exposure = _exposureRecipes[file.remoteId];
+                final camera = _cameraKey;
+                final recipe = seconds == null || camera == null
+                    ? null
+                    : await store.captureRecipe(camera, file, seconds, code);
+                await store.rememberPhotoFilm(uri, code, hash,
+                    recipe: recipe, exposureRecipe: exposure);
+                if (mounted && session == _session) {
+                  ref.read(diagnosticStoreProvider).record(DiagnosticEvent(
+                      stage: 'photoShootingRecipe',
+                      monotonicMicros: metadataStart,
+                      durationMs:
+                          (_clock.elapsedMicroseconds - metadataStart) ~/ 1000,
+                      retryCount: 0,
+                      exceptionCode: recipe != null
+                          ? null
+                          : exposure != null
+                              ? 'bodySnapshotStored'
+                              : 'filmIdentityOnly'));
+                }
+                if (recipe != null && mounted && session == _session) {
+                  _photoRecipes[file.remoteId] = recipe;
+                }
+              } on Exception {
+                // The original is already saved. Metadata must not mark it failed.
+              }
+            }
             if (file.file.toLowerCase().endsWith('.jpg') ||
                 file.file.toLowerCase().endsWith('.jpeg')) {
               await ref
@@ -255,6 +335,7 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
 
   @override
   Widget build(BuildContext context) {
+    if (_recordedFilms.isNotEmpty) ref.watch(bundledLeicaCameraCatalogProvider);
     final ready = ref.watch(connectionControllerProvider) is ConnectionReady;
     ref.listen(connectionControllerProvider, (previous, next) {
       if (previous is ConnectionReady && next is! ConnectionReady) {
@@ -277,6 +358,11 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
         if (_cameraKey == null || _cameraKey != next.cameraKey) {
           _selected.clear();
           _saved.clear();
+          _recordedFilms.clear();
+          _recordedHashes.clear();
+          _recordedTimes.clear();
+          _exposureRecipes.clear();
+          _photoRecipes.clear();
           _failures.clear();
           _selectionMode = false;
           _error = null;
@@ -661,11 +747,32 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
     );
   }
 
+  String? _recordedFilmLabel(CameraFile file) {
+    final code = _recordedFilms[file.remoteId];
+    if (code == null) return null;
+    if (code >= 0x2000) return '拍摄胶卷：自定义胶卷';
+    final id = code - 0x1000;
+    final catalog = ref.read(bundledLeicaCameraCatalogProvider).valueOrNull;
+    final name =
+        catalog?.entries.where((entry) => entry.id == id).firstOrNull?.name;
+    return name == null ? '拍摄胶卷：编号 $id' : '拍摄胶卷：$name';
+  }
+
   void _showFileSheet(List<CameraFile> files) {
+    final exposure = files
+        .map((file) => RecordedExposure.parse(
+            _exposureRecipes[file.remoteId], _recordedFilms[file.remoteId]))
+        .whereType<RecordedExposure>()
+        .firstOrNull;
+    final recorded = files
+        .map((file) => _photoRecipes[file.remoteId])
+        .whereType<ShootingRecipe>()
+        .firstOrNull;
     showModalBottomSheet<void>(
         context: context,
+        isScrollControlled: true,
         builder: (sheetContext) => SafeArea(
-                child: Padding(
+                child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
               child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -686,8 +793,8 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                                 : Icons.image_outlined,
                             color: context.palette.accent),
                         title: Text(file.file),
-                        subtitle: Text(
-                            file.extension == 'DNG' ? 'RAW 原始文件' : 'JPEG 原图'),
+                        subtitle: Text(_recordedFilmLabel(file) ??
+                            (file.extension == 'DNG' ? 'RAW 原始文件' : 'JPEG 原图')),
                         trailing: IconButton(
                             tooltip: '下载 ${file.extension}',
                             onPressed: _downloading
@@ -699,6 +806,35 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                             icon: const Icon(Icons.download_rounded)),
                       ),
                     const SizedBox(height: 8),
+                    if (recorded != null || exposure != null)
+                      FilledButton.tonal(
+                        onPressed: () {
+                          Navigator.pop(sheetContext);
+                          Navigator.of(context, rootNavigator: true).push(
+                              MaterialPageRoute<void>(
+                                  builder: (_) => ShootingRecipesPage(
+                                      recordedRecipe: recorded,
+                                      recordedExposure: exposure,
+                                      applyOnOpen: true)));
+                        },
+                        child:
+                            Text(exposure == null ? '应用手机记录的拍摄配方' : '应用原拍配方'),
+                      ),
+                    ...files
+                        .map((file) => recordedBuiltinFilmId(
+                            _recordedFilms[file.remoteId]))
+                        .whereType<int>()
+                        .toSet()
+                        .map((id) => TextButton(
+                              onPressed: () {
+                                Navigator.pop(sheetContext);
+                                Navigator.of(context, rootNavigator: true).push(
+                                    MaterialPageRoute<void>(
+                                        builder: (_) =>
+                                            ShootingRecipesPage(filmId: id)));
+                              },
+                              child: const Text('查看同款胶卷配方'),
+                            )),
                     SizedBox(
                         width: double.infinity,
                         child: FilledButton(

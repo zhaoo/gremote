@@ -39,10 +39,24 @@ void main() {
       expect(ExtensionSnapshot.fromJson(state).values['tornSession'], stage);
       expect(parsed.accepts('tornSession', stage), stage <= 1);
     }
-    for (final hash in supportedExtensionContractHashes
-        .where((h) => h != extensionContractHash)) {
+    for (final hash in supportedExtensionContractHashes.where((h) =>
+        h != extensionContractHash &&
+        h != whiteBalanceExtensionContractHash &&
+        h != photoRecipeExtensionContractHash)) {
       expect(extensionValueSupported(hash, 'tornSession', 1), isFalse);
     }
+  });
+  test('photo recipe contract carries white balance and per-film texture', () {
+    final caps = extCaps(photoRecipeExtensionContractHash);
+    for (final field in (caps['fields'] as List).cast<Map<String, dynamic>>()) {
+      if (whiteBalanceExtensionKeys.contains(field['key']) ||
+          field['key'] == 'filmTexture') field['supported'] = true;
+    }
+    final parsed = ExtensionCapabilities.fromJson(caps);
+    expect(parsed.accepts('filmTexture', 420), isTrue);
+    expect(parsed.accepts('wbKelvin', 5800), isTrue);
+    expect(ExtensionCapabilities.fromJson(extCaps()).supported,
+        isNot(contains('filmTexture')));
   });
   test('previous camera contract remains readable and cannot write vignette',
       () {
