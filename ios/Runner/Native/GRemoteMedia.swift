@@ -7,15 +7,23 @@ import Photos
 import UIKit
 
 final class GRemoteMedia: MediaHostApi {
-  private weak var controller: UIViewController?
   private let location: GRemoteLocation
   private var ids: [String: Int64] = [:]
   private var identifiers: [Int64: String] = [:]
   private var nextID: Int64 = 1
-  init(controller: UIViewController, location: GRemoteLocation) {
-    self.controller = controller; self.location = location
+  init(location: GRemoteLocation) {
+    self.location = location
     let stored = UserDefaults.standard.dictionary(forKey:"gremote.photoIDs") ?? [:]
     for (key, value) in stored { if let value = value as? NSNumber { ids[key] = value.int64Value; identifiers[value.int64Value] = key; nextID = max(nextID,value.int64Value+1) } }
+  }
+  private func presentationController() -> UIViewController? {
+    let windows = UIApplication.shared.connectedScenes
+      .compactMap { $0 as? UIWindowScene }
+      .filter { $0.activationState == .foregroundActive }
+      .flatMap(\.windows)
+    guard var controller = windows.first(where: \.isKeyWindow)?.rootViewController else { return nil }
+    while let presented = controller.presentedViewController { controller = presented }
+    return controller
   }
   private func id(_ identifier: String) -> Int64 {
     if let id = ids[identifier] { return id }
@@ -197,7 +205,7 @@ final class GRemoteMedia: MediaHostApi {
     Self.savePhoto(input, name: PhotoPolicy.editable(name) ? name : name + ".jpg", completion: completion)
   }
   func shareRecipe(card: FlutterStandardTypedData) throws {
-    guard card.data.count > 0, card.data.count <= 16384, let controller = controller else { throw nativeError("invalidRecipe","配方卡无效") }
+    guard card.data.count > 0, card.data.count <= 16384, let controller = presentationController() else { throw nativeError("invalidRecipe","配方卡无效") }
     let dir = FileManager.default.temporaryDirectory.appendingPathComponent("recipe-share",isDirectory:true)
     try FileManager.default.createDirectory(at:dir,withIntermediateDirectories:true)
     for file in (try? FileManager.default.contentsOfDirectory(at:dir,includingPropertiesForKeys:[.contentModificationDateKey])) ?? [] {
@@ -211,7 +219,7 @@ final class GRemoteMedia: MediaHostApi {
     controller.present(sheet,animated:true)
   }
   func share(uri: String) throws {
-    guard uri.hasPrefix("ph://"), let controller = controller,
+    guard uri.hasPrefix("ph://"), let controller = presentationController(),
           let asset = PHAsset.fetchAssets(withLocalIdentifiers:[String(uri.dropFirst(5))],options:nil).firstObject else { throw nativeError("photoUnavailable","照片不可用") }
     let options = PHImageRequestOptions(); options.isNetworkAccessAllowed = false; options.version = .original
     PHImageManager.default().requestImageDataAndOrientation(for:asset,options:options) { data,_,_,_ in

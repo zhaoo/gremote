@@ -62,7 +62,7 @@ abstract final class GRemoteTheme {
         shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
       ),
-      tabBarTheme: TabBarTheme(
+      tabBarTheme: TabBarThemeData(
         indicator: const BoxDecoration(),
         dividerColor: Colors.transparent,
         labelColor: palette.text,
@@ -93,7 +93,7 @@ abstract final class GRemoteTheme {
           textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: palette.surface,
         elevation: 0,
         shape: RoundedRectangleBorder(

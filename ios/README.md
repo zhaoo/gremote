@@ -9,8 +9,8 @@
 - Bundle ID：`com.izhaoo.gremote`
 - Apple Developer Team：从本机 `ios/LocalSigning.xcconfig` 读取，不提交到仓库
 - 签名：Automatic Signing
-- Flutter：官方 stable `3.24.5`（与 iOS CI 一致）
-- 最低系统：iOS 14.0
+- Flutter：官方 stable `3.50.0`（与 iOS CI 一致，支持 Xcode/iOS 26）
+- 最低系统：iOS 15.0
 - 能力：Hotspot Configuration
 
 ## 打开工程
@@ -29,7 +29,7 @@ flutter build ios --config-only --release --no-codesign
 cd ios && pod install
 ```
 
-使用官方 Flutter stable 3.24.5，并确认 `flutter --version` 输出与之匹配。使用 FVM 时可通过 `fvm flutter` 执行 Flutter 命令；SDK 安装路径由每台机器自行配置。
+使用官方 Flutter stable 3.50.0，并确认 `flutter --version` 输出与之匹配。仓库根目录的 `.fvmrc` 固定此版本；使用 FVM 时可通过 `fvm flutter` 执行 Flutter 命令，SDK 安装路径由每台机器自行配置。Flutter 3.24.5 / Dart 3.5.4 的 Debug 引擎无法在 iOS 26.6 真机上初始化 JIT，不要再用旧 SDK 从 Xcode 调试。
 
 ## 本机签名配置
 

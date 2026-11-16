@@ -15,8 +15,8 @@ jobs:
           sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
           xcodebuild -version
           xcrun --sdk iphoneos --show-sdk-version
-          curl --fail --retry 3 --location https://storage.googleapis.com/flutter_infra_release/releases/stable/macos/flutter_macos_arm64_3.24.5-stable.zip -o "$RUNNER_TEMP/flutter.zip"
-          printf '%s  %s\n' ca9624a6de7a1a8962f2f0a3e2a57b16434ca34f1137b8d9dc68c5ca1f187133 "$RUNNER_TEMP/flutter.zip" | shasum -a 256 -c
+          curl --fail --retry 3 --location https://storage.googleapis.com/flutter_infra_release/releases/stable/macos/flutter_macos_arm64_3.50.0-stable.zip -o "$RUNNER_TEMP/flutter.zip"
+          printf '%s  %s\n' ed2d08a3e3c023e84cbe9316d21bd88fda6ee9552f90c1eb4da41a07c170fb35 "$RUNNER_TEMP/flutter.zip" | shasum -a 256 -c
           unzip -q "$RUNNER_TEMP/flutter.zip" -d "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
       - name: Verify camera HTTP framing on macOS

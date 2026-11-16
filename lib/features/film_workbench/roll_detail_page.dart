@@ -19,7 +19,7 @@ final rollThumbnailProvider =
         await gateway.contentHash(item.mediaId!) != item.identity.contentHash) {
       return null;
     }
-    return gateway.thumbnail(item.mediaId!, 384);
+    return await gateway.thumbnail(item.mediaId!, 384);
   } catch (_) {
     return null;
   }

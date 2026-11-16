@@ -4,7 +4,7 @@
 
 ## 已加入
 
-- iOS 14+ Runner 工程、应用图标、中文权限说明及 Hotspot Configuration entitlement。
+- iOS 15+ GRemote 工程、应用图标、中文权限说明及 Hotspot Configuration entitlement。
 - 由 Pigeon 22.7.4 生成的 Swift 通道；`python3 scripts/generate_ios_bridges.py` 仅刷新 Swift，不覆盖原 Android/Dart 输出。
 - CoreBluetooth 扫描、连接、GATT 读写及超时；URLSession 本地 HTTP、实时取景流、照片下载和变更 WebSocket。
 - Photos 图库、缩略图、EXIF、文件描述符、导出副本与分享；前台位置记录。
@@ -16,10 +16,10 @@ GitHub Actions 已编译设备和模拟器的图像框架，并将设备框架�
 
 ## 在具备 Xcode 的 Mac 上继续
 
-1. 检出 GitHub 预发布标签 `v1.2.2-ios-unsigned`。安装 Xcode 26.3、Flutter 3.24.5、CocoaPods 与 CMake，选择完整 Xcode 开发目录并接受许可。
+1. 检出 GitHub 预发布标签 `v1.2.2-ios-unsigned`。安装 Xcode 26.3、Flutter 3.50.0、CocoaPods 与 CMake，选择完整 Xcode 开发目录并接受许可。iOS 26 真机调试不得使用 Flutter 3.24.5 / Dart 3.5.4。
 2. 将发布附件 `ios-pubspec.lock` 复制为项目根目录的 `pubspec.lock`，执行 `flutter pub get --enforce-lockfile`。Swift 通道已随源码提交。
 3. 执行 `bash scripts/build_ios_imaging.sh` 生成 dist/ios/gremote_imaging.xcframework；该脚本已在 GitHub Actions 验证。
-4. `cd ios && pod install`，打开 Runner.xcworkspace。由团队账号选择签名团队并核对包名 `com.izhaoo.gremote`、Hotspot Configuration 能力、iOS 14 最低版本和权限文案。
+4. `cd ios && pod install`，打开 `GRemote.xcworkspace`。由团队账号选择签名团队并核对包名 `com.izhaoo.gremote`、Hotspot Configuration 能力、iOS 15 最低版本和权限文案。
 5. 用签名的开发构建在 iPhone / GR III 上验收下列项目。
 6. 在获授权的 Apple Developer 团队中注册 Bundle ID、创建 App Store Connect 应用并配置签名。完成 `flutter build ipa`、签名核验、上传、处理和测试组配置，再公布真实 TestFlight 邀请链接。
 

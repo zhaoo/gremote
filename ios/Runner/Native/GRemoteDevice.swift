@@ -6,6 +6,7 @@ import Photos
 import UIKit
 import Security
 import CryptoKit
+import UniformTypeIdentifiers
 
 func nativeError(_ code: String, _ message: String) -> PigeonError {
   PigeonError(code: code, message: message, details: nil)
@@ -58,6 +59,15 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
   func emit(_ type: String, _ payload: [String: Any]) {
     guard let data = try? JSONSerialization.data(withJSONObject: payload), let json = String(data: data, encoding: .utf8) else { return }
     DispatchQueue.main.async { self.flutter.onNativeEvent(type: type, jsonPayload: json) { _ in } }
+  }
+  private func presentationController() -> UIViewController? {
+    let windows = UIApplication.shared.connectedScenes
+      .compactMap { $0 as? UIWindowScene }
+      .filter { $0.activationState == .foregroundActive }
+      .flatMap(\.windows)
+    guard var controller = windows.first(where: \.isKeyWindow)?.rootViewController else { return nil }
+    while let presented = controller.presentedViewController { controller = presented }
+    return controller
   }
   // Kept for wire compatibility only. Dart handles iOS permissions separately.
   func androidSdkInt() throws -> Int64 { 0 }
@@ -179,11 +189,10 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
   }
   func pickCompanionFile(kind: String, completion: @escaping (Result<FlutterStandardTypedData?, Error>) -> Void) {
     guard ["pairing", "film"].contains(kind), companionFileResult == nil, filmExportResult == nil else { completion(.failure(nativeError("companionPickerBusy", "文件选择暂不可用"))); return }
-    guard var controller = UIApplication.shared.windows.first(where: { $0.isKeyWindow })?.rootViewController else { completion(.failure(nativeError("companionPickerFailed", "无法打开文件选择器"))); return }
-    while let presented = controller.presentedViewController { controller = presented }
+    guard let controller = presentationController() else { completion(.failure(nativeError("companionPickerFailed", "无法打开文件选择器"))); return }
     companionFileGeneration = UUID()
     companionFileLimit = kind == "pairing" ? 4096 : 18432; companionFileResult = completion
-    let picker = UIDocumentPickerViewController(documentTypes: ["public.item"], in: .import); picker.delegate = self; picker.allowsMultipleSelection = false
+    let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.item], asCopy: true); picker.delegate = self; picker.allowsMultipleSelection = false
     controller.present(picker, animated: !UIAccessibility.isReduceMotionEnabled)
   }
   func exportFilmLibrary(bytes: FlutterStandardTypedData, completion: @escaping (Result<Bool, Error>) -> Void) {
@@ -192,10 +201,9 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
     guard filmExportResult == nil, companionFileResult == nil else {
       completion(.failure(nativeError("filmLibraryExportBusy", "文件导出正在进行"))); return
     }
-    guard var controller = UIApplication.shared.windows.first(where: { $0.isKeyWindow })?.rootViewController else {
+    guard let controller = presentationController() else {
       completion(.failure(nativeError("filmLibraryExportFailed", "无法打开文件导出器"))); return
     }
-    while let presented = controller.presentedViewController { controller = presented }
     do {
       // A unique private directory guarantees the exact suggested filename
       // without replacing any existing local or camera file.
@@ -205,7 +213,7 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
       let file = directory.appendingPathComponent("FILMS.M10")
       try bytes.data.write(to: file, options: .atomic)
       filmExportResult = completion
-      let picker = UIDocumentPickerViewController(url: file, in: .exportToService)
+      let picker = UIDocumentPickerViewController(forExporting: [file], asCopy: true)
       picker.delegate = self; picker.allowsMultipleSelection = false
       filmExportPicker = picker
       controller.present(picker, animated: !UIAccessibility.isReduceMotionEnabled)

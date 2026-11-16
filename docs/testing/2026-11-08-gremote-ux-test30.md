@@ -13,7 +13,7 @@
 - 新增回归断言先在旧行为下失败，修复后定向 32 项通过；补充弹层关闭后恢复轮询的断言，页面 12 项通过。
 - 最终 App 全量测试：709 passed、6 skipped。
 - 静态检查无问题，arm64 release 构建和 APK 签名验证通过；独立代码评审无可执行问题。
-- APK：`/Users/zhaoo/Desktop/GRemote-1.2.6-test30.apk`，包名 `com.izhaoo.gremote`，版本 `1.2.6-test+30`，沿用 test29 的正式签名，可覆盖更新。
+- APK：`/path/to/GRemote-1.2.6-test30.apk`，包名 `com.izhaoo.gremote`，版本 `1.2.6-test+30`，沿用 test29 的正式签名，可覆盖更新。
 - APK SHA-256：`d9ac16a307ef19c9d460da2549fdc12d677f49edae7cb273276762d97b64c192`。
 - 签名证书 SHA-256：`442d55ef48b0a29d917fe267e79c6d2941aba05157ac9b0a3175217a3ed60a29`。
 - 本次界面修改尚待用户手机实测；没有提交、推送或部署。

@@ -1,8 +1,8 @@
 # Gate 1 工具链
 
-- Flutter：3.24.5 stable，framework revision `dec2ee5c1f`
-- Dart：3.5.4
-- DevTools：2.37.3
+- Flutter：3.50.0 stable，framework revision `ab2912035e`
+- Dart：3.14.0
+- DevTools：2.61.0
 - JDK：Homebrew OpenJDK 17（构建时由 `JAVA_HOME` 显式选择）
 - Android：compileSdk 34、targetSdk 34、minSdk 26
 - ABI：arm64-v8a
