@@ -4,6 +4,7 @@ import java.util.UUID
 
 object RicohGattIds {
     val CAMERA_INFORMATION_SERVICE: UUID = uuid("9a5ed1c5-74cc-4c50-b5b6-66a48e7ccff1")
+    val PAIRING_SERVICE: UUID = uuid("0f291746-0c80-4726-87a7-3c501fd3b4b6")
     val MODEL: UUID = uuid("35fe6272-6aa5-44d9-88e1-f09427f51a71")
     val FIRMWARE: UUID = uuid("b4eb8905-7411-40a6-a367-2834c2157ea7")
 
@@ -23,7 +24,10 @@ object RicohGattIds {
     val CLIENT_CHARACTERISTIC_CONFIG: UUID =
         uuid("00002902-0000-1000-8000-00805f9b34fb")
 
-    val SCAN_SERVICES = setOf(CAMERA_INFORMATION_SERVICE, CAMERA_SERVICE)
+    val SCAN_SERVICES = setOf(CAMERA_INFORMATION_SERVICE, CAMERA_SERVICE, PAIRING_SERVICE)
+
+    fun matchesAdvertisement(name: String, services: Set<UUID>): Boolean =
+        services.any(SCAN_SERVICES::contains) || name.startsWith("RICOH", ignoreCase = true)
 
     private fun uuid(value: String): UUID = UUID.fromString(value)
 }

@@ -14,15 +14,18 @@ import okio.Buffer
 class BoundCompanionTransport internal constructor(
     client: OkHttpClient,
     private val host: String,
+    private val trace: (String, String, Int?) -> Unit = { _, _, _ -> },
     private val isCurrent: () -> Boolean,
 ) {
+    private val livePath = Regex("/m10v/v1/live/[A-Za-z0-9_-]{1,16}/[A-Za-z0-9_-]{1,16}/[Jj][Pp][Ee]?[Gg](?:/clip/(?:0|[1-9][0-9]{0,6}))?")
     private val client = client.newBuilder().proxy(Proxy.NO_PROXY).followRedirects(false).followSslRedirects(false)
         .connectTimeout(1500, TimeUnit.MILLISECONDS).readTimeout(1500, TimeUnit.MILLISECONDS)
         .callTimeout(2, TimeUnit.SECONDS).build()
     private fun invalid(): Nothing = throw CameraTransportException("invalidCompanionTarget", "无效伴侣请求目标")
     suspend fun request(method: String, path: String, headers: Map<String, String>, body: ByteArray?): NativeHttpResponse = withContext(Dispatchers.IO) {
         if (!host.matches(Regex("(?:[0-9]{1,3}\\.){3}[0-9]{1,3}")) || host.split('.').any { it.toInt() > 255 }) invalid()
-        if (method !in setOf("GET", "POST", "PUT") || !path.matches(Regex("/m10v/v1/(?:hotspot|capabilities|state|extensions/(?:capabilities|state|operations(?:/[a-f0-9]{32})?)|operations(?:/[a-f0-9]{32})?|films/stage(?:/[a-f0-9]{32}(?:/(?:verify|chunks/[0-2]))?)?)"))) invalid()
+        val isLive = method == "GET" && livePath.matches(path)
+        if (!isLive && (method !in setOf("GET", "POST", "PUT") || !path.matches(Regex("/m10v/v1/(?:hotspot|capabilities|state|extensions/(?:capabilities|state|operations(?:/[a-f0-9]{32})?)|operations(?:/[a-f0-9]{32})?|films/stage(?:/[a-f0-9]{32}(?:/(?:verify|chunks/[0-2]))?)?)")))) invalid()
         if (path == "/m10v/v1/hotspot" &&
             (host != "192.168.0.1" || method != "GET" || headers != mapOf("X-M10V-Hotspot" to "1"))) invalid()
         val allowed = setOf("x-m10v-hotspot", "x-m10v-keyid", "x-m10v-nonce", "x-m10v-boot", "x-m10v-session", "x-m10v-seq", "x-m10v-signature", "x-m10v-chunk-hash", "content-type")
@@ -31,7 +34,20 @@ class BoundCompanionTransport internal constructor(
         val builder = Request.Builder().url("http://$host:18743$path")
         headers.forEach { (key, value) -> builder.header(key, value) }
         builder.method(method, if (method == "GET") null else (body ?: byteArrayOf()).toRequestBody())
-        client.newCall(builder.build()).execute().use { response ->
+        val diagnosticPath = when (path) {
+            "/m10v/v1/hotspot", "/m10v/v1/capabilities", "/m10v/v1/state",
+            "/m10v/v1/extensions/capabilities", "/m10v/v1/extensions/state" -> path
+            else -> null
+        }
+        diagnosticPath?.let { trace("requestBegin", it, null) }
+        val response = try {
+            client.newCall(builder.build()).execute()
+        } catch (error: java.io.IOException) {
+            diagnosticPath?.let { trace("requestIo", it, null) }
+            throw error
+        }
+        response.use {
+            diagnosticPath?.let { trace("responseHeaders", it, response.code) }
             if (!isCurrent()) throw CameraTransportException("companionSessionChanged", "相机连接已变化")
             if (response.code in 300..399) invalid()
             val bytes = Buffer()
@@ -51,6 +67,7 @@ class BoundCompanionTransport internal constructor(
                 if (name.lowercase().startsWith("x-m10v-") && values.size != 1) invalid()
                 resultHeaders[name.lowercase()] = values.joinToString(",")
             }
+            diagnosticPath?.let { trace("responseEnd", it, response.code) }
             NativeHttpResponse(response.code.toLong(), resultHeaders, bytes.readByteArray())
         }
     }

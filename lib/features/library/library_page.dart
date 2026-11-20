@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/services.dart';
+import '../../camera/http/camera_files.dart';
 import '../../camera/recipe/shooting_recipe.dart';
 import '../camera/shooting_recipes_page.dart';
 import 'package:crypto/crypto.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../darkroom/darkroom_providers.dart';
+import '../../film/capture/camera_roll_importer.dart';
 import '../../film/catalog/official_lut_selection.dart';
 import '../../darkroom/model/edit_document.dart';
 
@@ -23,6 +26,7 @@ import 'library_controller.dart';
 import 'camera_gallery.dart';
 import 'widgets/media_grid.dart';
 import 'widgets/recipe_sheet.dart';
+import '../film_workbench/workbench_providers.dart';
 
 final albumPhotoPickerProvider = Provider<Future<List<XFile>> Function()>(
     (ref) => () => openFiles(acceptedTypeGroups: const [
@@ -37,15 +41,17 @@ final albumTemporaryDirectoryProvider =
 enum _Source { local, camera }
 
 class LibraryPage extends ConsumerStatefulWidget {
-  const LibraryPage({super.key});
+  const LibraryPage({super.key, this.initialCamera = false});
+  final bool initialCamera;
 
   @override
   ConsumerState<LibraryPage> createState() => _LibraryPageState();
 }
 
 class _LibraryPageState extends ConsumerState<LibraryPage> {
-  var _source = _Source.local;
-  bool _busy = false, _selectMode = false, _cameraVisited = false;
+  late var _source = widget.initialCamera ? _Source.camera : _Source.local;
+  bool _busy = false, _selectMode = false;
+  late bool _cameraVisited = widget.initialCamera;
   late final AppLifecycleListener _lifecycle;
 
   LibraryController get _controller =>
@@ -57,6 +63,15 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     // Permission may change in system settings while we are away.
     _lifecycle = AppLifecycleListener(onResume: () => _controller.refresh());
     Future.microtask(_controller.refresh);
+  }
+
+  @override
+  void didUpdateWidget(covariant LibraryPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialCamera && !oldWidget.initialCamera) {
+      _source = _Source.camera;
+      _cameraVisited = true;
+    }
   }
 
   @override
@@ -90,12 +105,15 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                     onSelected: (value) {
                       if (value == 'select') {
                         setState(() => _selectMode = true);
+                      } else if (value == 'rolls') {
+                        context.push('/film-workbench?section=1');
                       } else {
                         context.push('/darkroom');
                       }
                     },
                     itemBuilder: (_) => const [
                           PopupMenuItem(value: 'select', child: Text('选择照片')),
+                          PopupMenuItem(value: 'rolls', child: Text('胶卷归档')),
                           PopupMenuItem(
                               value: 'resources', child: Text('LUT 与出图方案')),
                         ]),
@@ -160,7 +178,9 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
           .createTemp('album-import-');
       final gateway = ref.read(mediaGatewayProvider);
       final repo = ref.read(localMediaRepositoryProvider);
+      final rollImporter = CameraRollImporter(ref.read(filmRepositoryProvider));
       var done = 0;
+      var rollFailures = 0;
       final knownIds = (await gateway.queryImages()).map((e) => e.id).toSet();
       for (final file in files) {
         if (await file.length() > 100000000) {
@@ -168,16 +188,46 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
         }
         final hash = (await sha256.bind(file.openRead()).first).toString();
         final existing = await repo.importedId(hash);
-        if (existing != null && knownIds.contains(existing)) continue;
+        final alreadyImported = existing != null && knownIds.contains(existing);
+        if (alreadyImported && !Platform.isAndroid) continue;
         final path = '${temp.path}/input.jpg';
         await file.saveTo(path);
-        final uri = await gateway.importPhoto(path, file.name);
-        await repo.addUriToAlbum(uri, source: 'import', sourceHash: hash);
-        final id = int.tryParse(Uri.parse(uri).pathSegments.lastOrNull ?? '');
-        if (id != null) knownIds.add(id);
-        done++;
+        var id = existing;
+        if (!alreadyImported) {
+          final uri = await gateway.importPhoto(path, file.name);
+          await repo.addUriToAlbum(uri, source: 'import', sourceHash: hash);
+          id = int.tryParse(Uri.parse(uri).pathSegments.lastOrNull ?? '');
+          if (id != null) knownIds.add(id);
+          done++;
+        }
+        if (Platform.isAndroid) {
+          try {
+            final record = await const MethodChannel('gremote/camera_roll')
+                .invokeMapMethod<String, Object?>('readPickedJpeg', path);
+            final frame =
+                CameraRollFrame.parse(record?['rollFrame'] as String?);
+            if (frame != null) {
+              await rollImporter.import(
+                  CameraFile(dir: localCameraRollDirectory, file: file.name),
+                  frame,
+                  hash: hash,
+                  mediaId: id,
+                  filmCode: record?['code'] as int?,
+                  recipe: record?['exposureRecipe'] as String?);
+              if (mounted) ref.read(filmRollRevisionProvider.notifier).state++;
+            }
+          } on Exception {
+            rollFailures++;
+          } on StateError {
+            rollFailures++;
+          }
+        }
       }
-      if (mounted) _message('已导入 $done 张');
+      if (mounted) {
+        _message(rollFailures == 0
+            ? '已导入 $done 张'
+            : '已导入 $done 张 · $rollFailures 张未能归入机身胶卷');
+      }
     } catch (error) {
       if (mounted) _message('导入失败：$error');
     } finally {

@@ -70,7 +70,7 @@ class CanvasContactSheetRasterizer implements ContactSheetRasterizer {
               width: 210);
         }
         final label =
-            '${(page.index * 24 + i + 1).toString().padLeft(2, '0')}  ${cell.item.files.isEmpty ? '照片' : cell.item.files.first}';
+            '${(cell.item.frameNumber ?? page.index * 24 + i + 1).toString().padLeft(2, '0')}  ${cell.item.files.isEmpty ? '照片' : cell.item.files.first}';
         text(label, x, y + 228, 17, const Color(0xffe5dfd0), width: 324);
       }
       text('配方与原片独立保存 · 印样仅供浏览', 48, page.height - 48, 16,

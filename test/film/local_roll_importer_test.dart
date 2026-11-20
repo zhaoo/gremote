@@ -30,7 +30,7 @@ void main() {
     await importer.import(
         rollId: roll.id, mediaId: 2, recipe: catalog.recipe(34));
     final first = (await repo.listItems(roll.id)).single;
-    expect(first.recipe.fingerprint, recipe.fingerprint);
+    expect(first.recipe?.fingerprint, recipe.fingerprint);
     expect(first.confidence, RecipeConfidence.userAssigned);
     await importer.import(rollId: roll.id, mediaId: 3, recipe: recipe);
     expect(await repo.listItems(roll.id), hasLength(2));

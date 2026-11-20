@@ -39,7 +39,11 @@ final appRouter = GoRouter(
         StatefulShellBranch(
           navigatorKey: _libraryKey,
           routes: [
-            GoRoute(path: '/library', builder: (_, __) => const LibraryPage()),
+            GoRoute(
+                path: '/library',
+                builder: (_, state) => LibraryPage(
+                    initialCamera:
+                        state.uri.queryParameters['source'] == 'camera')),
           ],
         ),
         StatefulShellBranch(

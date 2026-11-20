@@ -45,7 +45,7 @@ class _FilmWorkbenchPageState extends State<FilmWorkbenchPage> {
               Padding(
                   padding: const EdgeInsets.only(right: 20),
                   child: Center(
-                      child: Text('离线可用',
+                      child: Text(_section == 2 ? 'Wi-Fi 连接' : '离线可用',
                           style: TextStyle(
                               color: context.palette.muted, fontSize: 11))))
             ]),
@@ -78,13 +78,13 @@ class _FilmWorkbenchPageState extends State<FilmWorkbenchPage> {
                       color: context.palette.muted),
                   selectedIcon: Icon(Icons.local_movies_outlined,
                       color: context.palette.accent),
-                  label: '数字胶卷'),
+                  label: '胶卷归档'),
               NavigationDestination(
                   icon: Icon(Icons.camera_alt_outlined,
                       color: context.palette.muted),
                   selectedIcon: Icon(Icons.camera_alt_outlined,
                       color: context.palette.accent),
-                  label: '相机胶卷'),
+                  label: '机身滤镜'),
             ]),
       ));
 }

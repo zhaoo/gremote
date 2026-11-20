@@ -201,9 +201,7 @@ class RicohBleManager(
                         val advertisedServices =
                             result.scanRecord?.serviceUuids?.map { it.uuid }?.toSet().orEmpty()
                         val name = result.scanRecord?.deviceName.orEmpty()
-                        val matchesService = advertisedServices.any(RicohGattIds.SCAN_SERVICES::contains)
-                        val matchesName = name.startsWith("RICOH", ignoreCase = true)
-                        if (!matchesService && !matchesName) return
+                        if (!RicohGattIds.matchesAdvertisement(name, advertisedServices)) return
 
                         val previous = devices[result.device.address]
                         if (previous == null || result.rssi > (previous.rssi ?: Int.MIN_VALUE.toLong())) {

@@ -130,7 +130,7 @@ void main() {
         dir: '100RICOH', baseName: 'R0000001', files: ['R0000001.DNG']));
     final item = (await repo.listItems(roll.id)).single;
     expect(item.files, hasLength(2));
-    expect(item.recipe.fingerprint, recipe.fingerprint);
+    expect(item.recipe?.fingerprint, recipe.fingerprint);
     expect(item.confidence, RecipeConfidence.unverified);
   });
   test('reconnection only proposes new groups without assigning them',

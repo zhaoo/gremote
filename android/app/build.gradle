@@ -5,6 +5,8 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
+// Opt-in local builds can coexist with the signed public app.
+def isolatedRollLiveTest = providers.gradleProperty('gremoteRollLiveTest').orNull == 'true'
 def releaseProperties = new Properties()
 def releasePropertiesFile = rootProject.file('key.properties')
 if (releasePropertiesFile.exists()) {
@@ -22,7 +24,7 @@ gradle.taskGraph.whenReady { graph ->
 
 android {
     namespace = "com.izhaoo.gremote"
-    compileSdk = 34
+    compileSdk = 36
     ndkVersion = "27.0.12077973"
 
     compileOptions {
@@ -36,6 +38,7 @@ android {
 
     defaultConfig {
         applicationId = "com.izhaoo.gremote"
+        manifestPlaceholders.appDisplayName = "GRemote"
         minSdk = 26
         targetSdk = 34
         versionCode = flutter.versionCode
@@ -69,6 +72,13 @@ android {
     }
 
     buildTypes {
+        debug {
+            if (isolatedRollLiveTest) {
+                applicationIdSuffix = ".rolllive"
+                versionNameSuffix = "-roll-live-test"
+                manifestPlaceholders.appDisplayName = "GRemote 测试"
+            }
+        }
         release {
             signingConfig = signingConfigs.release
         }

@@ -17,6 +17,7 @@ import com.izhaoo.gremote.device.GRemoteDeviceHostApi
 import com.izhaoo.gremote.media.GRemoteMediaHostApi
 import com.izhaoo.gremote.media.MediaHostApi
 import com.izhaoo.gremote.media.CameraImportHistory
+import com.izhaoo.gremote.media.MotionPhotoChannel
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -36,6 +37,7 @@ class MainActivity : FlutterActivity() {
     private var deviceApi: GRemoteDeviceHostApi? = null
     private var mediaApi: GRemoteMediaHostApi? = null
     private var importHistory: CameraImportHistory? = null
+    private var motionPhotoChannel: MotionPhotoChannel? = null
     private var appInfoChannel: MethodChannel? = null
     private var gpuEditor: GpuEditorHost? = null
 
@@ -97,8 +99,15 @@ class MainActivity : FlutterActivity() {
                 }
             },
         ).also { CameraDeviceHostApi.setUp(messenger, it) }
-        mediaApi = GRemoteMediaHostApi(this).also { MediaHostApi.setUp(messenger, it) }
+        mediaApi = GRemoteMediaHostApi(this).also {
+            MediaHostApi.setUp(messenger, it)
+            it.setUpRollReader(messenger)
+        }
         importHistory = CameraImportHistory(applicationContext, messenger)
+        motionPhotoChannel = MotionPhotoChannel(this, messenger) { directory, file, output, sha256 ->
+            val device = requireNotNull(deviceApi) { "相机未连接" }
+            device.downloadLiveJpeg(directory, file, output, sha256)
+        }
         gpuEditor = GpuEditorHost(messenger, flutterEngine.renderer)
     }
 
@@ -208,6 +217,8 @@ class MainActivity : FlutterActivity() {
         mediaApi = null
         importHistory?.close()
         importHistory = null
+        motionPhotoChannel?.close()
+        motionPhotoChannel = null
         super.cleanUpFlutterEngine(flutterEngine)
     }
 }

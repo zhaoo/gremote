@@ -36,7 +36,7 @@ class RollCard extends StatelessWidget {
                       ]),
                       const SizedBox(height: 10),
                       Text(
-                          '${roll.confirmedCount} / ${roll.targetCount} 张 · ${roll.status == FilmRollStatus.open ? '拍摄中' : '已结束'}',
+                          '${roll.confirmedCount} / ${roll.targetCount} 张 · ${roll.statusLabel}',
                           style: TextStyle(
                               color: context.palette.muted, fontSize: 12)),
                       const SizedBox(height: 16),

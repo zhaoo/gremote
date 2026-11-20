@@ -37,6 +37,18 @@ class DiagnosticStore {
 
   String exportJson() => jsonEncode(_payload(_events));
 
+  /// Keeps the last request boundaries within chat and clipboard size limits.
+  String exportRecentJson() {
+    final events = _events.toList(growable: false);
+    final recent = <DiagnosticEvent>[];
+    for (final event in events.reversed) {
+      final candidate = [event, ...recent];
+      if (jsonEncode(_payload(candidate)).length > 3800) break;
+      recent.insert(0, event);
+    }
+    return jsonEncode(_payload(recent));
+  }
+
   Future<void> persist() {
     final skip = (_events.length - maxPersistedEvents).clamp(0, _events.length);
     return _persistence.write(jsonEncode(_payload(_events.skip(skip))));

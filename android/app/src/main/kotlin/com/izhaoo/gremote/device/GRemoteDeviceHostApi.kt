@@ -134,6 +134,10 @@ class GRemoteDeviceHostApi(
         callback: (Result<String>) -> Unit,
     ) = launchResult(callback) { requireTransport().downloadPhoto(directory, fileName) }
 
+    internal suspend fun downloadLiveJpeg(
+        directory: String, fileName: String, output: java.io.File, expectedSha256: String,
+    ) = requireTransport().downloadLiveJpeg(directory, fileName, output, expectedSha256)
+
     override fun startLiveView(url: String, callback: (Result<Unit>) -> Unit) =
         launchResult(callback) { requireTransport().startLiveView(url) }
 

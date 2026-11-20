@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +11,7 @@ import '../../app/theme/app_palette.dart';
 import '../../app/widgets/workspace_motion.dart';
 import '../../settings/app_preferences.dart';
 import '../../settings/preferences_controller.dart';
+import 'motion_photo_export_page.dart';
 
 final appPackageInfoProvider =
     FutureProvider<AppPackageInfo>((ref) => AppPackageInfo.fromPlatform());
@@ -92,6 +94,23 @@ class AppSettingsPage extends ConsumerWidget {
                 unawaited(ref.read(appHapticsProvider).selection());
               },
             ),
+            if (defaultTargetPlatform == TargetPlatform.android) ...[
+              const SizedBox(height: 26),
+              const _GroupLabel('工具'),
+              const SizedBox(height: 8),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('导出动态照片', style: TextStyle(fontSize: 15)),
+                subtitle: const Text('合并已有的 JPEG 与 MP4'),
+                trailing: Icon(Icons.chevron_right,
+                    size: 18, color: context.palette.muted),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const MotionPhotoExportPage(),
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 26),
             const _GroupLabel('关于'),
             const SizedBox(height: 8),

@@ -137,6 +137,7 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
     final cache = ref.watch(officialFilmCacheProvider).valueOrNull;
     final local = catalog.valueOrNull;
     final availability = ref.watch(cameraAvailabilityProvider);
+    final m10vAllowed = ref.watch(cameraM10vAllowedProvider);
     final sync = ref.watch(companionSyncControllerProvider);
     final existingFilms = cache?.films ??
         [
@@ -247,7 +248,9 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
                     : const Icon(Icons.sync, size: 20)),
             IconButton(
                 tooltip: '导出 SD 胶卷库',
-                onPressed: _exporting || _syncing ? null : _exportSdLibrary,
+                onPressed: _exporting || _syncing || !m10vAllowed
+                    ? null
+                    : _exportSdLibrary,
                 icon: _exporting
                     ? const SizedBox.square(
                         dimension: 17,
@@ -280,7 +283,7 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
             child: Text(_error!,
                 style: TextStyle(color: context.palette.danger, fontSize: 12))),
-      if (!availability.canInstallFilms && _group != '我的 LUT')
+      if (m10vAllowed && !availability.canInstallFilms && _group != '我的 LUT')
         Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
             child: Row(children: [
@@ -334,7 +337,8 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
                               film.icon;
                           return FilmLibraryTile(
                               name: film.name,
-                              available: cache?.phoneLuts
+                              available: !m10vAllowed ||
+                                  cache?.phoneLuts
                                           .any((l) => l.filmId == film.id) ==
                                       true ||
                                   availability.canInstallFilms &&
@@ -392,6 +396,7 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
         showDragHandle: true,
         builder: (sheet) => Consumer(builder: (_, ref, __) {
               final availability = ref.watch(cameraAvailabilityProvider);
+              final m10vAllowed = ref.watch(cameraM10vAllowedProvider);
               final activeCatalog =
                   ref.watch(cameraFilmCatalogProvider).valueOrNull ?? catalog;
               final currentCache =
@@ -462,7 +467,8 @@ class _FilmLibraryPageState extends ConsumerState<FilmLibraryPage> {
                                       }
                                     : null,
                                 child: const Text('装入相机')),
-                            if (!installed || !availability.canInstallFilms)
+                            if (m10vAllowed &&
+                                (!installed || !availability.canInstallFilms))
                               Padding(
                                   padding: const EdgeInsets.only(top: 12),
                                   child: Text(

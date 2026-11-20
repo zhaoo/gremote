@@ -89,10 +89,13 @@ class CompanionCapabilities {
           {'readState', 'writeState', 'uploadFilm', 'captureEvidence'});
   bool compatibleWith(String catalog, String renderer) =>
       wire['protocol'] == contract['protocol'] &&
-      wire['model'] == 'GR III' &&
+      const ['GR III', 'GR IIIx'].contains(wire['model']) &&
       wire['recipeSchema'] == contract['recipeSchema'] &&
       wire['slotCount'] == contract['slotCount'] &&
-      wire['firmwareIdentity'] == contract['officialFirmwareSha256'] &&
+      wire['firmwareIdentity'] ==
+          (wire['model'] == 'GR IIIx'
+              ? '708e79f3b7b96a7e1581b4acf4c412233050a1832718ef7f06c8397db1b431c7'
+              : contract['officialFirmwareSha256']) &&
       (wire['stateSchema'] ?? 1) == (contract['stateSchema'] ?? 1) &&
       canonicalJson(wire['readOnlyParameters'] ?? []) ==
           canonicalJson(contract['readOnlyParameters'] ?? []) &&

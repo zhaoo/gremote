@@ -82,7 +82,8 @@ void main() {
     expect(find.text('GR III'), findsOneWidget);
     expect(find.text('固件 2.00'), findsOneWidget);
     expect(find.text('电量 80%'), findsOneWidget);
-    expect(find.text('固件未经真机验证'), findsOneWidget);
+    expect(find.byTooltip('固件未经真机验证'), findsOneWidget);
+    expect(find.text('固件未经真机验证'), findsNothing);
     expect(find.text('进入拍摄'), findsOneWidget);
   });
 

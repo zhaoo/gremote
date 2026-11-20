@@ -81,6 +81,8 @@ class BoundCameraTransport(
         .readTimeout(120, TimeUnit.SECONDS)
         .callTimeout(0, TimeUnit.SECONDS)
         .build()
+    private val liveJpegClient = client.newBuilder().followRedirects(false)
+        .followSslRedirects(false).callTimeout(45, TimeUnit.SECONDS).build()
     private val changeSocket = ChangeSocketClient(
         client = client.newBuilder().readTimeout(0, TimeUnit.SECONDS).build(),
         emitEvent = emitEvent,
@@ -112,6 +114,13 @@ class BoundCameraTransport(
         }
     }
 
+    private fun trace(phase: String, endpoint: String, status: Int? = null) {
+        val event = JSONObject().put("phase", phase).put("endpoint", endpoint)
+        if (status != null) event.put("status", status)
+        Log.i("GRemoteCameraTrace", event.toString())
+        emitEvent("cameraTrace", event.toString())
+    }
+
     suspend fun request(
         method: String,
         path: String,
@@ -130,8 +139,15 @@ class BoundCameraTransport(
             .method(normalizedMethod, requestBody)
             .build()
 
+        val diagnosticPath = path.substringBefore('?').takeIf {
+            it in setOf("/v1/props", "/v1/params", "/v1/params/device")
+        }
+        diagnosticPath?.let { trace("requestBegin", it) }
         try {
             execute(request).use { response ->
+                diagnosticPath?.let { trace("responseHeaders", it, response.code) }
+                val bytes = readBounded(response, MAX_RESPONSE_BYTES)
+                diagnosticPath?.let { trace("responseEnd", it, response.code) }
                 NativeHttpResponse(
                     statusCode = response.code.toLong(),
                     headers = buildMap<String?, String?> {
@@ -139,10 +155,11 @@ class BoundCameraTransport(
                             put(response.headers.name(index), response.headers.value(index))
                         }
                     },
-                    body = readBounded(response, MAX_RESPONSE_BYTES),
+                    body = bytes,
                 )
             }
         } catch (error: IOException) {
+            diagnosticPath?.let { trace("requestIo", it) }
             throw CameraTransportException(
                 code = "cameraRequestFailed",
                 message = "Camera request failed",
@@ -239,10 +256,11 @@ class BoundCameraTransport(
                         if (recordedFilm != null) {
                             emitEvent("photoRecordedFilm", JSONObject().apply {
                                 put("id", "$directory/$fileName")
-                                put("code", recordedFilm.code)
+                                recordedFilm.code?.let { put("code", it) }
                                 put("hash", digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xff) })
                                 recordedFilm.capturedAt?.let { put("capturedAt", it) }
                                 recordedFilm.exposureRecipe?.let { put("exposureRecipe", it) }
+                                recordedFilm.rollFrame?.let { put("rollFrame", it) }
                             }.toString())
                         }
                         uri.toString()
@@ -256,43 +274,100 @@ class BoundCameraTransport(
             }
         }
 
+    internal suspend fun downloadLiveJpeg(
+        directory: String,
+        fileName: String,
+        output: File,
+        expectedSha256: String,
+    ): Unit = withContext(Dispatchers.IO) {
+        require(directory.matches(Regex("[A-Za-z0-9_-]{1,16}")) &&
+            fileName.matches(Regex("[A-Za-z0-9_-]{1,16}\\.(?i:JPE?G)")) &&
+            expectedSha256.matches(Regex("[a-f0-9]{64}"))) { "动态照片配对信息无效" }
+        val maximumBytes = 100_000_000L
+        val call = liveJpegClient.newCall(Request.Builder()
+            .url(resolve("/v1/photos/$directory/$fileName?size=full")).get().build())
+        photoCalls.add(call)
+        try {
+            call.execute().use { response ->
+                val body = response.body
+                if (!response.isSuccessful || body == null || body.contentLength() > maximumBytes ||
+                    body.contentType()?.subtype == "json") {
+                    throw CameraTransportException("invalidPhoto", "相机没有返回可用的 JPEG 原片")
+                }
+                val sink = java.nio.file.Files.newOutputStream(output.toPath(),
+                    java.nio.file.StandardOpenOption.CREATE_NEW, java.nio.file.StandardOpenOption.WRITE)
+                try {
+                    val digest = MessageDigest.getInstance("SHA-256")
+                    val copied = DigestOutputStream(sink, digest).use { destination ->
+                        body.byteStream().use { source ->
+                            copyPhotoStream(source, destination) { received ->
+                                if (received > maximumBytes) {
+                                    throw CameraTransportException("photoTooLarge", "相机原片超过大小限制")
+                                }
+                            }
+                        }
+                    }
+                    val actual = digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xff) }
+                    if (closed || copied == 0L || actual != expectedSha256) {
+                        throw CameraTransportException("liveStillMismatch", "相机原片与动态短片的配对信息不符")
+                    }
+                } catch (error: Throwable) {
+                    output.delete()
+                    throw error
+                }
+            }
+        } finally {
+            photoCalls.remove(call)
+        }
+    }
+
     fun startLiveView(path: String) {
         stopLiveView()
         val request = Request.Builder().url(resolve(path)).get().build()
         val call = client.newCall(request)
         synchronized(liveViewLock) { liveViewCall = call }
+        trace("streamBegin", "/v1/liveview")
         call.enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
+                clearLiveViewCall(call)
                 if (!call.isCanceled()) {
+                    trace("streamConnectIo", "/v1/liveview")
                     emitEvent("liveView", "{\"state\":\"failed\"}")
                 }
-                clearLiveViewCall(call)
             }
 
             override fun onResponse(call: Call, response: Response) {
-                response.use {
-                    if (!response.isSuccessful) {
-                        emitEvent(
-                            "liveView",
-                            "{\"state\":\"failed\",\"status\":${response.code}}",
-                        )
-                        clearLiveViewCall(call)
-                        return
+                try {
+                    response.use {
+                        trace("streamHeaders", "/v1/liveview", response.code)
+                        if (!response.isSuccessful) {
+                            emitEvent("liveView", "{\"state\":\"failed\",\"status\":${response.code}}")
+                            return
+                        }
+                        val stream = response.body?.byteStream() ?: return
+                        val buffer = ByteArray(MAX_LIVE_VIEW_CHUNK_BYTES)
+                        var received = false
+                        while (!call.isCanceled()) {
+                            val count = stream.read(buffer)
+                            if (count < 0) break
+                            if (count > 0) {
+                                if (!received) trace("streamFirstBytes", "/v1/liveview")
+                                received = true
+                                onLiveViewChunk(buffer.copyOf(count))
+                            }
+                        }
                     }
-                    val stream = response.body?.byteStream() ?: run {
-                        clearLiveViewCall(call)
-                        return
+                    if (!call.isCanceled()) {
+                        trace("streamEnd", "/v1/liveview")
+                        emitEvent("liveView", "{\"state\":\"ended\"}")
                     }
-                    val buffer = ByteArray(MAX_LIVE_VIEW_CHUNK_BYTES)
-                    while (!call.isCanceled()) {
-                        val count = stream.read(buffer)
-                        if (count < 0) break
-                        if (count > 0) onLiveViewChunk(buffer.copyOf(count))
+                } catch (_: IOException) {
+                    if (!call.isCanceled()) {
+                        trace("streamBodyIo", "/v1/liveview")
+                        emitEvent("liveView", "{\"state\":\"failed\"}")
                     }
-                }
-                clearLiveViewCall(call)
-                if (!call.isCanceled()) {
-                    emitEvent("liveView", "{\"state\":\"ended\"}")
+                } finally {
+                    clearLiveViewCall(call)
                 }
             }
         })
@@ -316,7 +391,7 @@ class BoundCameraTransport(
 
     fun companion(): BoundCompanionTransport {
         if (baseUrl == null || closed) throw CameraTransportException("wifiNotConnected", "相机尚未探测成功")
-        return BoundCompanionTransport(client, cameraIp) { !closed && baseUrl != null }
+        return BoundCompanionTransport(client, cameraIp, ::trace) { !closed && baseUrl != null }
     }
 
     fun close() {

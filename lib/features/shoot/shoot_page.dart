@@ -131,10 +131,10 @@ class _ShootPageState extends ConsumerState<ShootPage> {
     _router?.routeInformationProvider.removeListener(_routeChanged);
     _histogramTimer?.cancel();
     if (_attached) {
-      Future.microtask(() {
+      Future.microtask(() async {
         try {
           _shootVisible.state = false;
-          _liveViewController.detach();
+          await _liveViewController.detach();
         } on StateError {
           // The whole ProviderScope was disposed with this page.
         }
@@ -345,9 +345,11 @@ class _ShootPageState extends ConsumerState<ShootPage> {
     _histogramTimer?.cancel();
     _histogram = false;
     _stats = null;
-    _liveViewController.detach();
-    await ref.read(locationRecordingProvider.notifier).sync();
     try {
+      await Future.wait<void>([
+        _liveViewController.detach(),
+        ref.read(locationRecordingProvider.notifier).sync(),
+      ]);
       if (!_restoreRequired &&
           ref.read(connectionControllerProvider) is! ConnectionReady) {
         return const SettingsRestoreReport();
@@ -355,7 +357,6 @@ class _ShootPageState extends ConsumerState<ShootPage> {
       await ref.read(programControllerProvider.notifier).abort();
       await _pressInFlight?.catchError((Object _) {});
       if (_shutterHeld) await _releaseShutter();
-      await ref.read(cameraGatewaysProvider).transport.stopLiveView();
       if (ref.read(connectionControllerProvider) is! ConnectionReady) {
         return !_restoreRequired
             ? const SettingsRestoreReport()

@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:sqflite/sqflite.dart';
+import '../../camera/http/camera_files.dart';
 import '../model/camera_photo_identity.dart';
+import '../model/camera_roll_frame.dart';
 import '../model/film_recipe.dart';
 import '../model/film_roll.dart';
 
@@ -158,11 +160,111 @@ class FilmRepository {
     return (await listItems(rollId)).firstWhere((e) => e.id == result);
   }
 
+  Future<RollItem> importCameraFrame(CameraFile file, CameraRollFrame frame,
+      {required String hash, int? mediaId, FilmRecipe? recipe}) async {
+    if (!RegExp(r'^[a-f0-9]{64}$').hasMatch(hash) ||
+        !RegExp(r'^[A-Za-z0-9_-]+$').hasMatch(file.dir) ||
+        !RegExp(r'^[A-Za-z0-9_-]+\.(jpe?g|dng)$', caseSensitive: false)
+            .hasMatch(file.file)) {
+      throw const FormatException('机身胶卷原片校验失败');
+    }
+    final identity = CameraPhotoIdentity(
+        instanceId: 'm10r',
+        storageId: 'camera-roll',
+        storageEpoch: frame.rollId,
+        dir: file.dir,
+        baseName: file.baseName,
+        captureId: frame.number.toString());
+    final format = file.extension == 'DNG' ? 'DNG' : 'JPEG';
+    final now = _clock().millisecondsSinceEpoch;
+    return db.transaction((tx) async {
+      final rolls = await tx.query('film_rolls',
+          columns: ['target_count'], where: 'id=?', whereArgs: [frame.rollId]);
+      if (rolls.isEmpty) {
+        await tx.insert('film_rolls', {
+          'id': frame.rollId,
+          'name': '机身胶卷 ${frame.rollId.substring(0, 8)}',
+          'target_count': frame.targetCount,
+          'recipe_fingerprint': '',
+          'status': FilmRollStatus.archived.name,
+          'created_at': now
+        });
+      } else if (rolls.single['target_count'] != frame.targetCount) {
+        throw StateError('机身胶卷计划张数与现有记录不一致');
+      }
+
+      final rows = await tx.query('film_roll_items',
+          where: 'roll_id=? AND frame_number=?',
+          whereArgs: [frame.rollId, frame.number]);
+      final old = rows.singleOrNull;
+      final hashes = _originalHashes(old?['original_hashes']);
+      final oldIdentity = old == null
+          ? null
+          : CameraPhotoIdentity.fromJson(
+              jsonDecode(old['identity_json'] as String)
+                  as Map<String, dynamic>);
+      final fromCamera = file.dir != localCameraRollDirectory;
+      final confirmCameraPath =
+          fromCamera && oldIdentity?.dir == localCameraRollDirectory;
+      if (old != null &&
+          (fromCamera &&
+                  !confirmCameraPath &&
+                  old['camera_key'] != identity.key ||
+              hashes[format] != null && hashes[format] != hash ||
+              recipe != null &&
+                  old['recipe_fingerprint'] != '' &&
+                  old['recipe_fingerprint'] != recipe.fingerprint)) {
+        throw StateError('机身胶卷的同一帧有不同的原片或配方');
+      }
+      hashes[format] = hash;
+      final existing = old == null ? <String>[] : _files(old['files_json']);
+      final id = old?['id'] as String? ?? _id();
+      final attachPreview = mediaId != null &&
+          (format == 'JPEG' || old?['preview_format'] != 'JPEG');
+      final values = <String, Object?>{
+        'original_hashes': jsonEncode(hashes),
+        'files_json': jsonEncode({...existing, file.file}.toList()..sort()),
+        if (attachPreview) 'media_id': mediaId,
+        if (attachPreview) 'preview_format': format,
+        if (confirmCameraPath) 'camera_key': identity.key,
+        if (confirmCameraPath) 'identity_json': jsonEncode(identity.toJson()),
+      };
+      if (recipe != null) {
+        await _recipe(tx, recipe);
+        values.addAll({
+          'recipe_fingerprint': recipe.fingerprint,
+          'recipe_json': jsonEncode(recipe.toJson()),
+          'confidence': RecipeConfidence.cameraConfirmed.name,
+        });
+      }
+      if (old == null) {
+        await tx.insert('film_roll_items', {
+          'id': id,
+          'roll_id': frame.rollId,
+          'frame_number': frame.number,
+          'camera_key': identity.key,
+          'identity_json': jsonEncode(identity.toJson()),
+          'recipe_fingerprint': '',
+          'recipe_json': 'null',
+          'confidence': RecipeConfidence.unverified.name,
+          'created_at': now,
+          ...values
+        });
+      } else {
+        await tx
+            .update('film_roll_items', values, where: 'id=?', whereArgs: [id]);
+      }
+      final result =
+          await tx.query('film_roll_items', where: 'id=?', whereArgs: [id]);
+      return _item(result.single);
+    });
+  }
+
   Future<List<RollItem>> listItems(String rollId) async => [
         for (final row in await db.query('film_roll_items',
             where: 'roll_id=?',
             whereArgs: [rollId],
-            orderBy: 'created_at ASC, id ASC'))
+            orderBy: 'frame_number IS NULL, frame_number, created_at, id'))
           _item(row)
       ];
   Future<void> setSelected(String itemId, bool selected) =>
@@ -172,7 +274,7 @@ class FilmRepository {
       id: row['id'] as String,
       name: row['name'] as String,
       targetCount: row['target_count'] as int,
-      recipeFingerprint: row['recipe_fingerprint'] as String,
+      recipeFingerprint: _recipeFingerprint(row['recipe_fingerprint']),
       status: FilmRollStatus.values.byName(row['status'] as String),
       createdAt: DateTime.fromMillisecondsSinceEpoch(row['created_at'] as int),
       closedAt: row['closed_at'] == null
@@ -180,9 +282,12 @@ class FilmRepository {
           : DateTime.fromMillisecondsSinceEpoch(row['closed_at'] as int),
       confirmedCount: row['confirmed_count'] as int? ?? 0);
   static RollItem _item(Map<String, Object?> row) {
-    final recipe = FilmRecipe.fromJson(
-        jsonDecode(row['recipe_json'] as String) as Map<String, dynamic>);
-    if (recipe.fingerprint != row['recipe_fingerprint']) {
+    final fingerprint = _recipeFingerprint(row['recipe_fingerprint']);
+    final recipe = fingerprint == null
+        ? null
+        : FilmRecipe.fromJson(
+            jsonDecode(row['recipe_json'] as String) as Map<String, dynamic>);
+    if (recipe?.fingerprint != fingerprint) {
       throw const FormatException('照片配方校验失败');
     }
     return RollItem(
@@ -191,11 +296,25 @@ class FilmRepository {
         identity: CameraPhotoIdentity.fromJson(
             jsonDecode(row['identity_json'] as String) as Map<String, dynamic>),
         recipe: recipe,
-        files: (jsonDecode(row['files_json'] as String) as List).cast<String>(),
+        files: _files(row['files_json']),
         confidence: RecipeConfidence.values.byName(row['confidence'] as String),
         createdAt:
             DateTime.fromMillisecondsSinceEpoch(row['created_at'] as int),
         mediaId: row['media_id'] as int?,
+        frameNumber: row['frame_number'] as int?,
+        previewHash:
+            _originalHashes(row['original_hashes'])[row['preview_format']],
         selected: row['selected'] == 1);
   }
+
+  static String? _recipeFingerprint(Object? stored) =>
+      stored is String && stored.isNotEmpty ? stored : null;
+
+  static List<String> _files(Object? stored) =>
+      (jsonDecode(stored as String) as List).cast<String>();
+
+  static Map<String, String> _originalHashes(Object? stored) => stored == null
+      ? {}
+      : (jsonDecode(stored as String) as Map<String, dynamic>)
+          .cast<String, String>();
 }

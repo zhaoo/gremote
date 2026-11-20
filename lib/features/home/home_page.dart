@@ -10,6 +10,8 @@ import '../../camera/connection/connection_controller.dart';
 import '../../camera/connection/connection_state.dart';
 import '../../diagnostics/diagnostic_store.dart';
 import 'widgets/connection_card.dart';
+import 'widgets/camera_switcher.dart';
+import '../../camera/gateway/ble_gateway.dart';
 import 'widgets/home_brand.dart';
 import 'widgets/home_cover.dart';
 import 'widgets/manual_wifi_dialog.dart';
@@ -42,6 +44,8 @@ class HomePage extends ConsumerWidget {
                     onSelected: (value) {
                       if (value == 'wifi') {
                         _showManualWifi(context, controller);
+                      } else if (value == 'switch') {
+                        _switchCamera(context, controller, state);
                       } else if (value == 'settings') {
                         context.push('/settings');
                       } else if (value == 'diagnostics') {
@@ -50,6 +54,7 @@ class HomePage extends ConsumerWidget {
                       }
                     },
                     itemBuilder: (_) => const [
+                      PopupMenuItem(value: 'switch', child: Text('切换相机')),
                       PopupMenuItem(value: 'wifi', child: Text('手动连接 Wi-Fi')),
                       PopupMenuItem(value: 'diagnostics', child: Text('诊断信息')),
                       PopupMenuItem(value: 'settings', child: Text('设置')),
@@ -74,6 +79,8 @@ class HomePage extends ConsumerWidget {
                   ),
                   onManualWifi: () => _showManualWifi(context, controller),
                   onCancel: controller.cancel,
+                  onSwitchCamera: () =>
+                      _switchCamera(context, controller, state),
                 ),
               ),
               const Padding(
@@ -102,6 +109,24 @@ class HomePage extends ConsumerWidget {
     await controller.retry();
   }
 
+  Future<void> _switchCamera(BuildContext context,
+      ConnectionController controller, CameraConnectionState state) async {
+    final selected = await showModalBottomSheet<BleDeviceCandidate>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => Consumer(builder: (_, ref, __) {
+        final current = ref.watch(connectionControllerProvider);
+        return CameraSwitcher(
+          current: current is ConnectionReady ? current : null,
+          discover: controller.discoverCameras,
+          onManualWifi: () => _showManualWifi(context, controller),
+        );
+      }),
+    );
+    if (selected != null) await controller.switchDevice(selected);
+  }
+
   Future<void> _showManualWifi(
     BuildContext context,
     ConnectionController controller,
@@ -111,6 +136,7 @@ class HomePage extends ConsumerWidget {
       builder: (_) => const ManualWifiDialog(),
     );
     if (credentials == null) return;
+    await controller.cancel();
     await controller.connectWifiManually(
       ssid: credentials.$1,
       passphrase: credentials.$2,
@@ -139,13 +165,13 @@ class HomePage extends ConsumerWidget {
               const SizedBox(height: 18),
               FilledButton.icon(
                 onPressed: () async {
-                  final export = store.exportJson();
+                  final export = store.exportRecentJson();
                   await store.persist();
                   await Clipboard.setData(ClipboardData(text: export));
                   if (sheetContext.mounted) Navigator.pop(sheetContext);
                 },
                 icon: const Icon(Icons.copy_all_outlined),
-                label: const Text('复制脱敏 JSON'),
+                label: const Text('复制最近诊断 JSON'),
               ),
               const SizedBox(height: 10),
               OutlinedButton.icon(

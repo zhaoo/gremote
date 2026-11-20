@@ -31,7 +31,7 @@ GRemote 想把拍摄现场和照片后期放在一处：通过蓝牙与相机 Wi
 
 ## 下载
 
-[下载 GRemote 1.2.13 Android arm64 APK](https://github.com/zhaoo/gremote/releases/download/v1.2.13/gremote-1.2.13-android-arm64.apk) · [发布说明与校验文件](https://github.com/zhaoo/gremote/releases/tag/v1.2.13) · [GRemote 官网](https://gremote.izhaoo.com)
+[下载 GRemote 1.2.14 Android arm64 APK](https://github.com/zhaoo/gremote/releases/download/v1.2.14/gremote-1.2.14-android-arm64.apk) · [发布说明与校验文件](https://github.com/zhaoo/gremote/releases/tag/v1.2.14) · [GRemote 官网](https://gremote.izhaoo.com)
 
 最低 Android 8.0。v1.0.1 改用专用正式签名，不能直接覆盖旧 v1.0.0；卸载前先备份本地数据。见 [1.0.1 发布记录](docs/releases/v1.0.1.md)。
 
@@ -42,6 +42,7 @@ GRemote 想把拍摄现场和照片后期放在一处：通过蓝牙与相机 Wi
 ### 环境
 
 - Flutter SDK，包含 Dart `>=3.5.4 <4.0.0`
+- 当前多机型迭代使用 Flutter 3.50.0 / Dart 3.14.0 验证；Android 构建配置已对齐该 SDK。执行下列命令时请确认 PATH 指向同一 SDK。
 - Android SDK 与 JDK 17
 - Android 真机；相机连接功能需要 RICOH GR III
 

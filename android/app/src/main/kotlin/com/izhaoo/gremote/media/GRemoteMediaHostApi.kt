@@ -3,6 +3,8 @@ package com.izhaoo.gremote.media
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
+import io.flutter.plugin.common.BinaryMessenger
+import io.flutter.plugin.common.MethodChannel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -17,6 +19,33 @@ class GRemoteMediaHostApi(private val activity: Activity) : MediaHostApi {
     private val permissions = MediaPermissions(activity)
     private val reader = MediaStoreReader(activity.applicationContext)
     private val publisher = MediaStorePublisher(activity.applicationContext)
+    private var rollReader: MethodChannel? = null
+
+    fun setUpRollReader(messenger: BinaryMessenger) {
+        rollReader = MethodChannel(messenger, "gremote/camera_roll").also { channel ->
+            channel.setMethodCallHandler { call, reply ->
+                val path = call.arguments as? String
+                if (call.method != "readPickedJpeg" || path == null) {
+                    reply.notImplemented()
+                    return@setMethodCallHandler
+                }
+                launchIo<Map<String, Any>?>({ result ->
+                    result.fold(reply::success) { reply.error("rollReadFailed", it.message, null) }
+                }) {
+                    val file = File(path).canonicalFile
+                    require(file.path.startsWith(activity.cacheDir.canonicalPath + File.separator))
+                    val record = file.inputStream().use(RicohRecordedFilm::read)
+                        ?: return@launchIo null
+                    val frame = record.rollFrame ?: return@launchIo null
+                    buildMap {
+                        put("rollFrame", frame)
+                        record.code?.let { put("code", it) }
+                        record.exposureRecipe?.let { put("exposureRecipe", it) }
+                    }
+                }
+            }
+        }
+    }
 
     override fun access(): NativeMediaAccess = permissions.access()
 
@@ -117,7 +146,10 @@ class GRemoteMediaHostApi(private val activity: Activity) : MediaHostApi {
     fun onRequestPermissionsResult(requestCode: Int): Boolean =
         permissions.onRequestPermissionsResult(requestCode)
 
-    fun close() = scope.cancel()
+    fun close() {
+        rollReader?.setMethodCallHandler(null)
+        scope.cancel()
+    }
 
     private fun <T> launchIo(callback: (Result<T>) -> Unit, block: () -> T) {
         scope.launch {

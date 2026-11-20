@@ -15,11 +15,18 @@ class FilmRoll {
       required this.createdAt,
       this.closedAt,
       this.confirmedCount = 0});
-  final String id, name, recipeFingerprint;
+  final String id, name;
+  final String? recipeFingerprint;
   final int targetCount, confirmedCount;
   final FilmRollStatus status;
   final DateTime createdAt;
   final DateTime? closedAt;
+
+  String get statusLabel => switch (status) {
+        FilmRollStatus.open => '拍摄中',
+        FilmRollStatus.closed => '已结束',
+        FilmRollStatus.archived => '从机身归档',
+      };
 }
 
 class RollItem {
@@ -32,14 +39,21 @@ class RollItem {
       required this.confidence,
       required this.createdAt,
       this.mediaId,
+      this.frameNumber,
+      this.previewHash,
       this.selected = false})
       : files = List.unmodifiable(files);
   final String id, rollId;
   final CameraPhotoIdentity identity;
-  final FilmRecipe recipe;
+  final FilmRecipe? recipe;
   final List<String> files;
   final RecipeConfidence confidence;
   final DateTime createdAt;
   final int? mediaId;
+  final int? frameNumber;
+  final String? previewHash;
   final bool selected;
+
+  String? get originalPreviewHash =>
+      identity.instanceId == 'local-photo' ? identity.contentHash : previewHash;
 }

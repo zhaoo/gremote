@@ -78,4 +78,33 @@ class BoundCompanionTransportTest {
         assertEquals(4, requested.size)
     }
 
+    @Test fun live_media_allows_exact_DCF_lookup_and_sequential_chunk_path() = runTest {
+        val seen = mutableListOf<String>()
+        val client = OkHttpClient.Builder().addInterceptor { chain ->
+            val request = chain.request()
+            assertEquals("192.168.0.1", request.url.host)
+            assertEquals(18743, request.url.port)
+            seen.add(request.url.encodedPath)
+            Response.Builder().request(request).protocol(Protocol.HTTP_1_1)
+                .code(200).message("OK").body("{}".toResponseBody()).build()
+        }.build()
+        val transport = BoundCompanionTransport(client, "192.168.0.1") { true }
+        val path = "/m10v/v1/live/100RICOH/R0000021/JPG"
+        for (candidate in listOf(path, "$path/clip/0", "$path/clip/2048")) {
+            transport.request("GET", candidate, emptyMap(), null)
+        }
+        for ((method, candidate) in listOf(
+            "POST" to path, "GET" to path.replace("/JPG", ".JPG"),
+            "GET" to "$path/clip/01", "GET" to "$path/clip/-1",
+            "GET" to "$path/clip/0?anything=1", "GET" to "$path/clip/0/more",
+        )) {
+            try {
+                transport.request(method, candidate, emptyMap(), null)
+                fail("Malformed Live path reached camera: $candidate")
+            } catch (error: CameraTransportException) {
+                assertEquals("invalidCompanionTarget", error.code)
+            }
+        }
+        assertEquals(listOf(path, "$path/clip/0", "$path/clip/2048"), seen)
+    }
 }

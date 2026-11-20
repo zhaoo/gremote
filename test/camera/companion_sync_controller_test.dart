@@ -155,6 +155,13 @@ FilmRecipe recipe() => FilmRecipe.fromJson({
       'name': 'TEST'
     });
 void main() {
+  test('bridge startup failure asks retry without declaring unsupported', () {
+    final message =
+        companionErrorMessage(const CompanionException('bridgeUnavailable'));
+    expect(message, contains('服务尚未就绪'));
+    expect(message, contains('重试'));
+    expect(message, isNot(contains('不支持')));
+  });
   sqfliteFfiInit();
   late Database db;
   late FakeCompanion api;

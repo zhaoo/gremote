@@ -20,7 +20,7 @@ String companionErrorMessage(Object error) {
           : '';
   return const {
         'unauthorized': 'M10V 连接已失效，请重新连接相机 Wi-Fi',
-        'bridgeUnavailable': '相机暂不支持无线装卷',
+        'bridgeUnavailable': 'M10V 服务尚未就绪，请确认相机已开启 GRemote 连接后重试',
         'companionUnsupported': '当前平台暂不支持相机无线装卷',
         'busy': '相机正忙，请稍后确认',
         'revisionConflict': '机身配置已变化，请重新核对',
@@ -204,7 +204,7 @@ class CompanionSyncController extends ChangeNotifier {
             connectionStatus: SyncConnectionStatus.unsupported,
             readOnly: true,
             stale: true,
-            message: '相机暂不支持无线装卷；离线试卷和数字胶卷仍可使用'));
+            message: '当前 M10V 服务未提供滤镜配置读取；仍可从相册下载原片并归档胶卷'));
         return;
       }
       CompanionSnapshot snapshot;

@@ -88,7 +88,7 @@ void main() {
     await repo.closeRoll(roll.id);
     await repo.createRoll(
         name: '下一卷', targetCount: 36, recipe: catalog.recipe(75));
-    expect((await repo.listItems(roll.id)).single.recipe.fingerprint,
+    expect((await repo.listItems(roll.id)).single.recipe?.fingerprint,
         initial.fingerprint);
     expect((await repo.rolls()).where((r) => r.status == FilmRollStatus.open),
         hasLength(1));
@@ -196,6 +196,6 @@ void main() {
     final rows = await repo.listItems(roll.id);
     expect(rows, hasLength(1));
     expect(rows.single.mediaId, 2);
-    expect(rows.single.recipe.fingerprint, recipe.fingerprint);
+    expect(rows.single.recipe?.fingerprint, recipe.fingerprint);
   });
 }

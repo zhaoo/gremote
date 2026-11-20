@@ -93,11 +93,20 @@ final companionIdentityHydrationProvider = FutureProvider<void>((ref) async {
 final companionHotspotTransportProvider =
     Provider<CompanionTransport>((ref) => NativeCompanionTransport());
 
+/// A connected stock-only family must never inherit another camera's keys.
+final cameraM10vAllowedProvider = Provider<bool>((ref) {
+  final connection = ref.watch(connectionControllerProvider);
+  return connection is! ConnectionReady ||
+      connection.snapshot.identity.supportsM10v;
+});
+
 final companionHotspotPairingProvider =
     FutureProvider<({PairingIdentity identity, HotspotPairingStore keys})?>(
         (ref) async {
   final connection = ref.watch(connectionControllerProvider.select((value) =>
-      value is ConnectionReady ? (true, value.cameraKey) : (false, null)));
+      value is ConnectionReady
+          ? (value.snapshot.identity.supportsM10v, value.cameraKey)
+          : (false, null)));
   if (!connection.$1) return null;
   var linked = false;
   ref.listen(appForegroundProvider, (_, foreground) {
@@ -138,7 +147,8 @@ final companionHotspotPairingProvider =
       if (response.statusCode == 401 || response.statusCode == 404) {
         // A legacy service may use imported credentials. Keep discovering:
         // startup or replacement of the matching service can finish later.
-        if (ref.read(companionPairingIdentityProvider) == null) retryDiscovery();
+        if (ref.read(companionPairingIdentityProvider) == null)
+          retryDiscovery();
         return null;
       }
       if (response.statusCode != 200) continue;
@@ -167,6 +177,7 @@ final companionHotspotPairingProvider =
 });
 
 final effectiveCompanionIdentityProvider = Provider<PairingIdentity?>((ref) {
+  if (!ref.watch(cameraM10vAllowedProvider)) return null;
   final automatic = ref.watch(companionHotspotPairingProvider);
   final legacy = ref.watch(companionPairingIdentityProvider);
   // A previously imported file may target a different camera. First give the
@@ -183,11 +194,17 @@ final companionApiFactoryProvider =
     Provider<CompanionApi Function(PairingIdentity)>((ref) {
   final keys = ref.watch(companionPairingStoreProvider);
   final automatic = ref.watch(companionHotspotPairingProvider).asData?.value;
+  final connection = ref.watch(connectionControllerProvider.select((value) =>
+      value is ConnectionReady
+          ? (value.cameraKey, value.snapshot.identity.companionModel)
+          : (null, null)));
+  final model = connection.$2;
   return (identity) => CompanionClient(
       transport: NativeCompanionTransport(),
       pairingStore:
           identical(automatic?.identity, identity) ? automatic!.keys : keys,
       identity: identity,
+      expectedModel: model,
       contract: cameraContract);
 });
 final companionNetworkReadyProvider = Provider<bool>((ref) {

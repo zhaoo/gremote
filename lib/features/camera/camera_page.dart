@@ -28,6 +28,8 @@ class _CameraPageState extends ConsumerState<CameraPage> {
     ref.watch(companionIdentityHydrationProvider);
     final connection = ref.watch(connectionControllerProvider);
     final connected = connection is ConnectionReady;
+    final m10vAllowed = ref.watch(cameraM10vAllowedProvider);
+    final tab = m10vAllowed ? _tab : 0;
     final sync = ref.watch(companionSyncControllerProvider);
     if (!connected) _loaded = null;
     if (connected && sync != null && !identical(sync, _loaded)) {
@@ -74,7 +76,8 @@ class _CameraPageState extends ConsumerState<CameraPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 6),
                     child: WorkspaceTabs<int>(
                         items: const [(0, '胶卷库'), (1, '扩展')],
-                        value: _tab,
+                        value: tab,
+                        disabledItems: m10vAllowed ? const {} : const {1},
                         onChanged: (v) => setState(() {
                               _tab = v;
                               if (v == 1) _extensionsVisited = true;
@@ -83,9 +86,9 @@ class _CameraPageState extends ConsumerState<CameraPage> {
                     padding: EdgeInsets.symmetric(horizontal: 20),
                     child: Divider(height: 12)),
                 Expanded(
-                    child: IndexedStack(index: _tab, children: [
+                    child: IndexedStack(index: tab, children: [
                   const FilmLibraryPage(),
-                  if (_extensionsVisited)
+                  if (_extensionsVisited && m10vAllowed)
                     CameraExtensions(active: _tab == 1)
                   else
                     const SizedBox.shrink(),
@@ -97,35 +100,45 @@ class _CameraPageState extends ConsumerState<CameraPage> {
   void _connectionOptions() => showModalBottomSheet<void>(
         context: context,
         showDragHandle: true,
-        builder: (sheet) => SafeArea(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-          ListTile(
-              title: const Text('拍摄配方'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.pop(sheet);
-                Navigator.of(context, rootNavigator: true).push(
-                    MaterialPageRoute<void>(
-                        builder: (_) => const ShootingRecipesPage()));
-              }),
-          ListTile(
-              title: const Text('相机连接'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.pop(sheet);
-                context.go('/home');
-              }),
-          ListTile(
-              title: const Text('机内胶卷'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                Navigator.pop(sheet);
-                Navigator.of(context, rootNavigator: true).push(
-                    MaterialPageRoute<void>(
-                        builder: (_) => Scaffold(
-                            appBar: AppBar(title: const Text('机内胶卷')),
-                            body: const SafeArea(child: CameraFilmsPage()))));
-              }),
-        ])),
+        builder: (sheet) => Consumer(
+            builder: (_, ref, __) => SafeArea(
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  ListTile(
+                      title: const Text('拍摄配方'),
+                      enabled: ref.watch(cameraM10vAllowedProvider),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: !ref.watch(cameraM10vAllowedProvider)
+                          ? null
+                          : () {
+                              Navigator.pop(sheet);
+                              Navigator.of(context, rootNavigator: true).push(
+                                  MaterialPageRoute<void>(
+                                      builder: (_) =>
+                                          const ShootingRecipesPage()));
+                            }),
+                  ListTile(
+                      title: const Text('相机连接'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.pop(sheet);
+                        context.go('/home');
+                      }),
+                  ListTile(
+                      title: const Text('机内胶卷'),
+                      enabled: ref.watch(cameraM10vAllowedProvider),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: !ref.watch(cameraM10vAllowedProvider)
+                          ? null
+                          : () {
+                              Navigator.pop(sheet);
+                              Navigator.of(context, rootNavigator: true).push(
+                                  MaterialPageRoute<void>(
+                                      builder: (_) => Scaffold(
+                                          appBar:
+                                              AppBar(title: const Text('机内胶卷')),
+                                          body: const SafeArea(
+                                              child: CameraFilmsPage()))));
+                            }),
+                ]))),
       );
 }

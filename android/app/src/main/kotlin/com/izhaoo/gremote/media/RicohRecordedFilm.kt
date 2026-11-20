@@ -7,7 +7,12 @@ import java.util.zip.CRC32
 internal object RicohRecordedFilm {
     private const val maxPrefix = 256 * 1024
 
-    data class Record(val code: Int, val capturedAt: String?, val exposureRecipe: String? = null)
+    data class Record(
+        val code: Int?,
+        val capturedAt: String?,
+        val exposureRecipe: String? = null,
+        val rollFrame: String? = null,
+    )
 
     fun read(input: InputStream): Record? {
         val bytes = ByteArray(maxPrefix)
@@ -48,36 +53,35 @@ internal object RicohRecordedFilm {
         val note = Directory(root.bytes, root.start + entry.first, root.start + entry.second, false)
         if (!note.magic(0, "RICOH\u0000")) return null
         val maker = note.byteOrder(6) ?: return null
-        val tone = maker.data(8, 0x004f, 3, 2) ?: return null
-        val code = maker.word(tone.first)?.takeIf {
+        val tone = maker.data(8, 0x004f, 3, 2)
+        val code = tone?.let { maker.word(it.first) }?.takeIf {
             it in 0x1001..0x104e || it in 0x1121..0x114e || it in 0x2000 until (0x2000 + 210 * 235)
-        } ?: return null
+        }
+        val frame = maker.envelope(0xc7f2, mapOf(32 to "M10R"))
+        if (code == null && frame == null) return null
         val date = exif?.let { tiff.data(it, 0x9003, 2, 20) }
         val capturedAt = date?.first?.takeIf { tiff.byte(it + 19) == 0 }
             ?.let { tiff.bytes.decodeToString(tiff.start + it, tiff.start + it + 19) }
             ?.takeIf { it.matches(Regex("[0-9]{4}:[0-9]{2}:[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}")) }
-        val recipe = maker.data(8, 0xc7f1, 7, null)?.let { (start, end) ->
-            val size = end - start
-            val signature = when (size) {
-                80 -> "MCR1"
-                176 -> "MCR2"
-                else -> return@let null
-            }
-            val bytes = maker.bytes
-            val at = maker.start + start
-            val crcAt = at + size - 4
-            val expected = (0..3).fold(0L) { n, i ->
-                n or ((bytes[crcAt + i].toLong() and 255) shl (8 * i))
-            }
-            if (maker.magic(start, signature) &&
-                CRC32().apply { update(bytes, at, size - 4) }.value == expected) {
-                bytes.copyOfRange(at, at + size).joinToString("") { "%02x".format(it.toInt() and 255) }
-            } else null
-        }
-        return Record(code, capturedAt, recipe)
+        val recipe = if (code == null) null else maker.envelope(0xc7f1, mapOf(80 to "MCR1", 176 to "MCR2"))
+        return Record(code, capturedAt, recipe, frame)
     }
 
     private class Directory(val bytes: ByteArray, val start: Int, val end: Int, val little: Boolean) {
+        fun envelope(tag: Int, signatures: Map<Int, String>): String? {
+            val (offset, limit) = data(8, tag, 7, null) ?: return null
+            val size = limit - offset
+            val signature = signatures[size] ?: return null
+            if (!magic(offset, signature)) return null
+            val at = start + offset
+            val crcAt = start + limit - 4
+            val expected = (0..3).fold(0L) { n, i ->
+                n or ((bytes[crcAt + i].toLong() and 255) shl (8 * i))
+            }
+            if (CRC32().apply { update(bytes, at, size - 4) }.value != expected) return null
+            return bytes.copyOfRange(at, start + limit).joinToString("") { "%02x".format(it.toInt() and 255) }
+        }
+
         fun contains(at: Int, n: Int) = at >= 0 && n >= 0 && at <= end - start - n
         fun byte(at: Int): Int? = if (contains(at, 1)) bytes[start + at].toInt() and 255 else null
         fun magic(at: Int, text: String) = text.indices.all { byte(at + it) == text[it].code }

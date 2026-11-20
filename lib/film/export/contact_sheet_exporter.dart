@@ -86,18 +86,16 @@ class ContactSheetExporter {
             Uint8List? thumbnail;
             try {
               if (item.mediaId != null) {
-                final local = item.identity.instanceId == 'local-photo';
-                final expected = item.identity.contentHash;
-                final verified = !local ||
-                    (expected != null &&
-                        RegExp(r'^[a-f0-9]{64}$').hasMatch(expected) &&
+                final expected = item.originalPreviewHash;
+                final verified = expected == null ||
+                    (RegExp(r'^[a-f0-9]{64}$').hasMatch(expected) &&
                         await _read(
                                 gateway.contentHash(item.mediaId!), cancel) ==
                             expected);
                 if (verified && !cancel.isCancelled) {
                   thumbnail = await _read(
                       gateway.thumbnail(item.mediaId!, 324), cancel);
-                  if (local &&
+                  if (expected != null &&
                       await _read(gateway.contentHash(item.mediaId!), cancel) !=
                           expected) {
                     thumbnail = null;

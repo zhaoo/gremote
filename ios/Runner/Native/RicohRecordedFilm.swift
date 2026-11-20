@@ -2,9 +2,10 @@ import Foundation
 
 enum RicohRecordedFilm {
   struct Record {
-    let code: Int
+    let code: Int?
     let capturedAt: String?
     let exposureRecipe: String?
+    let rollFrame: String?
   }
 
   static func read(_ file: FileHandle) throws -> Record? {
@@ -37,28 +38,26 @@ enum RicohRecordedFilm {
     guard let noteRange else { return nil }
     let base = tiff.range.lowerBound
     let note = Directory(bytes: tiff.bytes, range: (base + noteRange.lowerBound)..<(base + noteRange.upperBound))
-    guard note.magic(0, "RICOH\0"), let maker = note.withByteOrder(6),
-          let tone = maker.value(8, 0x004f, 3, size: 2),
-          let code = maker.word(tone.lowerBound),
-          (0x1001...0x104e).contains(code) || (0x1121...0x114e).contains(code) ||
-          (0x2000..<(0x2000 + 210 * 235)).contains(code) else { return nil }
+    guard note.magic(0, "RICOH\0"), let maker = note.withByteOrder(6) else { return nil }
+    let code = maker.value(8, 0x004f, 3, size: 2).flatMap { maker.word($0.lowerBound) }.flatMap {
+      (0x1001...0x104e).contains($0) || (0x1121...0x114e).contains($0) ||
+        (0x2000..<(0x2000 + 210 * 235)).contains($0) ? $0 : nil
+    }
+    let frame = readEnvelope(maker, tag: 0xc7f2, signatures: [32: "M10R"])
+    guard code != nil || frame != nil else { return nil }
     let timestamp = exif.flatMap { tiff.value($0, 0x9003, 2, size: 20) }.flatMap { field -> String? in
       guard tiff.byte(field.upperBound - 1) == 0 else { return nil }
       let date = String(decoding: tiff.bytes[(base + field.lowerBound)..<(base + field.upperBound - 1)], as: UTF8.self)
       return date.range(of: #"^[0-9]{4}:[0-9]{2}:[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$"#,
                         options: .regularExpression) == nil ? nil : date
     }
-    return Record(code: code, capturedAt: timestamp, exposureRecipe: readRecipe(maker))
+    return Record(code: code, capturedAt: timestamp,
+                  exposureRecipe: code == nil ? nil : readEnvelope(maker, tag: 0xc7f1, signatures: [80: "MCR1", 176: "MCR2"]),
+                  rollFrame: frame)
   }
 
-  private static func readRecipe(_ maker: Directory) -> String? {
-    guard let field = maker.value(8, 0xc7f1, 7) else { return nil }
-    let signature: String
-    switch field.count {
-    case 80: signature = "MCR1"
-    case 176: signature = "MCR2"
-    default: return nil
-    }
+  private static func readEnvelope(_ maker: Directory, tag: Int, signatures: [Int: String]) -> String? {
+    guard let field = maker.value(8, tag, 7), let signature = signatures[field.count] else { return nil }
     guard maker.magic(field.lowerBound, signature) else { return nil }
     let first = maker.range.lowerBound + field.lowerBound
     let end = maker.range.lowerBound + field.upperBound

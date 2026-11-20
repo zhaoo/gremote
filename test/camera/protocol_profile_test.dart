@@ -4,6 +4,24 @@ import 'package:gremote/storage/gremote_database.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
+  test('same firmware label on different cameras never shares write encoding',
+      () async {
+    final db = await GRemoteDatabase.open(
+        factory: databaseFactoryFfiNoIsolate, path: inMemoryDatabasePath);
+    addTearDown(db.close);
+    final store = ProtocolProfileStore(db);
+    await store.save(const ProtocolProfile(
+        firmware: '1.11',
+        model: 'RICOH GR IV',
+        writeEncoding: WriteEncoding.form));
+    expect((await store.load('1.11', model: 'RICOH GR IV')).writeEncoding,
+        WriteEncoding.form);
+    expect(
+        (await store.load('1.11', model: 'RICOH GR IV Monochrome'))
+            .writeEncoding,
+        WriteEncoding.unknown);
+    expect((await store.load('1.11')).writeEncoding, WriteEncoding.unknown);
+  });
   setUpAll(sqfliteFfiInit);
 
   test('profiles round-trip through JSON', () {
@@ -20,12 +38,11 @@ void main() {
   });
 
   test('unknown enum names fall back to unknown', () {
-    final profile = ProtocolProfile.fromJson(
-        const <String, Object?>{
-          'firmware': '2.10',
-          'writeEncoding': 'xml',
-          'webSocket': 3,
-        });
+    final profile = ProtocolProfile.fromJson(const <String, Object?>{
+      'firmware': '2.10',
+      'writeEncoding': 'xml',
+      'webSocket': 3,
+    });
     expect(profile.writeEncoding, WriteEncoding.unknown);
     expect(profile.webSocket, WsSupport.unknown);
   });

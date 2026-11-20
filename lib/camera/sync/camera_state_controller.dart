@@ -243,7 +243,9 @@ class CameraStateController extends Notifier<CameraState> {
 
   Future<void> saveProfile(ProtocolProfile profile) async {
     final session = _session;
-    if (session != null && session.firmware == profile.firmware) {
+    if (session != null &&
+        session.firmware == profile.firmware &&
+        session.profile.model == profile.model) {
       session.profile = profile;
     }
     await ref.read(protocolProfileStoreProvider).save(profile);
@@ -258,7 +260,8 @@ class CameraStateController extends Notifier<CameraState> {
   void _onConnection(CameraConnectionState next) {
     if (next is ConnectionReady) {
       if (_session == null && _starting == null) {
-        unawaited(_startSession(next.snapshot.identity.firmware));
+        unawaited(_startSession(next.snapshot.identity.firmware,
+            model: next.snapshot.identity.model.trim()));
       }
     } else {
       _starting = null;
@@ -266,11 +269,13 @@ class CameraStateController extends Notifier<CameraState> {
     }
   }
 
-  Future<void> _startSession(String firmware) async {
+  Future<void> _startSession(String firmware, {required String model}) async {
     final token = _starting = Object();
     _propsFailures = 0;
     state = const CameraState(syncMode: SyncMode.polling);
-    final profile = await ref.read(protocolProfileStoreProvider).load(firmware);
+    final profile = await ref
+        .read(protocolProfileStoreProvider)
+        .load(firmware, model: model);
     if (_starting != token) return;
     _starting = null;
 

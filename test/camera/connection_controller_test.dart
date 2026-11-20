@@ -16,6 +16,63 @@ import 'package:gremote/diagnostics/diagnostic_store.dart';
 import 'package:gremote/platform/camera_permission_gate.dart';
 
 void main() {
+  for (final model in [
+    'RICOH GR IIIx',
+    'RICOH GR IV',
+    'RICOH GR IV Monochrome'
+  ]) {
+    test('BLE and HTTP agree on $model before ready', () async {
+      final harness = _Harness();
+      harness.ble.bootstrap = CameraBootstrap(
+          model: model,
+          firmware: '1.11',
+          batteryLevel: 80,
+          acPowered: false,
+          ssid: 'GR_TEST',
+          passphrase: '12345678');
+      harness.transport.model = model;
+      await harness.controller.connect();
+      expect(harness.state, isA<ConnectionReady>());
+      expect((harness.state as ConnectionReady).snapshot.identity.model, model);
+    });
+  }
+  test('BLE identity must match the Wi-Fi camera before ready', () async {
+    final harness = _Harness()..transport.model = 'RICOH GR IV';
+    await harness.controller.connect();
+    expect(harness.state, isA<ConnectionFailed>());
+    expect((harness.state as ConnectionFailed).failure.code,
+        'cameraIdentityMismatch');
+  });
+
+  test('nearby discovery keeps the current connection until selection',
+      () async {
+    final harness = _Harness();
+    await harness.controller.connect();
+    harness.trace.clear();
+    final devices = await harness.controller.discoverCameras();
+    expect(devices, hasLength(1));
+    expect(harness.state, isA<ConnectionReady>());
+    expect(harness.trace, ['scan']);
+    await harness.controller.switchDevice(devices.single);
+    expect(harness.state, isA<ConnectionReady>());
+    expect(harness.trace.where((entry) => entry == 'scan'), hasLength(1));
+    expect(harness.trace,
+        containsAllInOrder(['disconnectWifi', 'disconnectBle', 'connectBle']));
+  });
+  for (final model in [
+    'RICOH GR IIIx',
+    'RICOH GR IV',
+    'RICOH GR IV Monochrome'
+  ]) {
+    test('manual Wi-Fi identifies $model without a model selection', () async {
+      final harness = _Harness()..transport.model = model;
+      await harness.controller
+          .connectWifiManually(ssid: 'GR_TEST', passphrase: '12345678');
+      expect(harness.state, isA<ConnectionReady>());
+      expect((harness.state as ConnectionReady).snapshot.identity.model, model);
+      expect(harness.trace, isNot(contains('connectBle')));
+    });
+  }
   test('connect follows the required gateway order', () async {
     final harness = _Harness();
 
@@ -120,7 +177,7 @@ void main() {
   test('unsupported model stops before camera power writes', () async {
     final harness = _Harness()
       ..ble.bootstrap = const CameraBootstrap(
-        model: 'RICOH GR IV',
+        model: 'RICOH GR II',
         firmware: '1.00',
         batteryLevel: 80,
         acPowered: false,
@@ -441,7 +498,7 @@ void main() {
   });
 
   test('manual Wi-Fi rejects another camera model after probing', () async {
-    final harness = _Harness()..transport.model = 'RICOH GR IIIx';
+    final harness = _Harness()..transport.model = 'RICOH GR II';
     await harness.controller.connectWifiManually(
       ssid: 'GR_TEST',
       passphrase: '12345678',
@@ -464,6 +521,33 @@ void main() {
     final events = harness.container.read(diagnosticStoreProvider).exportJson();
     expect(events, contains('ble.services'));
     expect(events, isNot(contains('AA:BB')));
+  });
+
+  test('camera transport diagnostics keep only known stages and endpoints',
+      () async {
+    final harness = _Harness();
+    harness.ble.emit(const CameraDeviceEvent(
+      type: 'cameraTrace',
+      jsonPayload:
+          '{"phase":"streamHeaders","endpoint":"/v1/liveview","status":200,"ssid":"private"}',
+    ));
+    harness.ble.emit(const CameraDeviceEvent(
+      type: 'cameraTrace',
+      jsonPayload: '{"phase":"requestBegin","endpoint":"/v1/photos/private"}',
+    ));
+    await Future<void>.delayed(Duration.zero);
+    final result =
+        jsonDecode(harness.container.read(diagnosticStoreProvider).exportJson())
+            as Map;
+    final events = result['events'] as List;
+    expect(
+        events,
+        contains(allOf(
+          containsPair('stage', 'camera.streamHeaders'),
+          containsPair('endpointPath', '/v1/liveview'),
+          containsPair('statusCode', 200),
+        )));
+    expect(events.toString(), isNot(contains('private')));
   });
 
   test('manual Wi-Fi shutter uses HTTP without trying BLE', () async {

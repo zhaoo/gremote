@@ -1,6 +1,7 @@
 abstract final class RicohGattIds {
   static const cameraInformationService =
       '9a5ed1c5-74cc-4c50-b5b6-66a48e7ccff1';
+  static const pairingService = '0f291746-0c80-4726-87a7-3c501fd3b4b6';
   static const model = '35fe6272-6aa5-44d9-88e1-f09427f51a71';
   static const firmware = 'b4eb8905-7411-40a6-a367-2834c2157ea7';
 

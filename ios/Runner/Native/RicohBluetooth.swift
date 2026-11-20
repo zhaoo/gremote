@@ -55,7 +55,9 @@ final class RicohBluetooth: NSObject, CBCentralManagerDelegate, CBPeripheralDele
   }
   func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String: Any], rssi RSSI: NSNumber) {
     let name = (advertisementData[CBAdvertisementDataLocalNameKey] as? String) ?? peripheral.name ?? ""
-    guard name.uppercased().contains("GR") || name.uppercased().contains("RICOH") else { return }
+    let services = advertisementData[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID] ?? []
+    let scanServices = Set(["9A5ED1C5-74CC-4C50-B5B6-66A48E7CCFF1", "4B445988-CAA0-4DD3-941D-37B4F52ACA86", "0F291746-0C80-4726-87A7-3C501FD3B4B6"])
+    guard services.contains(where: { scanServices.contains($0.uuidString.uppercased()) }) || name.uppercased().hasPrefix("RICOH") else { return }
     devices[peripheral.identifier] = peripheral
     seen[peripheral.identifier] = NativeBleDevice(id: peripheral.identifier.uuidString, name: name, rssi: RSSI.int64Value)
   }

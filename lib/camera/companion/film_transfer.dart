@@ -35,7 +35,7 @@ class FilmTransfer {
               'size',
               'chunkBytes'
             }.contains(k)) &&
-        meta['model'] == 'GR III' &&
+        const ['GR III', 'GR IIIx'].contains(meta['model']) &&
         meta['schema'] == 1 &&
         meta['stableId'] is int &&
         (meta['stableId'] as int) >= 79 &&

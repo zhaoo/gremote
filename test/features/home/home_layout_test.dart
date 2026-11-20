@@ -44,7 +44,8 @@ void main() {
       expect(t.takeException(), isNull);
       await t.ensureVisible(find.text('进入拍摄'));
       expect(t.takeException(), isNull);
-      await t.ensureVisible(find.text('位置记录'));
+      await t.scrollUntilVisible(find.text('位置记录'), 200,
+          scrollable: find.byType(Scrollable).first);
       expect(t.takeException(), isNull);
     });
   }

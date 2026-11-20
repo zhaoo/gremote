@@ -6,6 +6,20 @@ import 'package:gremote/diagnostics/diagnostic_redactor.dart';
 import 'package:gremote/diagnostics/diagnostic_store.dart';
 
 void main() {
+  test('recent export is complete JSON with the newest request boundaries', () {
+    final store = DiagnosticStore(persistence: _Persistence());
+    for (var i = 0; i < 100; i++) {
+      store.record(DiagnosticEvent(stage: 'request$i', monotonicMicros: i,
+          durationMs: 0, retryCount: 0, endpointPath: '/v1/props'));
+    }
+    final text = store.exportRecentJson();
+    final events = (jsonDecode(text) as Map)['events'] as List;
+    expect(text.length, lessThanOrEqualTo(3800));
+    expect(events.last['stage'], 'request99');
+    expect(events.length, lessThan(100));
+    expect((jsonDecode(store.exportJson()) as Map)['events'], hasLength(100));
+  });
+
   test('redacts every sensitive field and preserves protocol evidence', () {
     const event = DiagnosticEvent(
       stage: 'probing',
@@ -84,4 +98,10 @@ class _MemoryPersistence implements DiagnosticPersistence {
 
   @override
   Future<void> write(String json) async => value = json;
+}
+
+
+class _Persistence implements DiagnosticPersistence {
+  @override
+  Future<void> write(String json) async {}
 }

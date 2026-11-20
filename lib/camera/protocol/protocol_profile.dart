@@ -15,6 +15,7 @@ enum WsSupport { supported, unsupported, unknown }
 class ProtocolProfile {
   const ProtocolProfile({
     required this.firmware,
+    this.model = '',
     this.writeEncoding = WriteEncoding.unknown,
     this.webSocket = WsSupport.unknown,
     this.probedAt,
@@ -23,6 +24,7 @@ class ProtocolProfile {
   factory ProtocolProfile.fromJson(Map<String, Object?> json) =>
       ProtocolProfile(
         firmware: json['firmware'] as String? ?? 'unknown',
+        model: json['model'] as String? ?? '',
         writeEncoding: _byName(
             WriteEncoding.values, json['writeEncoding'], WriteEncoding.unknown),
         webSocket:
@@ -34,12 +36,14 @@ class ProtocolProfile {
       );
 
   final String firmware;
+  final String model;
   final WriteEncoding writeEncoding;
   final WsSupport webSocket;
   final DateTime? probedAt;
 
   Map<String, Object?> toJson() => {
         'firmware': firmware,
+        if (model.isNotEmpty) 'model': model,
         'writeEncoding': writeEncoding.name,
         'webSocket': webSocket.name,
         'probedAt': probedAt?.toIso8601String(),
@@ -52,6 +56,7 @@ class ProtocolProfile {
   }) =>
       ProtocolProfile(
         firmware: firmware,
+        model: model,
         writeEncoding: writeEncoding ?? this.writeEncoding,
         webSocket: webSocket ?? this.webSocket,
         probedAt: probedAt ?? this.probedAt,
@@ -73,26 +78,33 @@ class ProtocolProfileStore {
 
   final Database _db;
 
-  static String _key(String firmware) => 'protocolProfile:$firmware';
+  static String _key(String firmware, String model) =>
+      model.isEmpty || model == 'RICOH GR III'
+          ? 'protocolProfile:$firmware'
+          : 'protocolProfile:$model:$firmware';
 
-  Future<ProtocolProfile> load(String firmware) async {
+  Future<ProtocolProfile> load(String firmware, {String model = ''}) async {
     final rows = await _db.query('app_kv',
-        where: 'key = ?', whereArgs: [_key(firmware)], limit: 1);
-    if (rows.isEmpty) return ProtocolProfile(firmware: firmware);
+        where: 'key = ?', whereArgs: [_key(firmware, model)], limit: 1);
+    if (rows.isEmpty) return ProtocolProfile(firmware: firmware, model: model);
     try {
       final json = jsonDecode(rows.single['value']! as String);
       if (json is Map<String, Object?>) {
-        return ProtocolProfile.fromJson({...json, 'firmware': firmware});
+        return ProtocolProfile.fromJson(
+            {...json, 'firmware': firmware, 'model': model});
       }
     } on FormatException {
       // Fall through to a fresh profile.
     }
-    return ProtocolProfile(firmware: firmware);
+    return ProtocolProfile(firmware: firmware, model: model);
   }
 
   Future<void> save(ProtocolProfile profile) => _db.insert(
         'app_kv',
-        {'key': _key(profile.firmware), 'value': jsonEncode(profile.toJson())},
+        {
+          'key': _key(profile.firmware, profile.model),
+          'value': jsonEncode(profile.toJson())
+        },
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
 }

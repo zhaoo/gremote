@@ -6,11 +6,54 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gremote/app/theme/app_theme.dart';
 import 'package:gremote/camera/companion/camera_film_catalog.dart';
 import 'package:gremote/features/camera/camera_page.dart';
+import 'package:gremote/camera/connection/connection_controller.dart';
+import 'package:gremote/camera/connection/connection_state.dart';
+import 'package:gremote/camera/model/camera_identity.dart';
+import 'package:gremote/camera/model/camera_snapshot.dart';
 import 'package:gremote/features/camera/film_library_page.dart';
 import 'package:gremote/features/film_workbench/companion_providers.dart';
 import '../../support/test_darkroom.dart';
 
 void main() {
+  testWidgets('GR IV keeps browsing and disables M10V without explanatory text',
+      (tester) async {
+    final env = await TestDarkroom.create();
+    addTearDown(env.close);
+    final catalog = await tester.runAsync(() async =>
+        CameraFilmCatalog.fromJson(jsonDecode(
+                await rootBundle.loadString('assets/films/camera-catalog.json'))
+            as Map<String, dynamic>));
+    await tester.pumpWidget(ProviderScope(overrides: [
+      ...env.overrides,
+      connectionControllerProvider.overrideWith(_StockConnection.new),
+      cameraFilmCatalogProvider.overrideWith((_) async => catalog!),
+      officialFilmCacheProvider.overrideWith((_) async => null),
+    ], child: MaterialApp(theme: GRemoteTheme.dark, home: const CameraPage())));
+    await tester.pumpAndSettle();
+    expect(
+        tester
+            .widget<TextButton>(find.widgetWithText(TextButton, '扩展'))
+            .onPressed,
+        isNull);
+    expect(find.byType(GridView), findsOneWidget);
+    expect(find.textContaining('M10V'), findsNothing);
+    expect(find.text('重试连接'), findsNothing);
+    expect(
+        tester
+            .widget<IconButton>(find.byWidgetPredicate((widget) =>
+                widget is IconButton && widget.tooltip == '导出 SD 胶卷库'))
+            .onPressed,
+        isNull);
+    await tester.tap(find.text('RICOH GR IV Monochrome'));
+    await tester.pumpAndSettle();
+    expect(
+        tester.widget<ListTile>(find.widgetWithText(ListTile, '机内胶卷')).enabled,
+        isFalse);
+    expect(
+        tester.widget<ListTile>(find.widgetWithText(ListTile, '拍摄配方')).enabled,
+        isFalse);
+    expect(tester.takeException(), isNull);
+  });
   for (final width in [320.0, 390.0]) {
     testWidgets(
         'camera workspace fits $width with large text and searchable film grid',
@@ -77,4 +120,15 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+}
+
+class _StockConnection extends ConnectionController {
+  @override
+  CameraConnectionState build() => const ConnectionReady(
+        snapshot: CameraSnapshot(
+            identity: CameraIdentity(
+                model: 'RICOH GR IV Monochrome', firmware: '1.11'),
+            battery: CameraBattery(level: 80, acPowered: false)),
+        firmwareWarning: true,
+      );
 }

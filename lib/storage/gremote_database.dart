@@ -5,7 +5,7 @@ import 'package:sqflite/sqflite.dart';
 
 /// Opens the single app database and owns its schema.
 abstract final class GRemoteDatabase {
-  static const version = 6;
+  static const version = 7;
 
   static Future<Database> open({
     DatabaseFactory? factory,
@@ -43,6 +43,7 @@ abstract final class GRemoteDatabase {
     await _createV4(db);
     await _createV5(db);
     await _createV6(db);
+    await _createV7(db);
   }
 
   static Future<void> _upgrade(Database db, int from, int to) async {
@@ -51,6 +52,17 @@ abstract final class GRemoteDatabase {
     if (from < 4) await _createV4(db);
     if (from < 5) await _createV5(db);
     if (from < 6) await _createV6(db);
+    if (from < 7) await _createV7(db);
+  }
+
+  static Future<void> _createV7(Database db) async {
+    final batch = db.batch()
+      ..execute('ALTER TABLE film_roll_items ADD COLUMN frame_number INTEGER')
+      ..execute('ALTER TABLE film_roll_items ADD COLUMN original_hashes TEXT')
+      ..execute('ALTER TABLE film_roll_items ADD COLUMN preview_format TEXT')
+      ..execute('''CREATE UNIQUE INDEX film_roll_items_camera_frame
+          ON film_roll_items(roll_id, frame_number) WHERE frame_number IS NOT NULL''');
+    await batch.commit(noResult: true);
   }
 
   static Future<void> _createV6(Database db) => db.execute(

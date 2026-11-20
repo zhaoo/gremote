@@ -64,6 +64,24 @@ Future<({TestDarkroom env, FakeCameraGateways gateways})> pumpShoot(
 }
 
 void main() {
+  testWidgets('opening camera settings releases Live View once',
+      (tester) async {
+    final harness = await pumpShoot(tester, connect: true);
+    expect(harness.gateways.trace.where((e) => e == 'startLiveView'),
+        hasLength(1));
+    await tester.tap(find.byTooltip('设置'));
+    await tester.pumpAndSettle();
+    expect(harness.gateways.trace.where((e) => e == 'stopLiveView'), isEmpty);
+    await tester.ensureVisible(find.text('机内胶卷'));
+    await tester.tap(find.text('机内胶卷'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(harness.gateways.trace.where((e) => e == 'stopLiveView'),
+        hasLength(1));
+    expect(appRouter.routeInformationProvider.value.uri.path, '/camera');
+  });
+
   testWidgets(
       'aperture row and ruler follow HTTP readback without socket events',
       (tester) async {
@@ -563,5 +581,5 @@ class _FixtureLiveView extends LiveViewController {
   @override
   void attach() {}
   @override
-  void detach() {}
+  Future<void> detach() async {}
 }

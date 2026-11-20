@@ -8,6 +8,8 @@ import 'companion_transport.dart';
 import 'pairing_store.dart';
 import 'extensions_protocol.dart';
 import 'camera_film_catalog.dart';
+import 'camera_live_manifest.dart';
+import '../http/camera_files.dart';
 
 class CompanionException implements Exception {
   const CompanionException(this.code);
@@ -30,11 +32,13 @@ abstract interface class CompanionApi {
   void invalidate();
 }
 
-class CompanionClient implements CompanionApi, CompanionExtensionsApi {
+class CompanionClient
+    implements CompanionApi, CompanionExtensionsApi, CameraLiveApi {
   CompanionClient(
       {required this.transport,
       required this.pairingStore,
       required this.identity,
+      this.expectedModel,
       Map<String, dynamic>? contract,
       Future<void> Function()? busyWait})
       : contract = contract ?? companionContract,
@@ -45,11 +49,15 @@ class CompanionClient implements CompanionApi, CompanionExtensionsApi {
   final CompanionTransport transport;
   final PairingStore pairingStore;
   final PairingIdentity identity;
+  final String? expectedModel;
+  String? _model;
   String? _boot, _session, _capBuild;
   CameraFilmProfile? _profile;
   Map<String, dynamic> get _activeContract => _profile?.contract ?? contract;
   int _sequence = 0, _epoch = 0;
   Future<void> _tail = Future.value();
+  static final _livePath = RegExp(
+      r'^/m10v/v1/live/[A-Za-z0-9_-]{1,16}/[A-Za-z0-9_-]{1,16}/[Jj][Pp][Ee]?[Gg](/clip/(0|[1-9][0-9]{0,6}))?$');
   @override
   String? get bootId => _boot;
   @override
@@ -59,6 +67,7 @@ class CompanionClient implements CompanionApi, CompanionExtensionsApi {
     _session = null;
     _capBuild = null;
     _profile = null;
+    _model = null;
     _sequence = 0;
   }
 
@@ -86,9 +95,10 @@ class CompanionClient implements CompanionApi, CompanionExtensionsApi {
   Future<Map<String, dynamic>> _request(String method, String path,
       {Object? payload, Uint8List? binary, bool bootstrap = false}) async {
     final epoch = _epoch;
-    if (!RegExp(
-            r'^/m10v/v1/(capabilities|state|extensions/(capabilities|state|operations(/[a-f0-9]{32})?)|operations(/[a-f0-9]{32})?|films/stage(/[a-f0-9]{32}(/(verify|chunks/[0-2]))?)?)$')
-        .hasMatch(path)) {
+    final isLive = method == 'GET' && _livePath.hasMatch(path);
+    if (!isLive &&
+        !RegExp(r'^/m10v/v1/(capabilities|state|extensions/(capabilities|state|operations(/[a-f0-9]{32})?)|operations(/[a-f0-9]{32})?|films/stage(/[a-f0-9]{32}(/(verify|chunks/[0-2]))?)?)$')
+            .hasMatch(path)) {
       throw const CompanionException('invalidCompanionTarget');
     }
     if (!bootstrap && (_boot == null || _session == null)) {
@@ -171,6 +181,9 @@ class CompanionClient implements CompanionApi, CompanionExtensionsApi {
         path == '/m10v/v1/extensions/capabilities') {
       throw const CompanionException('extensionsUnsupported');
     }
+    if (response.statusCode == 404 && isLive && !path.contains('/clip/')) {
+      throw const CompanionException('livePairMissing');
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final error = (raw['error'] as Map?)?['code'];
       throw CompanionException(error is String && error.length <= 48
@@ -181,17 +194,54 @@ class CompanionClient implements CompanionApi, CompanionExtensionsApi {
       final caps = CompanionCapabilities.fromJson(raw, contract: contract);
       if (caps.bootId != boot ||
           caps.sessionId != session ||
-          caps.instanceId != identity.instanceId) {
+          caps.instanceId != identity.instanceId ||
+          (expectedModel != null && caps.wire['model'] != expectedModel)) {
         throw const CompanionException('identityMismatch');
       }
       _capBuild = caps.wire['buildId'] as String;
       _profile = resolveCameraFilmProfile(caps.catalogHash, caps.rendererHash);
+      _model = caps.wire['model'] as String?;
       _boot = boot;
       _session = session;
       _sequence = 0;
     }
     return raw;
   }
+
+  @override
+  Future<CameraLiveManifest?> liveManifest(CameraFile jpeg) =>
+      _serial(() async {
+        final path = CameraLiveManifest.pathFor(jpeg);
+        if (_boot == null) {
+          await _request('GET', '/m10v/v1/capabilities', bootstrap: true);
+        }
+        try {
+          final wire = await _request('GET', path);
+          return CameraLiveManifest.parse(wire, jpeg);
+        } on CompanionException catch (error) {
+          if (error.code == 'livePairMissing') return null;
+          if (error.code == 'unauthorized') invalidate();
+          rethrow;
+        }
+      });
+
+  @override
+  Future<void> liveClip(CameraLiveManifest manifest,
+          Future<void> Function(Uint8List) receive) =>
+      _serial(() async {
+        final path = CameraLiveManifest.pathFor(manifest.jpeg);
+        try {
+          for (var offset = 0; offset < manifest.clipBytes;) {
+            final chunk = manifest.chunk(
+                await _request('GET', '$path/clip/$offset'), offset);
+            await receive(chunk);
+            offset += chunk.length;
+          }
+        } on CompanionException catch (error) {
+          if (error.code == 'unauthorized') invalidate();
+          rethrow;
+        }
+      });
 
   void _snapshotIdentity(CompanionSnapshot value) {
     if (value.bootId != _boot || value.instanceId != identity.instanceId) {
@@ -249,7 +299,7 @@ class CompanionClient implements CompanionApi, CompanionExtensionsApi {
       _serial(() async {
         final receipt = FilmUploadReceipt.fromJson(await _request(
             'POST', '/m10v/v1/films/stage',
-            payload: metadata.toJson()));
+            payload: {...metadata.toJson(), 'model': _model ?? 'GR III'}));
         if (receipt.wire['contentHash'] != metadata.contentHash ||
             receipt.wire['targetSlot'] != metadata.targetSlot ||
             receipt.wire['stableId'] != metadata.stableId) {

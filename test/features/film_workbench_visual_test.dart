@@ -155,10 +155,10 @@ void main() {
     }
     await tester.pumpAndSettle();
     await save('comparison-grid');
-    await tester.tap(find.text('数字胶卷'));
+    await tester.tap(find.text('胶卷归档'));
     await tester.pumpAndSettle();
     await save('rolls-empty');
-    await tester.tap(find.text('相机胶卷'));
+    await tester.tap(find.text('机身滤镜'));
     await tester.pumpAndSettle();
     await save('camera-offline');
     // UI fixtures below are host-only layout evidence, never camera state proof.

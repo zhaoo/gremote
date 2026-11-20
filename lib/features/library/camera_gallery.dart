@@ -5,6 +5,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -18,11 +19,14 @@ import '../../camera/http/camera_api.dart';
 import '../../camera/http/camera_files.dart';
 import '../../diagnostics/diagnostic_event.dart';
 import '../../diagnostics/diagnostic_store.dart';
+import '../../film/capture/camera_roll_importer.dart';
 import '../../platform/device_api.g.dart';
 import 'camera_transfer.dart';
+import 'camera_live_photo_page.dart';
 import 'library_controller.dart';
 import '../home/import_history.dart';
 import '../film_workbench/companion_providers.dart';
+import '../film_workbench/workbench_providers.dart';
 import '../../camera/recipe/shooting_recipe.dart';
 import '../camera/shooting_recipes_page.dart';
 
@@ -77,6 +81,7 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
   final _recordedTimes = <String, int>{};
   final _exposureRecipes = <String, String>{};
   final _photoRecipes = <String, ShootingRecipe>{};
+  CameraRollFrame? _currentRollFrame;
   final _clock = Stopwatch()..start();
   final _thumbnails = <String, Future<Uint8List>>{};
   bool _loading = false;
@@ -125,26 +130,29 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
         if (data is! Map || data['id'] != _currentId) return;
         if (event.type == 'photoRecordedFilm') {
           final code = data['code'];
-          if (code is int && code >= 0x1001 && code <= 0xffff) {
-            setState(() {
+          final marker = data['rollFrame'];
+          _currentRollFrame =
+              marker is String ? CameraRollFrame.parse(marker) : null;
+          setState(() {
+            if (code is int && code >= 0x1001 && code <= 0xffff) {
               _recordedFilms[_currentId!] = code;
-              final hash = data['hash'];
-              if (hash is String && RegExp(r'^[a-f0-9]{64}$').hasMatch(hash)) {
-                _recordedHashes[_currentId!] = hash;
-              }
-              final time = data['capturedAt'];
-              if (time is String) {
-                final seconds = wallSecondsOf(time);
-                if (seconds != null) _recordedTimes[_currentId!] = seconds;
-              }
-              final exposure = data['exposureRecipe'];
-              if (exposure is String &&
-                  RegExp(r'^(4d435231[0-9a-f]{152}|4d435232[0-9a-f]{344})$')
-                      .hasMatch(exposure)) {
-                _exposureRecipes[_currentId!] = exposure;
-              }
-            });
-          }
+            }
+            final hash = data['hash'];
+            if (hash is String && RegExp(r'^[a-f0-9]{64}$').hasMatch(hash)) {
+              _recordedHashes[_currentId!] = hash;
+            }
+            final time = data['capturedAt'];
+            if (time is String) {
+              final seconds = wallSecondsOf(time);
+              if (seconds != null) _recordedTimes[_currentId!] = seconds;
+            }
+            final exposure = data['exposureRecipe'];
+            if (exposure is String &&
+                RegExp(r'^(4d435231[0-9a-f]{152}|4d435232[0-9a-f]{344})$')
+                    .hasMatch(exposure)) {
+              _exposureRecipes[_currentId!] = exposure;
+            }
+          });
           return;
         }
         final bytes = data['bytes'];
@@ -217,6 +225,7 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
     final session = _session;
     final service = _service;
     var successes = 0;
+    var rollFailures = 0;
     _failures.clear();
     _result = null;
     try {
@@ -232,6 +241,7 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
             _photoRecipes.remove(file.remoteId);
             _currentFile = file.file;
             _currentId = file.remoteId;
+            _currentRollFrame = null;
             _received = 0;
             _expected = -1;
           });
@@ -240,6 +250,30 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
             final metadataStart = _clock.elapsedMicroseconds;
             final code = _recordedFilms[file.remoteId];
             final hash = _recordedHashes[file.remoteId];
+            final frame = _currentRollFrame;
+            if (frame != null &&
+                hash != null &&
+                mounted &&
+                session == _session) {
+              final importer =
+                  CameraRollImporter(ref.read(filmRepositoryProvider));
+              try {
+                final mediaId = await _savedPhotoId(file, uri);
+                if (!mounted || session != _session) break;
+                await importer.import(file, frame,
+                    hash: hash,
+                    mediaId: mediaId,
+                    filmCode: code,
+                    recipe: _exposureRecipes[file.remoteId]);
+                if (mounted) {
+                  ref.read(filmRollRevisionProvider.notifier).state++;
+                }
+              } on Exception {
+                rollFailures++;
+              } on StateError {
+                rollFailures++;
+              }
+            }
             if (code != null &&
                 hash != null &&
                 mounted &&
@@ -310,14 +344,32 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
     setState(() {
       _downloading = false;
       _currentFile = null;
+      _currentRollFrame = null;
       _currentId = null;
       _result =
           '${_stopAfterCurrent ? '已停止' : '保存完成'} · 成功 $successes / ${files.length} 个文件';
+      if (rollFailures > 0) {
+        _result = '$_result · $rollFailures 个原片未能归入机身胶卷';
+      }
       if (_failures.isNotEmpty) {
         _selectionMode = true;
         _error = '${_failures.length} 个文件保存失败，已保留选择，可再次保存重试';
       }
     });
+  }
+
+  Future<int?> _savedPhotoId(CameraFile file, String uri) async {
+    if (!Platform.isIOS) {
+      return int.tryParse(Uri.parse(uri).pathSegments.lastOrNull ?? '');
+    }
+    if (file.extension == 'DNG') return null;
+    try {
+      final entries = await ref.read(mediaGatewayProvider).queryImages();
+      return entries.where((entry) => entry.uri == uri).firstOrNull?.id;
+    } on Exception {
+      // Add-only Photos permission is sufficient to archive the frame.
+      return null;
+    }
   }
 
   void _toggle(List<CameraFile> files) {
@@ -379,7 +431,7 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
     if (!ready) {
       return const _GalleryEmpty(
         icon: Icons.wifi_off_rounded,
-        title: '等待 GR III 连接',
+        title: '等待相机连接',
         message: '先在首页连接相机 Wi-Fi，再浏览和下载原图。',
       );
     }
@@ -759,6 +811,7 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
   }
 
   void _showFileSheet(List<CameraFile> files) {
+    final jpeg = files.where((file) => file.extension != 'DNG').firstOrNull;
     final exposure = files
         .map((file) => RecordedExposure.parse(
             _exposureRecipes[file.remoteId], _recordedFilms[file.remoteId]))
@@ -806,6 +859,21 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                             icon: const Icon(Icons.download_rounded)),
                       ),
                     const SizedBox(height: 8),
+                    if (jpeg != null &&
+                        defaultTargetPlatform == TargetPlatform.android)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.motion_photos_on_outlined),
+                        title: const Text('读取动态照片'),
+                        onTap: () {
+                          Navigator.pop(sheetContext);
+                          Navigator.of(context, rootNavigator: true).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => CameraLivePhotoPage(jpeg),
+                            ),
+                          );
+                        },
+                      ),
                     if (recorded != null || exposure != null)
                       FilledButton.tonal(
                         onPressed: () {

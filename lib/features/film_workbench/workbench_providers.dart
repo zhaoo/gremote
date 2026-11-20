@@ -87,11 +87,13 @@ final activeRollHydrationProvider = FutureProvider<void>((ref) async {
   ref.onDispose(() => disposed = true);
   final repository = ref.read(filmRepositoryProvider);
   final roll = await repository.activeRoll();
+  final fingerprint = roll?.recipeFingerprint;
   final recipe =
-      roll == null ? null : await repository.recipe(roll.recipeFingerprint);
+      fingerprint == null ? null : await repository.recipe(fingerprint);
   if (disposed) return;
-  ref.read(activeRollCaptureContextProvider.notifier).state = roll == null
-      ? null
-      : FrozenRollContext(
-          rollId: roll.id, recipeJson: jsonEncode(recipe!.toJson()));
+  ref.read(activeRollCaptureContextProvider.notifier).state =
+      roll == null || recipe == null
+          ? null
+          : FrozenRollContext(
+              rollId: roll.id, recipeJson: jsonEncode(recipe.toJson()));
 });

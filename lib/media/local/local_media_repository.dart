@@ -4,6 +4,7 @@ import 'package:meta/meta.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../../darkroom/model/photo_meta.dart';
+import '../../camera/model/camera_identity.dart';
 import 'media_gateway.dart';
 
 const grIIIModel = 'RICOH GR III';
@@ -113,8 +114,14 @@ class LocalMediaRepository {
   Future<List<LocalMediaItem>> list({required bool grOnly}) async {
     final rows = await _db.query(
       'local_media',
-      where: grOnly ? 'upper(trim(model)) = ?' : null,
-      whereArgs: grOnly ? [grIIIModel] : null,
+      where: grOnly
+          ? 'upper(trim(model)) IN (${List.filled(CameraIdentity.supportedModels.length, '?').join(',')})'
+          : null,
+      whereArgs: grOnly
+          ? CameraIdentity.supportedModels
+              .map((model) => model.toUpperCase())
+              .toList()
+          : null,
       orderBy: 'coalesce(date_taken, date_modified * 1000) DESC, media_id DESC',
     );
     return rows.map(_item).toList();

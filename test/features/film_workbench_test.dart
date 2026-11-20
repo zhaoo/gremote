@@ -119,6 +119,9 @@ void main() {
     await show(tester, section: 1);
     expect(find.text('把一天，拍成一卷。'), findsNothing);
     expect(find.text('新建胶卷'), findsOneWidget);
+    expect(find.text('从相机导入胶卷'), findsOneWidget);
+    expect(find.text('机身滤镜'), findsOneWidget);
+    expect(find.textContaining('自动按卷和帧序归档'), findsOneWidget);
     expect(find.text('18 / 36 张'), findsNothing);
     expect(find.text('雨后散步'), findsNothing);
   });

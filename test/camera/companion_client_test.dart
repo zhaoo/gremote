@@ -8,6 +8,7 @@ import 'package:gremote/camera/companion/companion_protocol.dart';
 import 'package:gremote/camera/companion/generated_contract.dart';
 import 'package:gremote/camera/companion/pairing_store.dart';
 import 'package:gremote/camera/gateway/camera_transport.dart';
+import 'package:gremote/camera/http/camera_files.dart';
 
 final contract = jsonDecode(companionContractJson) as Map<String, dynamic>;
 final key = Uint8List.fromList(List.generate(32, (i) => i));
@@ -52,6 +53,8 @@ class Keys implements PairingStore {
 class Wire implements CompanionTransport {
   bool tamper = false, changedBoot = false;
   int count = 0;
+  final paths = <String>[];
+  final replies = <String, (int, Map<String, Object?>)>{};
   @override
   Future<CameraResponse> request(
       {required String method,
@@ -59,6 +62,7 @@ class Wire implements CompanionTransport {
       required Map<String, String> headers,
       required Uint8List body}) async {
     count++;
+    paths.add(path);
     expect(headers['X-M10V-KeyId'], identity.keyId);
     final canonical = [
       method,
@@ -71,7 +75,8 @@ class Wire implements CompanionTransport {
     ].join('\n');
     expect(headers['X-M10V-Signature'],
         Hmac(sha256, key).convert(utf8.encode(canonical)).toString());
-    final raw = Uint8List.fromList(utf8.encode(jsonEncode(capabilities())));
+    final (status, payload) = replies[path] ?? (200, capabilities());
+    final raw = Uint8List.fromList(utf8.encode(jsonEncode(payload)));
     final boot = changedBoot ? '09' * 16 : '02' * 16, session = '03' * 16;
     final response = [
       'RESPONSE',
@@ -81,11 +86,11 @@ class Wire implements CompanionTransport {
       session,
       headers['X-M10V-Seq'],
       headers['X-M10V-Nonce'],
-      '200',
+      '$status',
       sha256.convert(raw).toString()
     ].join('\n');
     return CameraResponse(
-        statusCode: 200,
+        statusCode: status,
         headers: {
           'X-M10V-Boot': boot,
           'X-M10V-Session': session,
@@ -98,6 +103,113 @@ class Wire implements CompanionTransport {
 }
 
 void main() {
+  test('IIIx uses its own official firmware identity and pairing model',
+      () async {
+    final value = capabilities()
+      ..['model'] = 'GR IIIx'
+      ..['firmwareIdentity'] =
+          '708e79f3b7b96a7e1581b4acf4c412233050a1832718ef7f06c8397db1b431c7';
+    expect(
+        CompanionCapabilities.fromJson(value)
+            .compatibleWith('05' * 32, '06' * 32),
+        isTrue);
+    value['firmwareIdentity'] = contract['officialFirmwareSha256'];
+    expect(
+        CompanionCapabilities.fromJson(value)
+            .compatibleWith('05' * 32, '06' * 32),
+        isFalse);
+    final file = {
+      'schema': 'm10v.companion-pairing/v1',
+      'protocol': 1,
+      'model': 'GR IIIx',
+      'instanceId': '01' * 16,
+      'keyId': sha256.convert(key).toString().substring(0, 32),
+      'keyHex': key.map((v) => v.toRadixString(16).padLeft(2, '0')).join()
+    };
+    expect(
+        (await importPairing(
+                Uint8List.fromList(utf8.encode(jsonEncode(file))), Keys()))
+            .instanceId,
+        '01' * 16);
+  });
+
+  test(
+      'signed M10V capabilities cannot impersonate a different connected model',
+      () async {
+    final client = CompanionClient(
+        transport: Wire(),
+        pairingStore: Keys(),
+        identity: identity,
+        expectedModel: 'GR IIIx');
+    await expectLater(
+        client.capabilities(), throwsA(isA<CompanionException>()));
+    expect(client.bootId, isNull);
+  });
+  test('Live uses signed exact DCF routes and distinguishes a signed 404',
+      () async {
+    const photo = CameraFile(dir: '100RICOH', file: 'R0000021.JPG');
+    const path = '/m10v/v1/live/100RICOH/R0000021/JPG';
+    final clip = Uint8List.fromList(List.generate(48, (i) => i));
+    final wire = Wire()
+      ..replies[path] = (
+        200,
+        {
+          'version': 1,
+          'jpeg': {
+            'directory': photo.dir,
+            'file': photo.file,
+            'sha256': 'ab' * 32
+          },
+          'clip': {
+            'directory': 'LIVE',
+            'file': 'clip.m10l',
+            'format': 'm10l',
+            'sha256': sha256.convert(clip).toString(),
+            'bytes': 48,
+          },
+          'presentationTimestampUs': 120000,
+        }
+      )
+      ..replies['$path/clip/0'] = (
+        200,
+        {
+          'offset': 0,
+          'bytes': 48,
+          'data': base64Encode(clip.sublist(0, 17)),
+        }
+      )
+      ..replies['$path/clip/17'] = (
+        200,
+        {
+          'offset': 17,
+          'bytes': 48,
+          'data': base64Encode(clip.sublist(17)),
+        }
+      );
+    final client = CompanionClient(
+        transport: wire, pairingStore: Keys(), identity: identity);
+    final pair = (await client.liveManifest(photo))!;
+    final downloaded = <int>[];
+    await client.liveClip(pair, (chunk) async => downloaded.addAll(chunk));
+    expect(downloaded, clip);
+    expect(wire.paths, [
+      '/m10v/v1/capabilities',
+      path,
+      '$path/clip/0',
+      '$path/clip/17',
+    ]);
+    wire.replies[path] = (
+      404,
+      {
+        'error': {'code': 'missing'}
+      }
+    );
+    expect(await client.liveManifest(photo), isNull);
+    wire.tamper = true;
+    await expectLater(
+        client.liveManifest(photo), throwsA(isA<CompanionException>()));
+  });
+
   test('request and response canonical HMAC match independent oracle',
       () async {
     final wire = Wire();

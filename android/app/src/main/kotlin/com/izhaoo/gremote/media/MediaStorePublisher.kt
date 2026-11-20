@@ -55,6 +55,12 @@ class MediaStorePublisher(context: Context) {
             else insertLegacy(temp, safeName, directory)
     }
 
+    internal fun publishMotionPhoto(temp: File, displayName: String): Uri {
+        // EXIF rewriting may strip the MP4 after JPEG's end marker.
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) insertPending(temp, displayName)
+            else insertLegacy(temp, displayName)
+    }
+
     private fun writeExif(temp: File, source: Uri, keepGps: Boolean, width: Int, height: Int, outputSrgb: Boolean) {
         val tags = resolver.openInputStream(source)?.use { stream ->
             val exif = ExifInterface(stream)

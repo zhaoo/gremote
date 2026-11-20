@@ -14,6 +14,7 @@ class ConnectionCard extends StatelessWidget {
     required this.onOpenDiagnostics,
     this.onManualWifi,
     this.onCancel,
+    this.onSwitchCamera,
     super.key,
   });
 
@@ -25,6 +26,7 @@ class ConnectionCard extends StatelessWidget {
   final VoidCallback onOpenDiagnostics;
   final VoidCallback? onManualWifi;
   final VoidCallback? onCancel;
+  final VoidCallback? onSwitchCamera;
 
   @override
   Widget build(BuildContext context) {
@@ -64,6 +66,7 @@ class ConnectionCard extends StatelessWidget {
         key: const ValueKey('ready'),
         state: ready,
         onEnterShoot: onEnterShoot,
+        onSwitchCamera: onSwitchCamera,
       );
     }
     if (state case final ConnectionFailed failed) {
@@ -217,7 +220,7 @@ class _Header extends StatelessWidget {
 }
 
 class _CameraIdentity extends StatelessWidget {
-  const _CameraIdentity({this.model = 'RICOH GR III'});
+  const _CameraIdentity({this.model = 'RICOH GR'});
   final String model;
   @override
   Widget build(BuildContext context) => Row(children: [
@@ -236,8 +239,10 @@ class _CameraIdentity extends StatelessWidget {
                                 color: context.palette.muted)),
                       const SizedBox(height: 5),
                       Text(model.replaceFirst(RegExp(r'^RICOH '), ''),
-                          style: GRemoteType.display
-                              .copyWith(fontSize: 33, letterSpacing: -.8)),
+                          style: GRemoteType.display.copyWith(
+                              fontSize: 33,
+                              letterSpacing: -.8,
+                              color: context.palette.text)),
                     ])))),
         const SizedBox(width: 8),
         if (model == 'RICOH GR III')
@@ -273,11 +278,13 @@ class _ReadyContent extends StatelessWidget {
   const _ReadyContent({
     required this.state,
     required this.onEnterShoot,
+    this.onSwitchCamera,
     super.key,
   });
 
   final ConnectionReady state;
   final VoidCallback onEnterShoot;
+  final VoidCallback? onSwitchCamera;
 
   @override
   Widget build(BuildContext context) {
@@ -301,22 +308,18 @@ class _ReadyContent extends StatelessWidget {
                   ? '未读取'
                   : snapshot.identity.firmware,
             ),
+            if (state.firmwareWarning && snapshot.identity.firmware.isNotEmpty)
+              Tooltip(
+                message: '固件未经真机验证',
+                triggerMode: TooltipTriggerMode.tap,
+                child: Icon(Icons.info_outline,
+                    size: 15, color: context.palette.muted),
+              ),
             if (!state.wifiOnly || snapshot.battery.level >= 0) ...[
               _Fact(label: '电量', value: '${snapshot.battery.level}%'),
             ],
           ],
         ),
-        if (state.wifiOnly && snapshot.identity.firmware.isEmpty) ...[
-          const SizedBox(height: 14),
-          Text('Wi-Fi 属性未提供固件版本；可用蓝牙连接核验',
-              style: TextStyle(color: context.palette.text)),
-        ] else if (state.firmwareWarning) ...[
-          const SizedBox(height: 14),
-          Text(
-            '固件未经真机验证',
-            style: TextStyle(color: context.palette.text),
-          ),
-        ],
         const SizedBox(height: 18),
         SizedBox(
           width: double.infinity,
@@ -326,6 +329,13 @@ class _ReadyContent extends StatelessWidget {
             label: const Text('进入拍摄'),
           ),
         ),
+        if (onSwitchCamera != null)
+          Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: onSwitchCamera,
+                child: const Text('切换相机'),
+              )),
       ],
     );
   }

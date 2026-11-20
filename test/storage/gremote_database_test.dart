@@ -13,12 +13,12 @@ Future<Set<String>> _tables(Database db) async => {
 void main() {
   setUpAll(sqfliteFfiInit);
 
-  test('a new database is created at version 6 with every table', () async {
+  test('a new database has every application table', () async {
     final db = await GRemoteDatabase.open(
         factory: databaseFactoryFfiNoIsolate, path: inMemoryDatabasePath);
     addTearDown(db.close);
 
-    expect(await db.getVersion(), 6);
+    expect(await db.getVersion(), GRemoteDatabase.version);
     expect(
       await _tables(db),
       containsAll([
@@ -32,7 +32,7 @@ void main() {
         'program_runs',
         'shot_locations',
         'album_collection',
-      'film_recipes',
+        'film_recipes',
         'camera_film_recipes',
         'film_rolls',
         'film_roll_items',
@@ -76,7 +76,7 @@ void main() {
     final db = await GRemoteDatabase.open(
         factory: databaseFactoryFfiNoIsolate, path: path);
     addTearDown(db.close);
-    expect(await db.getVersion(), 6);
+    expect(await db.getVersion(), GRemoteDatabase.version);
     expect((await db.query('app_kv')).single['value'], 'yes');
     expect(await db.query('shot_locations'), isEmpty);
   });
@@ -112,7 +112,7 @@ void main() {
         factory: databaseFactoryFfiNoIsolate, path: path);
     addTearDown(db.close);
 
-    expect(await db.getVersion(), 6);
+    expect(await db.getVersion(), GRemoteDatabase.version);
     expect(
         await _tables(db),
         containsAll(
@@ -162,7 +162,7 @@ void main() {
     final db = await GRemoteDatabase.open(
         factory: databaseFactoryFfiNoIsolate, path: path);
     addTearDown(db.close);
-    expect(await db.getVersion(), 6);
+    expect(await db.getVersion(), GRemoteDatabase.version);
     expect((await db.query('app_kv')).single['value'], 'yes');
     expect((await db.query('local_media')).single['media_id'], 8);
     expect((await db.query('edit_documents')).single['title'], '保留编辑');
@@ -183,12 +183,20 @@ void main() {
     });
     await previous.execute('DROP TABLE camera_film_recipes');
     await previous.execute('DROP TABLE album_collection');
+    await previous.execute('DROP INDEX film_roll_items_camera_frame');
+    for (final column in [
+      'frame_number',
+      'original_hashes',
+      'preview_format'
+    ]) {
+      await previous.execute('ALTER TABLE film_roll_items DROP COLUMN $column');
+    }
     await previous.setVersion(4);
     await previous.close();
     final db = await GRemoteDatabase.open(
         factory: databaseFactoryFfiNoIsolate, path: path);
     addTearDown(db.close);
-    expect(await db.getVersion(), 6);
+    expect(await db.getVersion(), GRemoteDatabase.version);
     expect((await db.query('film_recipes')).single['recipe_json'],
         '{"legacy":true}');
     expect(await db.query('camera_film_recipes'), isEmpty);

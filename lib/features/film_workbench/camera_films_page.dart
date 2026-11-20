@@ -428,7 +428,7 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
                   child: Text(
                       snapshot == null
                           ? connected
-                              ? 'M10V 机内胶卷'
+                              ? 'M10V 机身滤镜'
                               : '相机未连接'
                           : state!.readOnly
                               ? '机身配置 · 只读'
@@ -460,6 +460,11 @@ class _CameraFilmsPageState extends ConsumerState<CameraFilmsPage>
             child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
                 children: [
+              Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Text('这里管理机身滤镜槽位。读取拍摄的胶卷，请到「胶卷归档」从相机导入原片。',
+                      style: TextStyle(
+                          color: context.palette.muted, height: 1.5))),
               if (snapshot == null ||
                   state!.readOnly ||
                   state.stale ||

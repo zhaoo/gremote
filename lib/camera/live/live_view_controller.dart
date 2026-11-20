@@ -19,7 +19,7 @@ class LiveViewController extends Notifier<Uint8List?> {
   StreamSubscription<Uint8List>? _chunks;
   var _references = 0;
   var _started = false;
-  var _syncing = false;
+  Future<void>? _syncing;
   var _dirty = false;
   String? _error;
 
@@ -43,26 +43,26 @@ class LiveViewController extends Notifier<Uint8List?> {
     unawaited(_sync());
   }
 
-  void detach() {
-    if (_references == 0) return;
-    _references--;
-    unawaited(_sync());
+  /// Releases one owner and waits for any pending native start or stop.
+  Future<void> detach() {
+    if (_references > 0) _references--;
+    return _sync();
   }
 
-  /// Serialises native start/stop; triggers arriving mid-flight re-run once.
-  Future<void> _sync() async {
-    if (_syncing) {
-      _dirty = true;
-      return;
-    }
-    _syncing = true;
+  /// Reconciles requests that arrive while native start/stop is in flight.
+  Future<void> _sync() {
+    _dirty = true;
+    return _syncing ??= _drain();
+  }
+
+  Future<void> _drain() async {
     try {
       do {
         _dirty = false;
         await _apply();
       } while (_dirty);
     } finally {
-      _syncing = false;
+      _syncing = null;
     }
   }
 
@@ -80,8 +80,8 @@ class LiveViewController extends Notifier<Uint8List?> {
         _error = '实时取景启动失败';
       }
     } else if (!shouldRun && _started) {
-      _started = false;
       await _transport.stopLiveView();
+      _started = false;
       _parser.reset();
       state = null;
     }

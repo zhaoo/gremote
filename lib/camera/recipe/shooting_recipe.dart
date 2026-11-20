@@ -3,7 +3,8 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:sqflite/sqflite.dart';
-import '../../film/model/film_recipe.dart' show canonicalJson;
+import '../../film/model/film_recipe.dart'
+    show FilmRecipe, canonicalJson, filmContract;
 
 import '../companion/companion_protocol.dart';
 import '../companion/camera_film_catalog.dart';
@@ -70,6 +71,44 @@ class RecordedExposure {
 
   bool matchesFilm(Map<String, Object?> film) =>
       film['filmId'] == filmId && film['customHash'] == customHash;
+
+  Map<String, int> get _filmParameters => {
+        'grain': _bytes[18],
+        'haloGain': _bytes[20],
+        'haloSpread': _bytes[21],
+        'haloThreshold': _bytes[22],
+        'haloProfile': _bytes[23],
+        'grainSize': _bytes[24],
+        'leakGain': _bytes[25],
+        'leakPosition': _bytes[26],
+        'leakSpread': _bytes[27],
+        'leakVariation': (_bytes[28] & 0x80) == 0 ? _bytes[28] : 0,
+        'filmExposure': _bytes[29],
+        'charmeraColor': _bytes[31],
+      };
+
+  FilmRecipe? toFilmRecipe() {
+    // A textured MCR2 uses its own packed camera fields in these bytes.
+    if ((_bytes[28] & 0x80) != 0) return null;
+    try {
+      return FilmRecipe.fromJson({
+        'schemaVersion': 1,
+        'filmId': filmId,
+        'catalogHash': catalog,
+        'rendererHash': renderer,
+        'name': '原拍配方',
+        'customHash': customHash,
+        'parameters': {
+          for (final entry in _filmParameters.entries)
+            if (cameraParameterSupported(entry.key, filmId,
+                contract: filmContract))
+              entry.key: entry.value,
+        }
+      });
+    } on FormatException {
+      return null;
+    }
+  }
 
   ShootingRecipe resolve(CameraState camera, CompanionSnapshot snapshot,
       Map<String, dynamic> contract) {
@@ -150,20 +189,6 @@ class RecordedExposure {
     }
     final stamp = _words.getUint32(36, Endian.little);
     final fx = _words.getUint32(40, Endian.little);
-    final values = {
-      'grain': _bytes[18],
-      'haloGain': _bytes[20],
-      'haloSpread': _bytes[21],
-      'haloThreshold': _bytes[22],
-      'haloProfile': _bytes[23],
-      'grainSize': _bytes[24],
-      'leakGain': _bytes[25],
-      'leakPosition': _bytes[26],
-      'leakSpread': _bytes[27],
-      'leakVariation': (_bytes[28] & 0x80) == 0 ? _bytes[28] : 0,
-      'filmExposure': _bytes[29],
-      'charmeraColor': _bytes[31],
-    };
     return ShootingRecipe(
       name: '原拍配方',
       catalog: catalog,
@@ -172,7 +197,7 @@ class RecordedExposure {
         'filmId': filmId,
         'customHash': customHash,
         'parameters': {
-          for (final entry in values.entries)
+          for (final entry in _filmParameters.entries)
             if (cameraParameterSupported(entry.key, filmId, contract: contract))
               entry.key: entry.value,
         },

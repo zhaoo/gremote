@@ -315,7 +315,7 @@ void main() {
     await tester.pumpAndSettle();
     fixture.pending!.complete('content://old-session');
     await tester.pumpAndSettle();
-    expect(find.text('等待 GR III 连接'), findsOneWidget);
+    expect(find.text('等待相机连接'), findsOneWidget);
     await tester.runAsync(harness.connect);
     await tester.pumpAndSettle();
     expect(find.text('已选 1 张'), findsWidgets);

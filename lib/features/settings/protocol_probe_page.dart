@@ -38,7 +38,9 @@ class _ProtocolProbePageState extends ConsumerState<ProtocolProbePage> {
       final connection = ref.read(connectionControllerProvider);
       if (connection case ConnectionReady(:final snapshot)) {
         final current = controller.profile ??
-            ProtocolProfile(firmware: snapshot.identity.firmware);
+            ProtocolProfile(
+                firmware: snapshot.identity.firmware,
+                model: snapshot.identity.model.trim());
         await controller.saveProfile(current.copyWith(
           writeEncoding: includeWrite ? report.preferredEncoding : null,
           webSocket: report.webSocket,

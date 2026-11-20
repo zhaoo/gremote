@@ -17,7 +17,8 @@ import '../support/test_darkroom.dart';
 Future<TestDarkroom> pumpLibrary(WidgetTester tester,
     {required FakeMediaGateway gateway,
     Future<List<XFile>> Function()? pickPhotos,
-    String? initialLut}) async {
+    String? initialLut,
+    bool initialCamera = false}) async {
   tester.view.physicalSize = const Size(390, 844);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
@@ -30,7 +31,9 @@ Future<TestDarkroom> pumpLibrary(WidgetTester tester,
               queryParameters: initialLut == null ? null : {'lut': initialLut})
           .toString(),
       routes: [
-        GoRoute(path: '/library', builder: (_, __) => const LibraryPage()),
+        GoRoute(
+            path: '/library',
+            builder: (_, __) => LibraryPage(initialCamera: initialCamera)),
         GoRoute(
             path: '/edit/:id',
             builder: (_, state) => Text(
@@ -82,6 +85,13 @@ class ImportGateway extends FakeMediaGateway {
 }
 
 void main() {
+  testWidgets('archive entry opens the camera source immediately',
+      (tester) async {
+    await pumpLibrary(tester, gateway: library(), initialCamera: true);
+    expect(find.text('等待相机连接'), findsOneWidget);
+    expect(find.byKey(const ValueKey('media-1')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets(
       'official selection is consumed before photo handoff and never reapplied on reopen',
       (tester) async {
@@ -231,7 +241,7 @@ void main() {
     await pumpLibrary(tester, gateway: library());
     await tester.tap(find.text('相机'));
     await tester.pumpAndSettle();
-    expect(find.text('等待 GR III 连接'), findsOneWidget);
+    expect(find.text('等待相机连接'), findsOneWidget);
   });
 
   testWidgets('returning from camera rescans newly saved local photos',

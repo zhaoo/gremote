@@ -23,7 +23,7 @@ class RollExportPage extends ConsumerStatefulWidget {
       required this.recipe});
   final FilmRoll roll;
   final List<RollItem> items;
-  final FilmRecipe recipe;
+  final FilmRecipe? recipe;
   @override
   ConsumerState<RollExportPage> createState() => _RollExportPageState();
 }
@@ -65,10 +65,12 @@ class _RollExportPageState extends ConsumerState<RollExportPage> {
   }
 
   Future<void> _shareRecipe() async {
+    final recipe = widget.recipe;
+    if (recipe == null) return;
     try {
       await ref
           .read(mediaGatewayProvider)
-          .shareRecipe(RecipeCardCodec.encode(widget.recipe));
+          .shareRecipe(RecipeCardCodec.encode(recipe));
     } catch (error) {
       if (mounted) setState(() => _error = '配方卡分享失败：$error');
     }
@@ -146,17 +148,19 @@ class _RollExportPageState extends ConsumerState<RollExportPage> {
                         tooltip: '分享印样',
                         onPressed: () => _share(progress.uri!),
                         icon: const Icon(Icons.ios_share))),
-          const SizedBox(height: 32),
-          const Divider(),
-          const SizedBox(height: 16),
-          Text('把这卷的味道带走', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          const Text('配方卡只包含胶卷和效果参数，可在试卷台导入。'),
-          const SizedBox(height: 16),
-          OutlinedButton.icon(
-              onPressed: _shareRecipe,
-              icon: const Icon(Icons.ios_share),
-              label: const Text('分享配方卡')),
+          if (widget.recipe != null) ...[
+            const SizedBox(height: 32),
+            const Divider(),
+            const SizedBox(height: 16),
+            Text('把这卷的味道带走', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            const Text('配方卡只包含胶卷和效果参数，可在试卷台导入。'),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+                onPressed: _shareRecipe,
+                icon: const Icon(Icons.ios_share),
+                label: const Text('分享配方卡')),
+          ],
           if (_error != null)
             Padding(
                 padding: const EdgeInsets.only(top: 16),

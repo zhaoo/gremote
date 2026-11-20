@@ -5,8 +5,7 @@ import '../../camera/connection/connection_controller.dart';
 import '../../camera/connection/connection_state.dart';
 import '../film_workbench/companion_providers.dart';
 
-const m10vServiceUnavailableHint =
-    '未连接 M10V 服务 · 请检查配套 SD 服务与脚本是否已启用';
+const m10vServiceUnavailableHint = '未连接 M10V 服务 · 请检查配套 SD 服务与脚本是否已启用';
 
 /// Presentation policy over authenticated, current-session evidence.
 /// Missing pairing and service timeouts never establish stock firmware.
@@ -23,8 +22,15 @@ class CameraAvailability {
   factory CameraAvailability.fromState(
       {required bool connected,
       required bool paired,
+      bool supportsM10v = true,
       CompanionSyncState? sync,
       String? expectedInstanceId}) {
+    if (!supportsM10v) {
+      return const CameraAvailability(
+          canReadFilms: false,
+          canInstallFilms: false,
+          hint: '此机型不支持 M10V · 可使用遥控拍摄与照片传输');
+    }
     final caps = sync?.capabilities, snapshot = sync?.snapshot;
     final ready = connected &&
         paired &&
@@ -68,7 +74,8 @@ class CameraAvailability {
 
 final cameraAvailabilityProvider =
     Provider.autoDispose<CameraAvailability>((ref) {
-  final connected = ref.watch(connectionControllerProvider) is ConnectionReady;
+  final connection = ref.watch(connectionControllerProvider);
+  final connected = connection is ConnectionReady;
   final identity = ref.watch(effectiveCompanionIdentityProvider);
   final controller = ref.watch(companionSyncControllerProvider);
   void changed() => ref.invalidateSelf();
@@ -76,6 +83,7 @@ final cameraAvailabilityProvider =
   ref.onDispose(() => controller?.removeListener(changed));
   return CameraAvailability.fromState(
       connected: connected,
+      supportsM10v: !connected || connection.snapshot.identity.supportsM10v,
       paired: identity != null,
       sync: controller?.state,
       expectedInstanceId: identity?.instanceId);

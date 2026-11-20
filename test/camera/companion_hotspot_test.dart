@@ -66,6 +66,46 @@ CameraResponse _pairing() {
 }
 
 void main() {
+  test('shutter-path updates preserve the M10V API factory', () async {
+    final connection = _Connection();
+    final container = ProviderContainer(overrides: [
+      connectionControllerProvider.overrideWith(() => connection),
+      companionHotspotPairingProvider.overrideWith((_) async => null),
+    ]);
+    addTearDown(container.dispose);
+    container.read(connectionControllerProvider);
+    connection.change(_ready);
+    await container.read(companionHotspotPairingProvider.future);
+    final factory = container.read(companionApiFactoryProvider);
+    connection.change(_ready.copyWith(lastShutterPath: ShutterPath.ble));
+    expect(container.read(companionApiFactoryProvider), same(factory));
+  });
+  for (final model in ['RICOH GR IV', 'RICOH GR IV Monochrome']) {
+    test('$model ignores legacy credentials and never discovers M10V',
+        () async {
+      final connection = _Connection();
+      final transport = _Transport();
+      final container = ProviderContainer(overrides: [
+        connectionControllerProvider.overrideWith(() => connection),
+        companionHotspotTransportProvider.overrideWithValue(transport),
+      ]);
+      addTearDown(container.dispose);
+      container.read(connectionControllerProvider);
+      container.read(companionPairingIdentityProvider.notifier).state =
+          const PairingIdentity(
+              instanceId: 'legacy-camera', keyId: 'legacy-key');
+      connection.change(ConnectionReady(
+        snapshot: CameraSnapshot(
+            identity: CameraIdentity(model: model, firmware: '1.21'),
+            battery: const CameraBattery(level: 80, acPowered: false)),
+        firmwareWarning: true,
+      ));
+      await container.read(companionHotspotPairingProvider.future);
+      expect(transport.calls, isEmpty);
+      expect(container.read(effectiveCompanionIdentityProvider), isNull);
+      expect(container.read(companionNetworkReadyProvider), isFalse);
+    });
+  }
   test('a failed discovery read is retried without reconnecting Wi-Fi', () {
     fakeAsync((clock) {
       final connection = _Connection();

@@ -1,0 +1,217 @@
+{
+  "schema": "gremote.multicamera-firmware-evidence/v1",
+  "date": "2026-11-20",
+  "validation": "static-offline-only",
+  "images": [
+    {
+      "modelVersion": "GR IIIx 1.60",
+      "officialInput": "gr3x_v160-fwdc243b.bin",
+      "sha256": "708e79f3b7b96a7e1581b4acf4c412233050a1832718ef7f06c8397db1b431c7",
+      "bytes": 30391788,
+      "files": {
+        "usr/bin/bled": {
+          "sha256": "fd2b2678eea1bf8191c1f4346dfaade458fdcb4cea2952b06c6d3aa09f449740",
+          "bytes": 759956,
+          "routes": [],
+          "uuidOffsets": {
+            "35fe6272-6aa5-44d9-88e1-f09427f51a71": 550496,
+            "b4eb8905-7411-40a6-a367-2834c2157ea7": 550608,
+            "90638e5a-e77d-409d-b550-78f7e1ca5ab4": 584336,
+            "559644b8-e0bc-4011-929b-5cf9199851e7": 571588,
+            "0f291746-0c80-4726-87a7-3c501fd3b4b6": 526384
+          }
+        },
+        "usr/bin/webapid": {
+          "sha256": "75ffb326f53a469b48f2c29285963a76b3613419d5c80a9e0b633d28bb039797",
+          "bytes": 1206900,
+          "routes": [
+            "/v1/camera/shoot",
+            "/v1/camera/shoot/cancel",
+            "/v1/camera/shoot/compose",
+            "/v1/changes",
+            "/v1/changes issue event.",
+            "/v1/changes message received.",
+            "/v1/changes new websocket connection.",
+            "/v1/changes websocket connection closed. reason({})",
+            "/v1/device/finish",
+            "/v1/device/wlan/finish",
+            "/v1/lens/focus",
+            "/v1/photos/<string>/<string>",
+            "/v1/photos/<string>/<string>/info",
+            "/v1/photos/<string>/<string>/transfer",
+            "/v1/transfers, transferState({}), afterIndex({}), limit({})",
+            "GET /v1/debug/revisions",
+            "GET /v1/liveview",
+            "GET /v1/photos",
+            "GET /v1/photos/infos",
+            "GET /v1/photos/{}/{}",
+            "GET /v1/photos/{}/{}/info",
+            "GET /v1/ping",
+            "GET /v1/props",
+            "GET /v1/transfers",
+            "POST /v1/camera/shoot",
+            "POST /v1/camera/shoot/cancel",
+            "POST /v1/camera/shoot/compose",
+            "POST /v1/device/finish",
+            "POST /v1/device/wlan/finish",
+            "POST /v1/lens/focus",
+            "PUT /v1/params/camera",
+            "PUT /v1/params/device",
+            "PUT /v1/params/lens",
+            "PUT /v1/photos/{}/{}/transfer"
+          ],
+          "uuidOffsets": {
+            "35fe6272-6aa5-44d9-88e1-f09427f51a71": -1,
+            "b4eb8905-7411-40a6-a367-2834c2157ea7": -1,
+            "90638e5a-e77d-409d-b550-78f7e1ca5ab4": -1,
+            "559644b8-e0bc-4011-929b-5cf9199851e7": -1
+          }
+        }
+      },
+      "cameraTested": false
+    },
+    {
+      "modelVersion": "GR IIIx 1.71",
+      "officialInput": "gr3x_v171-fwdc243b.bin",
+      "sha256": "7d7e9d8173bcc8bcc8bab1df185ae66671ff2a33c870067a6f4c029c628bedc9",
+      "bytes": 30476980,
+      "files": {
+        "usr/bin/bled": {
+          "sha256": "fd2b2678eea1bf8191c1f4346dfaade458fdcb4cea2952b06c6d3aa09f449740",
+          "bytes": 759956,
+          "routes": [],
+          "uuidOffsets": {
+            "35fe6272-6aa5-44d9-88e1-f09427f51a71": 550496,
+            "b4eb8905-7411-40a6-a367-2834c2157ea7": 550608,
+            "90638e5a-e77d-409d-b550-78f7e1ca5ab4": 584336,
+            "559644b8-e0bc-4011-929b-5cf9199851e7": 571588,
+            "0f291746-0c80-4726-87a7-3c501fd3b4b6": 526384
+          }
+        },
+        "usr/bin/webapid": {
+          "sha256": "75ffb326f53a469b48f2c29285963a76b3613419d5c80a9e0b633d28bb039797",
+          "bytes": 1206900,
+          "routes": [
+            "/v1/camera/shoot",
+            "/v1/camera/shoot/cancel",
+            "/v1/camera/shoot/compose",
+            "/v1/changes",
+            "/v1/changes issue event.",
+            "/v1/changes message received.",
+            "/v1/changes new websocket connection.",
+            "/v1/changes websocket connection closed. reason({})",
+            "/v1/device/finish",
+            "/v1/device/wlan/finish",
+            "/v1/lens/focus",
+            "/v1/photos/<string>/<string>",
+            "/v1/photos/<string>/<string>/info",
+            "/v1/photos/<string>/<string>/transfer",
+            "/v1/transfers, transferState({}), afterIndex({}), limit({})",
+            "GET /v1/debug/revisions",
+            "GET /v1/liveview",
+            "GET /v1/photos",
+            "GET /v1/photos/infos",
+            "GET /v1/photos/{}/{}",
+            "GET /v1/photos/{}/{}/info",
+            "GET /v1/ping",
+            "GET /v1/props",
+            "GET /v1/transfers",
+            "POST /v1/camera/shoot",
+            "POST /v1/camera/shoot/cancel",
+            "POST /v1/camera/shoot/compose",
+            "POST /v1/device/finish",
+            "POST /v1/device/wlan/finish",
+            "POST /v1/lens/focus",
+            "PUT /v1/params/camera",
+            "PUT /v1/params/device",
+            "PUT /v1/params/lens",
+            "PUT /v1/photos/{}/{}/transfer"
+          ],
+          "uuidOffsets": {
+            "35fe6272-6aa5-44d9-88e1-f09427f51a71": -1,
+            "b4eb8905-7411-40a6-a367-2834c2157ea7": -1,
+            "90638e5a-e77d-409d-b550-78f7e1ca5ab4": -1,
+            "559644b8-e0bc-4011-929b-5cf9199851e7": -1
+          }
+        }
+      },
+      "cameraTested": false
+    },
+    {
+      "files": {
+        "/usr/bin/bled": {
+          "sha256": "cace4337af0dd4b9dcf2a8078a4efedb585da9318bbfb1a30fe296c956ec35df",
+          "bytes": 684436,
+          "routes": [],
+          "uuidOffsets": {
+            "35fe6272-6aa5-44d9-88e1-f09427f51a71": 581912,
+            "b4eb8905-7411-40a6-a367-2834c2157ea7": 581952,
+            "90638e5a-e77d-409d-b550-78f7e1ca5ab4": 607700,
+            "559644b8-e0bc-4011-929b-5cf9199851e7": 605344,
+            "0f291746-0c80-4726-87a7-3c501fd3b4b6": 570200
+          }
+        },
+        "/usr/bin/webapid": {
+          "sha256": "27d3d36fbb8d6d5681f6901beb901600ab0a6bae34b51f3103d5e553717f8dd2",
+          "bytes": 833940,
+          "routes": [
+            "/v1/camera/shoot",
+            "/v1/camera/shoot/cancel",
+            "/v1/camera/shoot/compose",
+            "/v1/changes",
+            "/v1/changes issue event.",
+            "/v1/changes message received.",
+            "/v1/changes new websocket connection.",
+            "/v1/changes websocket connection closed.",
+            "/v1/configs/firmware/cancel",
+            "/v1/configs/firmware/prepare",
+            "/v1/device/finish",
+            "/v1/device/wlan/finish",
+            "/v1/lens/focus",
+            "/v1/photos/<string>/<string>",
+            "/v1/photos/<string>/<string>/imgctrl",
+            "/v1/photos/<string>/<string>/info",
+            "/v1/photos/<string>/<string>/transfer",
+            "/v1/transfers, transferState({}), afterIndex({}), limit({}), storageId({})",
+            "GET /v1/debug/revisions",
+            "GET /v1/liveview",
+            "GET /v1/logs/camera",
+            "GET /v1/photos",
+            "GET /v1/photos/infos",
+            "GET /v1/photos/{}/{}",
+            "GET /v1/photos/{}/{}/imgctrl",
+            "GET /v1/photos/{}/{}/info",
+            "GET /v1/ping",
+            "GET /v1/props",
+            "GET /v1/transfers",
+            "POST /v1/camera/shoot",
+            "POST /v1/camera/shoot/cancel",
+            "POST /v1/camera/shoot/compose",
+            "POST /v1/configs/firmware/cancel",
+            "POST /v1/configs/firmware/prepare",
+            "POST /v1/device/finish",
+            "POST /v1/device/wlan/finish",
+            "POST /v1/lens/focus",
+            "PUT /v1/configs/firmware",
+            "PUT /v1/device/image/endscreen",
+            "PUT /v1/params/camera",
+            "PUT /v1/params/device",
+            "PUT /v1/params/lens",
+            "PUT /v1/photos/{}/{}/transfer"
+          ],
+          "uuidOffsets": {
+            "35fe6272-6aa5-44d9-88e1-f09427f51a71": -1,
+            "b4eb8905-7411-40a6-a367-2834c2157ea7": -1,
+            "90638e5a-e77d-409d-b550-78f7e1ca5ab4": -1,
+            "559644b8-e0bc-4011-929b-5cf9199851e7": -1
+          }
+        }
+      },
+      "cameraTested": false,
+      "modelVersion": "GR IV 1.21 / GR IV Monochrome 1.11",
+      "officialInput": "gr4_v121-fwdc248b.bin / gr4_mono_v111-fwdc248b.bin",
+      "sha256": "bf4d6c35f6da1c16ed5f2943af570eab8fef326f7501a2b3ce5413fa55ec5c99",
+      "bytes": 38917288
+    }
+  ]
+}

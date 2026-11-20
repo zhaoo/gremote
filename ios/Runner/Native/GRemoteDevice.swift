@@ -127,7 +127,7 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
                 (response as? HTTPURLResponse)?.statusCode == 200, let data = data,
                 let props = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
                 let model = props["model"] as? String,
-                model.trimmingCharacters(in: .whitespacesAndNewlines) == "RICOH GR III"
+                ["RICOH GR III", "RICOH GR IIIx", "RICOH GR IV", "RICOH GR IV Monochrome", "RICOH GR III HDF", "RICOH GR IIIx HDF", "RICOH GR IV HDF"].contains(model.trimmingCharacters(in: .whitespacesAndNewlines))
           else { retryOrFail(); return }
           self.cameraWiFi = wifi
           self.connected = true
@@ -423,11 +423,12 @@ final class GRemoteDevice: NSObject, CameraDeviceHostApi, URLSessionDataDelegate
     }
     var data: [String: Any] = [
       "id": id,
-      "code": recorded.code,
       "hash": digest.finalize().map { String(format: "%02x", $0) }.joined(),
     ]
+    if let code = recorded.code { data["code"] = code }
     if let capturedAt = recorded.capturedAt { data["capturedAt"] = capturedAt }
     if let recipe = recorded.exposureRecipe { data["exposureRecipe"] = recipe }
+    if let frame = recorded.rollFrame { data["rollFrame"] = frame }
     return data
   }
   func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {

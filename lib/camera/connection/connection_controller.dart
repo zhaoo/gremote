@@ -92,6 +92,7 @@ class ConnectionController extends Notifier<CameraConnectionState> {
   Future<void>? _connectionInFlight;
   bool _autoAdopt = true;
   Future<void>? _wifiAdoptionInFlight;
+  Future<List<BleDeviceCandidate>>? _discoveryInFlight;
 
   @override
   CameraConnectionState build() {
@@ -115,6 +116,44 @@ class ConnectionController extends Notifier<CameraConnectionState> {
 
   Future<void> connect({String? deviceId}) =>
       _startUserConnection(() => _connect(deviceId));
+
+  /// Discovery does not replace the active camera or its running session.
+  Future<List<BleDeviceCandidate>> discoverCameras() async {
+    await _permissionGate.ensureGranted();
+    return _scanNearby();
+  }
+
+  Future<List<BleDeviceCandidate>> _scanNearby() => _discoveryInFlight ??= _ble
+      .scan(const Duration(seconds: 8))
+      .whenComplete(() => _discoveryInFlight = null);
+
+  Future<void> switchDevice(BleDeviceCandidate device) async {
+    final disconnect = cancel();
+    final disconnectedGeneration = _generation;
+    await disconnect;
+    if (_generation != disconnectedGeneration) return;
+    await _startConnection(() async {
+      _autoAdopt = true;
+      final generation = ++_generation;
+      _selectedDevice = device;
+      _bootstrap = null;
+      _snapshot = null;
+      _retryCount = 0;
+      _setState(generation, const ConnectionPermissions());
+      try {
+        await _permissionGate.ensureGranted();
+        _check(generation);
+        await _run(generation, _ConnectionStep.pairing);
+      } on _StaleAttempt {
+        return;
+      } catch (error) {
+        if (generation == _generation) {
+          state =
+              ConnectionFailed(_mapFailure(ConnectionStage.permissions, error));
+        }
+      }
+    });
+  }
 
   Future<void> _startUserConnection(Future<void> Function() action) {
     final adoption = _wifiAdoptionInFlight;
@@ -355,7 +394,7 @@ class ConnectionController extends Notifier<CameraConnectionState> {
         step = _ConnectionStep.scan;
         _retryStep = step;
         _setState(generation, const ConnectionScanning());
-        final devices = await _ble.scan(const Duration(seconds: 8));
+        final devices = await _scanNearby();
         _check(generation);
         if (devices.isEmpty) {
           throw const _ConnectionFault('cameraNotFound');
@@ -446,8 +485,13 @@ class ConnectionController extends Notifier<CameraConnectionState> {
       if (step.index <= _ConnectionStep.props.index) {
         step = _ConnectionStep.props;
         _retryStep = step;
-        await _api.props();
+        final props = await _api.props();
         _check(generation);
+        final model = props['model'];
+        if (model is! String ||
+            model.trim() != _requireSnapshot().identity.model.trim()) {
+          throw const _ConnectionFault('cameraIdentityMismatch');
+        }
       }
 
       final snapshot = _requireSnapshot();
@@ -513,6 +557,47 @@ class ConnectionController extends Notifier<CameraConnectionState> {
   }
 
   void _onDeviceEvent(CameraDeviceEvent event) {
+    if (event.type == 'cameraTrace') {
+      final payload = _jsonObject(event.jsonPayload);
+      const phases = {
+        'requestBegin',
+        'responseHeaders',
+        'responseEnd',
+        'requestIo',
+        'streamBegin',
+        'streamHeaders',
+        'streamFirstBytes',
+        'streamEnd',
+        'streamConnectIo',
+        'streamBodyIo',
+      };
+      const endpoints = {
+        '/v1/liveview',
+        '/v1/props',
+        '/v1/params',
+        '/v1/params/device',
+        '/m10v/v1/hotspot',
+        '/m10v/v1/capabilities',
+        '/m10v/v1/state',
+        '/m10v/v1/extensions/capabilities',
+        '/m10v/v1/extensions/state',
+      };
+      final phase = payload?['phase'];
+      final endpoint = payload?['endpoint'];
+      final status = payload?['status'];
+      if (phases.contains(phase) && endpoints.contains(endpoint)) {
+        _diagnostics.record(DiagnosticEvent(
+          stage: 'camera.$phase',
+          monotonicMicros: _clock.elapsedMicroseconds,
+          durationMs: 0,
+          retryCount: _retryCount,
+          statusCode:
+              status is int && status >= 100 && status <= 599 ? status : null,
+          endpointPath: endpoint as String,
+        ));
+      }
+      return;
+    }
     if (event.type == 'bleTrace') {
       final payload = _jsonObject(event.jsonPayload);
       const phases = {

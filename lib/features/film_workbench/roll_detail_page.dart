@@ -15,8 +15,8 @@ final rollThumbnailProvider =
   if (item.mediaId == null) return null;
   final gateway = ref.watch(mediaGatewayProvider);
   try {
-    if (item.identity.instanceId == 'local-photo' &&
-        await gateway.contentHash(item.mediaId!) != item.identity.contentHash) {
+    final hash = item.originalPreviewHash;
+    if (hash != null && await gateway.contentHash(item.mediaId!) != hash) {
       return null;
     }
     return await gateway.thumbnail(item.mediaId!, 384);
@@ -36,6 +36,8 @@ class _RollDetailPageState extends ConsumerState<RollDetailPage> {
   String? _error;
   bool _busy = false;
   Future<void> _import(FilmRoll roll) async {
+    final fingerprint = roll.recipeFingerprint;
+    if (fingerprint == null) return;
     final entries = await showModalBottomSheet<List<LocalMediaEntry>>(
         context: context,
         isScrollControlled: true,
@@ -49,7 +51,7 @@ class _RollDetailPageState extends ConsumerState<RollDetailPage> {
     try {
       final repository = ref.read(filmRepositoryProvider),
           gateway = ref.read(mediaGatewayProvider);
-      final recipe = await repository.recipe(roll.recipeFingerprint);
+      final recipe = await repository.recipe(fingerprint);
       final importer =
           LocalRollImporter(repository: repository, gateway: gateway);
       for (final entry in entries) {
@@ -103,8 +105,10 @@ class _RollDetailPageState extends ConsumerState<RollDetailPage> {
 
   Future<void> _export(FilmRoll roll, List<RollItem> items) async {
     try {
-      final recipe =
-          await ref.read(filmRepositoryProvider).recipe(roll.recipeFingerprint);
+      final fingerprint = roll.recipeFingerprint;
+      final recipe = fingerprint == null
+          ? null
+          : await ref.read(filmRepositoryProvider).recipe(fingerprint);
       if (mounted) {
         await Navigator.push<void>(
             context,
@@ -124,7 +128,7 @@ class _RollDetailPageState extends ConsumerState<RollDetailPage> {
     return Scaffold(
         backgroundColor: context.palette.background,
         appBar: AppBar(
-            title: const Text('数字胶卷'),
+            title: const Text('胶卷详情'),
             backgroundColor: context.palette.background),
         body: rolls.when(
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -152,7 +156,7 @@ class _RollDetailPageState extends ConsumerState<RollDetailPage> {
                                               color: context.palette.text)),
                                       const SizedBox(height: 12),
                                       Text(
-                                          '${items.length} / ${roll.targetCount} 张 · ${roll.status == FilmRollStatus.open ? '拍摄中' : '已结束'}',
+                                          '${items.length} / ${roll.targetCount} 张 · ${roll.statusLabel}',
                                           style: TextStyle(
                                               color: context.palette.accent)),
                                       const SizedBox(height: 24),
@@ -170,20 +174,26 @@ class _RollDetailPageState extends ConsumerState<RollDetailPage> {
                                           spacing: 10,
                                           runSpacing: 8,
                                           children: [
-                                            OutlinedButton.icon(
-                                                onPressed: _busy
-                                                    ? null
-                                                    : () => _import(roll),
-                                                icon: const Icon(Icons
-                                                    .add_photo_alternate_outlined),
-                                                label: Text(
-                                                    _busy ? '正在归档…' : '导入照片')),
+                                            if (roll.recipeFingerprint != null)
+                                              OutlinedButton.icon(
+                                                  onPressed: _busy
+                                                      ? null
+                                                      : () => _import(roll),
+                                                  icon: const Icon(Icons
+                                                      .add_photo_alternate_outlined),
+                                                  label: Text(_busy
+                                                      ? '正在归档…'
+                                                      : '导入照片')),
                                             FilledButton.icon(
                                                 onPressed: () =>
                                                     _export(roll, items),
                                                 icon: const Icon(
                                                     Icons.grid_on_outlined),
-                                                label: const Text('联系印样 / 配方卡'))
+                                                label: Text(
+                                                    roll.recipeFingerprint ==
+                                                            null
+                                                        ? '联系印样'
+                                                        : '联系印样 / 配方卡'))
                                           ]),
                                       if (roll.status == FilmRollStatus.open)
                                         TextButton(
@@ -241,7 +251,7 @@ class _RollDetailPageState extends ConsumerState<RollDetailPage> {
                                                       const EdgeInsets.only(
                                                           left: 8),
                                                   child: Text(
-                                                      '${i + 1}'
+                                                      '${item.frameNumber ?? i + 1}'
                                                           .padLeft(2, '0'),
                                                       style: TextStyle(
                                                           color: context

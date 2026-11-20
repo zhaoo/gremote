@@ -47,6 +47,21 @@ void main() {
   tearDown(() => db.close());
 
   group('LocalMediaRepository', () {
+    test(
+        'GR filter includes IIIx and IV imports without including phone photos',
+        () async {
+      gateway.entries = [for (var i = 1; i <= 5; i++) entry(i)];
+      gateway.exif = {
+        1: meta('RICOH GR III'),
+        2: meta('RICOH GR IIIx'),
+        3: meta('RICOH GR IV'),
+        4: meta('RICOH GR IV Monochrome'),
+        5: meta('Xiaomi 14'),
+      };
+      await repository.scan().drain<void>();
+      expect((await repository.list(grOnly: true)).map((item) => item.id),
+          [4, 3, 2, 1]);
+    });
     test('first scan reads EXIF in batches and reports progress', () async {
       final progress = await repository.scan().toList();
       expect(progress.map((p) => p.done), [0, 2, 3]);

@@ -74,7 +74,7 @@ Future<PairingIdentity> importPairing(
       value.length != 6 ||
       value['schema'] != 'm10v.companion-pairing/v1' ||
       value['protocol'] != 1 ||
-      value['model'] != 'GR III' ||
+      !const ['GR III', 'GR IIIx'].contains(value['model']) ||
       value['instanceId'] is! String ||
       !hex.hasMatch(value['instanceId'] as String) ||
       value['keyId'] is! String ||

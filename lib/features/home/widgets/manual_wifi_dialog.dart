@@ -86,7 +86,7 @@ class _ManualWifiDialogState extends State<ManualWifiDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: const Text('连接 GR III Wi-Fi'),
+        title: const Text('连接相机 Wi-Fi'),
         content: SingleChildScrollView(
             child: Column(
           mainAxisSize: MainAxisSize.min,

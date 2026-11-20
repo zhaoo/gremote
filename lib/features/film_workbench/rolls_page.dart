@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../film/capture/active_roll_context.dart';
@@ -41,11 +42,26 @@ class RollsPage extends ConsumerWidget {
         error: (error, _) => Center(child: Text('胶卷读取失败：$error')),
         data: (rolls) =>
             ListView(key: const PageStorageKey('film-rolls'), children: [
-              WorkbenchHeading('数字胶卷', '把一天，拍成一卷。', 'A DAY, A ROLL.',
+              WorkbenchHeading('胶卷归档', '机身拍摄 · 按帧归档 · 导出印样', 'A DAY, A ROLL.',
                   action: IconButton(
                       tooltip: '新建胶卷',
                       onPressed: () => _new(context, ref),
                       icon: Icon(Icons.add, color: context.palette.text))),
+              Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 0, 22, 20),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('机身胶卷：下载拍摄的 JPEG 原片，自动按卷和帧序归档，无需新建胶卷。打开一卷即可导出印样。',
+                            style: TextStyle(
+                                color: context.palette.muted, height: 1.6)),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                            onPressed: () =>
+                                context.go('/library?source=camera'),
+                            icon: const Icon(Icons.download_outlined),
+                            label: const Text('从相机导入胶卷')),
+                      ])),
               if (rolls.isEmpty)
                 Padding(
                     padding: const EdgeInsets.fromLTRB(30, 52, 30, 40),
@@ -59,13 +75,13 @@ class RollsPage extends ConsumerWidget {
                           child: Icon(Icons.local_movies_outlined,
                               size: 40, color: context.palette.accent)),
                       const SizedBox(height: 26),
-                      Text('第一卷，从今天开始',
+                      Text('还没有归档的胶卷',
                           style: TextStyle(
                               fontSize: 22,
                               color: context.palette.text,
                               fontWeight: FontWeight.w600)),
                       const SizedBox(height: 12),
-                      Text('选一种颜色，留下一段日常。\n开卷后可导入真实照片，再整理成联系印样。',
+                      Text('也可新建 App 胶卷，手动导入照片整理成印样。\nApp 开卷不会启动机身胶卷模式。',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                               color: context.palette.muted, height: 1.8)),
