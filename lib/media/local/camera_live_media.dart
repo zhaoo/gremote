@@ -8,15 +8,34 @@ import '../../camera/http/camera_files.dart';
 import '../../platform/motion_photo_api.dart';
 
 class PreparedCameraLivePhoto {
-  const PreparedCameraLivePhoto(
-      this.directory, this.jpeg, this.mp4, this.presentationTimestampUs);
+  PreparedCameraLivePhoto(
+      this.directory, this.jpeg, this.mp4, this.presentationTimestampUs,
+      {this.sourceCameraKey});
 
   final Directory directory;
   final File jpeg;
   final File mp4;
   final int? presentationTimestampUs;
+  final String? sourceCameraKey;
+
+  int _leases = 0;
+  bool _disposeRequested = false;
+  void retain() {
+    if (_disposeRequested) throw StateError('Live preparation is disposed');
+    _leases++;
+  }
+
+  Future<void> release() async {
+    if (_leases > 0) _leases--;
+    if (_disposeRequested && _leases == 0) await _delete();
+  }
 
   Future<void> dispose() async {
+    _disposeRequested = true;
+    if (_leases == 0) await _delete();
+  }
+
+  Future<void> _delete() async {
     try {
       await directory.delete(recursive: true);
     } on FileSystemException {
@@ -34,7 +53,7 @@ class CameraLiveMedia {
   final Future<Directory> Function() temporaryDirectory;
 
   Future<PreparedCameraLivePhoto?> prepare(CameraLiveApi api, CameraFile photo,
-      {required bool Function() isCurrent}) async {
+      {required bool Function() isCurrent, String? sourceCameraKey}) async {
     final manifest = await api.liveManifest(photo);
     if (manifest == null || !isCurrent()) return null;
     final dir = await (await temporaryDirectory()).createTemp('gremote-live-');
@@ -76,7 +95,8 @@ class CameraLiveMedia {
       }
       if (!isCurrent()) return null;
       ready = true;
-      return PreparedCameraLivePhoto(dir, jpeg, mp4, timestamp);
+      return PreparedCameraLivePhoto(dir, jpeg, mp4, timestamp,
+          sourceCameraKey: sourceCameraKey);
     } finally {
       if (!ready) {
         try {

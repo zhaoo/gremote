@@ -5,7 +5,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show defaultTargetPlatform;
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -22,11 +22,12 @@ import '../../diagnostics/diagnostic_store.dart';
 import '../../film/capture/camera_roll_importer.dart';
 import '../../platform/device_api.g.dart';
 import 'camera_transfer.dart';
-import 'camera_live_photo_page.dart';
+import 'photo_preview_surface.dart';
 import 'library_controller.dart';
 import '../home/import_history.dart';
 import '../film_workbench/companion_providers.dart';
 import '../film_workbench/workbench_providers.dart';
+import '../film_workbench/roll_archive_actions.dart';
 import '../../camera/recipe/shooting_recipe.dart';
 import '../camera/shooting_recipes_page.dart';
 
@@ -50,22 +51,39 @@ class CameraGalleryService {
   Future<List<CameraFile>> photos() async =>
       (await api.photos()).where((file) => file.downloadable).toList();
 
-  Future<Uint8List> thumbnail(CameraFile file) =>
-      transferGate.thumbnail(() => api.thumbnail(file));
+  Future<Uint8List> thumbnail(CameraFile file, {bool Function()? isCurrent}) =>
+      transferGate.thumbnail(() {
+        if (isCurrent?.call() == false)
+          throw StateError('Camera session changed');
+        return api.thumbnail(file);
+      });
 
-  Future<String> download(CameraFile file) async {
+  Future<String> download(CameraFile file, {bool Function()? isCurrent}) async {
+    if (isCurrent?.call() == false) throw StateError('Camera session changed');
     if (!file.downloadable) throw ArgumentError.value(file.file, 'file');
     if (!Platform.isIOS &&
         await host.androidSdkInt() < 29 &&
         !(await Permission.storage.request()).isGranted) {
       throw StateError('Storage permission denied');
     }
+    if (isCurrent?.call() == false) throw StateError('Camera session changed');
     return host.downloadPhoto(file.dir, file.file);
   }
 }
 
 class CameraGallery extends ConsumerStatefulWidget {
-  const CameraGallery({super.key});
+  const CameraGallery(
+      {super.key,
+      this.initialFiles,
+      this.startDownload = false,
+      this.sourceCameraKey,
+      this.singlePhoto = false,
+      this.initialPreview});
+  final List<CameraFile>? initialFiles;
+  final bool startDownload;
+  final String? sourceCameraKey;
+  final bool singlePhoto;
+  final Uint8List? initialPreview;
 
   @override
   ConsumerState<CameraGallery> createState() => _CameraGalleryState();
@@ -84,6 +102,8 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
   CameraRollFrame? _currentRollFrame;
   final _clock = Stopwatch()..start();
   final _thumbnails = <String, Future<Uint8List>>{};
+  Uint8List? _singlePreview;
+  bool _singlePhotoSaved = false;
   bool _loading = false;
   bool _downloading = false;
   bool _selectionMode = false;
@@ -114,10 +134,27 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
   int _completed = 0;
   int _total = 0;
 
+  bool _sourceIsCurrent() =>
+      mounted &&
+      (widget.initialFiles == null ||
+          (widget.sourceCameraKey != null &&
+              ref.read(connectionControllerProvider) is ConnectionReady &&
+              ref.read(cameraArchiveStableKeyProvider) ==
+                  widget.sourceCameraKey));
+
   @override
   void initState() {
     super.initState();
     _service = ref.read(cameraGalleryServiceProvider);
+    _singlePreview = widget.initialPreview;
+    if (widget.initialFiles?.isNotEmpty == true) {
+      if (widget.initialFiles!.every((file) => file.extension == 'DNG')) {
+        _format = 'RAW';
+      } else if (widget.initialFiles!
+          .every((file) => file.extension != 'DNG')) {
+        _format = 'JPG';
+      }
+    }
     final connection = ref.read(connectionControllerProvider);
     if (connection is ConnectionReady) _cameraKey = connection.cameraKey;
     _progressSubscription = _service.events.listen((event) {
@@ -171,7 +208,11 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted &&
           ref.read(connectionControllerProvider) is ConnectionReady) {
-        unawaited(_refresh());
+        unawaited(_refresh().then((_) {
+          if (mounted && widget.startDownload && _files.isNotEmpty) {
+            unawaited(_download(_files));
+          }
+        }));
       }
     });
   }
@@ -184,16 +225,30 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(covariant CameraGallery oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final files = widget.initialFiles;
+    if (files != null &&
+        !listEquals(files.map((f) => f.remoteId).toList(),
+            oldWidget.initialFiles?.map((f) => f.remoteId).toList())) {
+      // A roll index may discover more verified originals while this view is open.
+      // Never expand this scoped list using the camera's general photo listing.
+      _files = files;
+      _selected.removeWhere((id) => !files.any((f) => f.remoteId == id));
+    }
+  }
+
   Future<void> _refresh() async {
-    if (_loading || _downloading) return;
+    if (_loading || _downloading || !_sourceIsCurrent()) return;
     final session = _session;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      final files = await _service.photos();
-      if (!mounted || session != _session) return;
+      final files = widget.initialFiles ?? await _service.photos();
+      if (!mounted || session != _session || !_sourceIsCurrent()) return;
       setState(() {
         _files = files;
         _selected.removeWhere((id) => !files.any((f) => f.remoteId == id));
@@ -209,7 +264,7 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
   }
 
   Future<void> _download(List<CameraFile> files) async {
-    if (_downloading || files.isEmpty) return;
+    if (_downloading || files.isEmpty || !_sourceIsCurrent()) return;
     setState(() {
       _downloading = true;
       _completed = 0;
@@ -232,7 +287,8 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
       await service.transferGate.originals(() async {
         for (final file in files) {
           if (!mounted || session != _session || _stopAfterCurrent) break;
-          if (ref.read(connectionControllerProvider) is! ConnectionReady) break;
+          if (ref.read(connectionControllerProvider) is! ConnectionReady ||
+              !_sourceIsCurrent()) break;
           setState(() {
             _recordedHashes.remove(file.remoteId);
             _recordedFilms.remove(file.remoteId);
@@ -246,7 +302,10 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
             _expected = -1;
           });
           try {
-            final uri = await service.download(file);
+            final uri = await service.download(file,
+                isCurrent: () =>
+                    mounted && session == _session && _sourceIsCurrent());
+            if (!mounted || session != _session || !_sourceIsCurrent()) break;
             final metadataStart = _clock.elapsedMicroseconds;
             final code = _recordedFilms[file.remoteId];
             final hash = _recordedHashes[file.remoteId];
@@ -320,6 +379,7 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
             successes++;
             ref.invalidate(importHistoryProvider);
             _saved.add(file.remoteId);
+            if (widget.singlePhoto) _singlePhotoSaved = true;
             _selected.remove(file.remoteId);
           } catch (error) {
             if (!mounted || session != _session) break;
@@ -389,6 +449,7 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
   Widget build(BuildContext context) {
     if (_recordedFilms.isNotEmpty) ref.watch(bundledLeicaCameraCatalogProvider);
     final ready = ref.watch(connectionControllerProvider) is ConnectionReady;
+    ref.watch(cameraArchiveStableKeyProvider);
     ref.listen(connectionControllerProvider, (previous, next) {
       if (previous is ConnectionReady && next is! ConnectionReady) {
         setState(() {
@@ -428,6 +489,7 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
         });
       }
     });
+    if (widget.singlePhoto) return _singlePhotoView(ready);
     if (!ready) {
       return const _GalleryEmpty(
         icon: Icons.wifi_off_rounded,
@@ -435,6 +497,11 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
         message: '先在首页连接相机 Wi-Fi，再浏览和下载原图。',
       );
     }
+    if (!_sourceIsCurrent())
+      return const _GalleryEmpty(
+          icon: Icons.cameraswitch_outlined,
+          title: '相机已切换',
+          message: '返回胶卷列表重新读取');
     final groups = <String, List<CameraFile>>{};
     for (final file in _files) {
       groups.putIfAbsent('${file.dir}/${file.baseName}', () => []).add(file);
@@ -537,6 +604,66 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
       WorkspaceReveal(
           visible: _selectionMode || _downloading, child: _savePanel()),
     ]);
+  }
+
+  Widget _singlePhotoView(bool ready) {
+    final photo = widget.initialFiles!.single;
+    final current = ready && _sourceIsCurrent();
+    Future<Uint8List>? preview;
+    if (_singlePreview == null && current) {
+      preview = _thumbnails.putIfAbsent(photo.remoteId, () async {
+        final bytes = await _service.thumbnail(photo,
+            isCurrent: () => mounted && _sourceIsCurrent());
+        if (!mounted || !_sourceIsCurrent())
+          throw StateError('Camera session changed');
+        _singlePreview = bytes;
+        return bytes;
+      });
+    }
+    return PopScope(
+        canPop: !_downloading,
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Expanded(
+              child: FutureBuilder<Uint8List>(
+                  future: preview,
+                  builder: (context, snapshot) => PhotoPreviewSurface(
+                      bytes: _singlePreview ?? snapshot.data,
+                      raw: photo.extension == 'DNG',
+                      loading: _singlePreview == null &&
+                          snapshot.connectionState ==
+                              ConnectionState.waiting))),
+          if (!current)
+            Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                child: Text(ready ? '相机已切换' : '相机未连接',
+                    textAlign: TextAlign.center,
+                    style:
+                        TextStyle(color: context.palette.muted, fontSize: 12))),
+          if (_error != null)
+            Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                child: Text(_error!,
+                    style: TextStyle(
+                        color: context.palette.danger, fontSize: 12))),
+          if (_downloading)
+            _savePanel()
+          else
+            SafeArea(
+                top: false,
+                child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
+                    child: FilledButton.icon(
+                        onPressed: current && !_singlePhotoSaved
+                            ? () => _download([photo])
+                            : null,
+                        icon: Icon(
+                            _singlePhotoSaved
+                                ? Icons.check
+                                : Icons.download_outlined,
+                            size: 18),
+                        label: Text(_singlePhotoSaved ? '已保存到手机' : '保存原图')))),
+        ]));
   }
 
   Widget _savePanel() {
@@ -685,9 +812,10 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
     final cover = jpeg ?? files.first;
     final selected = files.where((f) => _selected.contains(f.remoteId)).length;
     final saved = files.where((f) => _saved.contains(f.remoteId)).length;
-    final preview = _thumbnails.putIfAbsent(
-        cover.remoteId, () => _service.thumbnail(cover));
+    final preview = _thumbnails.putIfAbsent(cover.remoteId,
+        () => _service.thumbnail(cover, isCurrent: _sourceIsCurrent));
     return InkWell(
+      key: ValueKey('camera-gallery-photo-${cover.remoteId}'),
       borderRadius: BorderRadius.zero,
       onTap: _downloading
           ? null
@@ -831,6 +959,19 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    SizedBox(
+                        height: 240,
+                        child: FutureBuilder<Uint8List>(
+                            future: _thumbnails.putIfAbsent(
+                                (jpeg ?? files.first).remoteId,
+                                () => _service.thumbnail(jpeg ?? files.first,
+                                    isCurrent: _sourceIsCurrent)),
+                            builder: (_, snapshot) => PhotoPreviewSurface(
+                                bytes: snapshot.data,
+                                raw: jpeg == null,
+                                loading: snapshot.connectionState ==
+                                    ConnectionState.waiting))),
+                    const SizedBox(height: 16),
                     Text(files.first.baseName,
                         style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 6),
@@ -859,21 +1000,6 @@ class _CameraGalleryState extends ConsumerState<CameraGallery> {
                             icon: const Icon(Icons.download_rounded)),
                       ),
                     const SizedBox(height: 8),
-                    if (jpeg != null &&
-                        defaultTargetPlatform == TargetPlatform.android)
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.motion_photos_on_outlined),
-                        title: const Text('读取动态照片'),
-                        onTap: () {
-                          Navigator.pop(sheetContext);
-                          Navigator.of(context, rootNavigator: true).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => CameraLivePhotoPage(jpeg),
-                            ),
-                          );
-                        },
-                      ),
                     if (recorded != null || exposure != null)
                       FilledButton.tonal(
                         onPressed: () {

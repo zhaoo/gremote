@@ -6,11 +6,23 @@ import 'package:gremote/diagnostics/diagnostic_redactor.dart';
 import 'package:gremote/diagnostics/diagnostic_store.dart';
 
 void main() {
+  test('diagnostics export the actual supplied app version and build', () {
+    final store = DiagnosticStore(persistence: _Persistence());
+    store.setAppIdentity(version: '1.2.14-test', buildNumber: '46');
+    expect((jsonDecode(store.exportRecentJson()) as Map)['app'], {
+      'version': '1.2.14-test',
+      'buildNumber': '46',
+    });
+  });
   test('recent export is complete JSON with the newest request boundaries', () {
     final store = DiagnosticStore(persistence: _Persistence());
     for (var i = 0; i < 100; i++) {
-      store.record(DiagnosticEvent(stage: 'request$i', monotonicMicros: i,
-          durationMs: 0, retryCount: 0, endpointPath: '/v1/props'));
+      store.record(DiagnosticEvent(
+          stage: 'request$i',
+          monotonicMicros: i,
+          durationMs: 0,
+          retryCount: 0,
+          endpointPath: '/v1/props'));
     }
     final text = store.exportRecentJson();
     final events = (jsonDecode(text) as Map)['events'] as List;
@@ -99,7 +111,6 @@ class _MemoryPersistence implements DiagnosticPersistence {
   @override
   Future<void> write(String json) async => value = json;
 }
-
 
 class _Persistence implements DiagnosticPersistence {
   @override

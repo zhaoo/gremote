@@ -104,7 +104,7 @@ class MainActivity : FlutterActivity() {
             it.setUpRollReader(messenger)
         }
         importHistory = CameraImportHistory(applicationContext, messenger)
-        motionPhotoChannel = MotionPhotoChannel(this, messenger) { directory, file, output, sha256 ->
+        motionPhotoChannel = MotionPhotoChannel(this, messenger, flutterEngine.renderer) { directory, file, output, sha256 ->
             val device = requireNotNull(deviceApi) { "相机未连接" }
             device.downloadLiveJpeg(directory, file, output, sha256)
         }

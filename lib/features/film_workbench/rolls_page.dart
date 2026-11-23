@@ -1,4 +1,7 @@
 import 'dart:convert';
+import '../../camera/companion/camera_film_catalog.dart';
+import '../../film/catalog/film_catalog.dart';
+import 'companion_providers.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,15 +11,33 @@ import '../../film/model/film_roll.dart';
 import '../../film/store/film_repository.dart';
 import 'roll_detail_page.dart';
 import 'workbench_providers.dart';
-import 'widgets/roll_card.dart';
+import '../../camera/companion/camera_roll_index.dart';
+import '../../camera/connection/connection_controller.dart';
+import '../../camera/connection/connection_state.dart';
+import '../library/live_gallery_page.dart';
+import 'camera_roll_detail_page.dart';
 import 'widgets/workbench_style.dart';
+import 'roll_archive_actions.dart';
 
-class RollsPage extends ConsumerWidget {
+class RollsPage extends ConsumerStatefulWidget {
   const RollsPage({super.key});
-  Future<void> _new(BuildContext context, WidgetRef ref) async {
+  @override
+  ConsumerState<RollsPage> createState() => _RollsPageState();
+}
+
+class _RollsPageState extends ConsumerState<RollsPage> {
+  int _source = 0;
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(
+        () => ref.read(cameraRollIndexProvider.notifier).refresh());
+  }
+
+  Future<void> _new() async {
     try {
       final catalog = await ref.read(filmCatalogProvider.future);
-      if (!context.mounted) return;
+      if (!mounted) return;
       final recipe = ref.read(selectedFilmRecipeProvider) ?? catalog.recipe(33);
       final roll = await showCreateRollSheet(
           context, ref.read(filmRepositoryProvider), recipe);
@@ -27,85 +48,258 @@ class RollsPage extends ConsumerWidget {
                 rollId: roll.id, recipeJson: jsonEncode(recipe.toJson()));
       }
     } catch (error) {
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('$error')));
       }
     }
   }
 
+  void _openCamera(CameraIndexedRoll roll) => Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => CameraRollDetailPage(roll)));
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final rolls = ref.watch(filmRollsProvider);
-    return rolls.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('胶卷读取失败：$error')),
-        data: (rolls) =>
-            ListView(key: const PageStorageKey('film-rolls'), children: [
-              WorkbenchHeading('胶卷归档', '机身拍摄 · 按帧归档 · 导出印样', 'A DAY, A ROLL.',
-                  action: IconButton(
-                      tooltip: '新建胶卷',
-                      onPressed: () => _new(context, ref),
-                      icon: Icon(Icons.add, color: context.palette.text))),
+  Widget build(BuildContext context) {
+    ref.listen(cameraRollIndexApiProvider, (previous, next) {
+      if (next != null && !identical(previous, next)) {
+        Future.microtask(() {
+          if (mounted) ref.read(cameraRollIndexProvider.notifier).refresh();
+        });
+      }
+    });
+    final local = ref.watch(filmRollsProvider),
+        hidden = ref.watch(hiddenCameraRollIdsProvider);
+    final index = ref.watch(cameraRollIndexProvider);
+    final catalog = ref.watch(cameraFilmCatalogProvider).valueOrNull;
+    final connected =
+        ref.watch(connectionControllerProvider) is ConnectionReady;
+    final camera = _source == 2 || !connected || hidden.isLoading
+        ? <CameraIndexedRoll>[]
+        : index.rolls
+            .where(
+                (roll) => !(hidden.valueOrNull ?? <String>{}).contains(roll.id))
+            .toList();
+    final phone =
+        _source == 1 ? <FilmRoll>[] : local.valueOrNull ?? <FilmRoll>[];
+    final reading = index.loading || index.scanning;
+    void refresh() {
+      ref.invalidate(filmRollsProvider);
+      if (connected) {
+        if (ref.read(cameraRollIndexApiProvider) == null) {
+          ref.invalidate(companionHotspotPairingProvider);
+        } else {
+          ref.read(cameraRollIndexProvider.notifier).refresh();
+        }
+      }
+    }
+
+    return Material(
+        color: context.palette.background,
+        child: ListView(
+            key: const PageStorageKey('film-rolls'),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+            children: [
               Padding(
-                  padding: const EdgeInsets.fromLTRB(22, 0, 22, 20),
+                  padding: const EdgeInsets.only(bottom: 18),
+                  child: Row(children: [
+                    AlbumFilter(
+                        choices: const ['全部', '相机', '手机'],
+                        selected: _source,
+                        onChanged: (i) => setState(() => _source = i)),
+                    const Spacer(),
+                    if (reading)
+                      IconButton(
+                          tooltip: '停止读取胶卷',
+                          onPressed: () => ref
+                              .read(cameraRollIndexProvider.notifier)
+                              .cancel(),
+                          icon: const Icon(Icons.close, size: 20))
+                    else
+                      PopupMenuButton<String>(
+                          tooltip: '胶卷操作',
+                          icon: const Icon(Icons.more_horiz),
+                          onSelected: (value) {
+                            if (value == 'new') {
+                              _new();
+                            } else {
+                              refresh();
+                            }
+                          },
+                          itemBuilder: (_) => const [
+                                PopupMenuItem(
+                                    value: 'refresh', child: Text('重新读取')),
+                                PopupMenuItem(
+                                    value: 'new', child: Text('新建手机胶卷'))
+                              ]),
+                  ])),
+              if (reading)
+                LinearProgressIndicator(
+                    minHeight: 2, color: context.palette.accent),
+              if (connected &&
+                  index.error != null &&
+                  ref.watch(cameraRollIndexApiProvider) != null)
+                AlbumNotice(index.error!, error: true),
+              if (local.hasError || hidden.hasError)
+                const AlbumNotice('胶卷读取失败，请重试', error: true),
+              for (final roll in camera)
+                Padding(
+                    padding: const EdgeInsets.only(bottom: 22),
+                    child: AlbumRollCard(
+                        key: roll.isLatest
+                            ? const ValueKey('latest-camera-roll')
+                            : ValueKey('camera-roll-${roll.id}'),
+                        title: cameraRollName(roll, catalog: catalog),
+                        subtitle:
+                            '${roll.journalCount ?? roll.verifiedPhotoCount} / ${roll.target} 张 · ${cameraRollStatus(roll)}',
+                        label: '相机',
+                        identityIcon: CameraRollFilmIcon(
+                            roll: roll, catalog: catalog, size: 44),
+                        cover: roll.photos.isEmpty
+                            ? null
+                            : Stack(fit: StackFit.expand, children: [
+                                CameraAlbumThumbnail(roll.photos.first.file),
+                                if (roll.photos.first.file.extension == 'DNG')
+                                  const Positioned(
+                                      top: 8, left: 8, child: AlbumTag('RAW'))
+                              ]),
+                        onTap: () => _openCamera(roll))),
+              for (final roll in phone)
+                Padding(
+                    padding: const EdgeInsets.only(bottom: 22),
+                    child: AlbumRollCard(
+                        title: roll.name,
+                        subtitle:
+                            '${roll.confirmedCount} / ${roll.targetCount} 张 · ${roll.statusLabel}',
+                        label: '手机',
+                        cover: roll.confirmedCount > 0
+                            ? _RollCover(roll.id)
+                            : null,
+                        onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                                builder: (_) =>
+                                    RollDetailPage(rollId: roll.id))))),
+              if (camera.isEmpty &&
+                  phone.isEmpty &&
+                  !reading &&
+                  !hidden.isLoading)
+                Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 44),
+                    child: AlbumEmpty(
+                        icon: Icons.local_movies_outlined,
+                        title: _source == 1 && !connected
+                            ? '连接相机后查看胶卷'
+                            : connected &&
+                                    ref.watch(cameraRollIndexApiProvider) ==
+                                        null &&
+                                    _source != 2
+                                ? '正在连接相机服务'
+                                : '还没有胶卷',
+                        message: '',
+                        action:
+                            Column(mainAxisSize: MainAxisSize.min, children: [
+                          TextButton(
+                              onPressed: refresh, child: const Text('重新读取')),
+                          TextButton(
+                              onPressed: () =>
+                                  context.go('/library?source=camera'),
+                              child: const Text('从相机添加照片'))
+                        ]))),
+              if (connected && index.hasMore && _source != 2 && !reading)
+                TextButton(
+                    onPressed: () =>
+                        ref.read(cameraRollIndexProvider.notifier).loadMore(),
+                    child: const Text('读取更多胶卷')),
+            ]));
+  }
+}
+
+FilmDefinition? cameraRollFilm(
+        CameraIndexedRoll roll, CameraFilmCatalog? catalog) =>
+    catalog?.entries.where((entry) => entry.id == roll.filmId).firstOrNull;
+String cameraRollName(CameraIndexedRoll roll, {CameraFilmCatalog? catalog}) =>
+    cameraRollFilm(roll, catalog)?.name ??
+    (roll.filmId == null
+        ? '机身胶卷 ${roll.id.substring(0, 8)}'
+        : '胶卷 ${roll.filmId}');
+
+class CameraRollFilmIcon extends StatelessWidget {
+  const CameraRollFilmIcon(
+      {super.key, required this.roll, required this.catalog, this.size = 44});
+  final CameraIndexedRoll roll;
+  final CameraFilmCatalog? catalog;
+  final double size;
+  @override
+  Widget build(BuildContext context) {
+    final film = cameraRollFilm(roll, catalog);
+    if (film == null) {
+      return Icon(Icons.local_movies_outlined,
+          size: size, color: context.palette.muted);
+    }
+    return Image.asset(film.icon,
+        key: ValueKey('camera-roll-film-icon-${film.id}'),
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => Icon(Icons.local_movies_outlined,
+            size: size, color: context.palette.muted));
+  }
+}
+
+String cameraRollStatus(CameraIndexedRoll roll) => switch (roll.status) {
+      CameraRollStatus.active => '拍摄中',
+      CameraRollStatus.paused => '已暂停',
+      CameraRollStatus.closed => '已收卷',
+      null => '已拍记录 · 状态未记录'
+    };
+
+class AlbumRollCard extends StatelessWidget {
+  const AlbumRollCard(
+      {super.key,
+      required this.title,
+      required this.subtitle,
+      required this.label,
+      required this.onTap,
+      this.cover,
+      this.identityIcon});
+  final String title, subtitle, label;
+  final VoidCallback onTap;
+  final Widget? cover, identityIcon;
+  @override
+  Widget build(BuildContext context) => InkWell(
+      onTap: onTap,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        if (cover != null)
+          ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: AspectRatio(aspectRatio: 1.85, child: cover)),
+        Padding(
+            padding: EdgeInsets.fromLTRB(
+                cover == null ? 0 : 2, cover == null ? 6 : 14, 0, 12),
+            child: Row(children: [
+              if (identityIcon != null) ...[
+                SizedBox(width: 42, height: 54, child: identityIcon),
+                const SizedBox(width: 14)
+              ],
+              Expanded(
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('机身胶卷：下载拍摄的 JPEG 原片，自动按卷和帧序归档，无需新建胶卷。打开一卷即可导出印样。',
-                            style: TextStyle(
-                                color: context.palette.muted, height: 1.6)),
-                        const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                            onPressed: () =>
-                                context.go('/library?source=camera'),
-                            icon: const Icon(Icons.download_outlined),
-                            label: const Text('从相机导入胶卷')),
-                      ])),
-              if (rolls.isEmpty)
-                Padding(
-                    padding: const EdgeInsets.fromLTRB(30, 52, 30, 40),
-                    child: Column(children: [
-                      Container(
-                          width: 88,
-                          height: 88,
-                          decoration: BoxDecoration(
-                              color: context.palette.raised,
-                              borderRadius: BorderRadius.circular(24)),
-                          child: Icon(Icons.local_movies_outlined,
-                              size: 40, color: context.palette.accent)),
-                      const SizedBox(height: 26),
-                      Text('还没有归档的胶卷',
-                          style: TextStyle(
-                              fontSize: 22,
-                              color: context.palette.text,
-                              fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 12),
-                      Text('也可新建 App 胶卷，手动导入照片整理成印样。\nApp 开卷不会启动机身胶卷模式。',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                              color: context.palette.muted, height: 1.8)),
-                      const SizedBox(height: 30),
-                      FilledButton(
-                          onPressed: () => _new(context, ref),
-                          child: const Text('新建胶卷')),
-                    ])),
-              for (final roll in rolls)
-                RollCard(
-                    roll: roll,
-                    cover: roll.confirmedCount > 0 ? _RollCover(roll.id) : null,
-                    onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                            builder: (_) => RollDetailPage(rollId: roll.id)))),
-              if (rolls.isNotEmpty)
-                Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text('胶卷配方随照片保存 · 原片保留',
-                        textAlign: TextAlign.center,
+                    Text(title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 7),
+                    Text(subtitle,
                         style: TextStyle(
-                            fontSize: 11, color: context.palette.muted))),
-            ]));
-  }
+                            color: context.palette.muted, fontSize: 11))
+                  ])),
+              const SizedBox(width: 10),
+              AlbumTag(label),
+              const SizedBox(width: 4),
+              Icon(Icons.chevron_right, size: 19, color: context.palette.muted),
+            ])),
+        if (cover == null) Divider(height: 1, color: context.palette.divider),
+      ]));
 }
 
 Future<FilmRoll?> showCreateRollSheet(

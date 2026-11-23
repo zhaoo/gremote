@@ -16,6 +16,23 @@ import 'package:gremote/diagnostics/diagnostic_store.dart';
 import 'package:gremote/platform/camera_permission_gate.dart';
 
 void main() {
+  test(
+      'Bluetooth disabled fails discovery but manual Wi-Fi remains independent',
+      () async {
+    final harness = _Harness();
+    harness.ble.failure = PlatformException(code: 'bluetoothDisabled');
+    await harness.controller.connect();
+    final failed = harness.state as ConnectionFailed;
+    expect(failed.failure.code, 'bluetoothDisabled');
+    expect(failed.failure.userAction, ConnectionUserAction.retry);
+    harness.trace.clear();
+    await harness.controller
+        .connectWifiManually(ssid: 'GR_TEST', passphrase: '12345678');
+    expect(harness.state, isA<ConnectionReady>());
+    expect(harness.trace, isNot(contains('scan')));
+    expect(harness.trace, isNot(contains('connectBle')));
+  });
+
   for (final model in [
     'RICOH GR IIIx',
     'RICOH GR IV',
@@ -535,6 +552,29 @@ void main() {
       type: 'cameraTrace',
       jsonPayload: '{"phase":"requestBegin","endpoint":"/v1/photos/private"}',
     ));
+    harness.ble.emit(const CameraDeviceEvent(
+      type: 'cameraTrace',
+      jsonPayload: '{"phase":"requestBegin","endpoint":"/v1/lens/focus"}',
+    ));
+    for (final endpoint in [
+      '/m10v/v1/rolls/latest',
+      '/m10v/v1/rolls/photos',
+      '/m10v/v1/live'
+    ]) {
+      harness.ble.emit(CameraDeviceEvent(
+          type: 'cameraTrace',
+          jsonPayload: '{"phase":"requestBegin","endpoint":"$endpoint"}'));
+    }
+    for (final phase in [
+      'streamStopRequested',
+      'streamCancelRequested',
+      'streamClosed'
+    ]) {
+      harness.ble.emit(CameraDeviceEvent(
+        type: 'cameraTrace',
+        jsonPayload: '{"phase":"$phase","endpoint":"/v1/liveview"}',
+      ));
+    }
     await Future<void>.delayed(Duration.zero);
     final result =
         jsonDecode(harness.container.read(diagnosticStoreProvider).exportJson())
@@ -548,6 +588,26 @@ void main() {
           containsPair('statusCode', 200),
         )));
     expect(events.toString(), isNot(contains('private')));
+    for (final endpoint in [
+      '/m10v/v1/rolls/latest',
+      '/m10v/v1/rolls/photos',
+      '/m10v/v1/live'
+    ]) {
+      expect(events, contains(containsPair('endpointPath', endpoint)));
+    }
+    expect(
+        events,
+        contains(allOf(
+          containsPair('stage', 'camera.requestBegin'),
+          containsPair('endpointPath', '/v1/lens/focus'),
+        )));
+    for (final phase in [
+      'streamStopRequested',
+      'streamCancelRequested',
+      'streamClosed'
+    ]) {
+      expect(events, contains(containsPair('stage', 'camera.$phase')));
+    }
   });
 
   test('manual Wi-Fi shutter uses HTTP without trying BLE', () async {

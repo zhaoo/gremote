@@ -6,6 +6,12 @@ import android.app.AlertDialog
 import android.content.pm.PackageManager
 import android.media.MediaExtractor
 import android.media.MediaFormat
+import android.media.MediaPlayer
+import android.media.MediaMetadataRetriever
+import android.graphics.Bitmap
+import android.view.Surface
+import io.flutter.view.TextureRegistry
+import java.io.ByteArrayOutputStream
 import android.os.Build
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -30,6 +36,7 @@ import java.util.UUID
 internal class MotionPhotoChannel(
     private val activity: Activity,
     messenger: BinaryMessenger,
+    private val textures: TextureRegistry,
     private val downloadJpeg: suspend (String, String, File, String) -> Unit,
 ) {
     private val context = activity.applicationContext
@@ -38,15 +45,29 @@ internal class MotionPhotoChannel(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val channel = MethodChannel(messenger, "gremote/motion_photo")
     private var preview: AlertDialog? = null
+    private var player: MediaPlayer? = null
+    private var texture: TextureRegistry.SurfaceTextureEntry? = null
+    private var playerSurface: Surface? = null
 
     init {
         channel.setMethodCallHandler { call, result ->
-            if (call.method !in setOf("export", "downloadJpeg", "transcodeM10l", "preview")) {
+            if (call.method !in setOf("export", "exportVideo", "downloadJpeg", "transcodeM10l", "preview", "openPlayer", "playerControl", "playerStatus", "inspectVideo")) {
                 result.notImplemented()
                 return@setMethodCallHandler
             }
             scope.launch {
                 try {
+                    if (call.method == "playerControl" || call.method == "playerStatus") {
+                        result.success(controlPlayer(call))
+                        return@launch
+                    }
+                    if (call.method == "openPlayer") {
+                        val movie = withContext(Dispatchers.IO) {
+                            cachedInput(call.argument<String>("mp4Path")).also(::validateVideoTrack)
+                        }
+                        openPlayer(movie, result)
+                        return@launch
+                    }
                     if (call.method == "preview") {
                         val movie = withContext(Dispatchers.IO) {
                             cachedInput(call.argument<String>("mp4Path")).also(::validateVideoTrack)
@@ -64,6 +85,15 @@ internal class MotionPhotoChannel(
                                     requireNotNull(call.argument<String>("sha256")),
                                 )
                                 null
+                            }
+                            "inspectVideo" -> inspectVideo(cachedInput(call.argument<String>("mp4Path")))
+                            "exportVideo" -> {
+                                checkWritePermission()
+                                val video = cachedInput(call.argument<String>("mp4Path"))
+                                validateVideoTrack(video)
+                                val name = safeStem(call.argument<String>("displayName"))
+                                currentCoroutineContext().ensureActive()
+                                publisher.publishVideo(video, "${name}_${UUID.randomUUID().toString().take(8)}.mp4").toString()
                             }
                             "transcodeM10l" -> M10lTranscoder.encode(
                                 cachedInput(call.argument<String>("inputPath")),
@@ -97,8 +127,104 @@ internal class MotionPhotoChannel(
     fun close() {
         channel.setMethodCallHandler(null)
         preview?.dismiss()
+        closePlayer()
         scope.cancel()
     }
+
+    private fun closePlayer() {
+        player?.release()
+        player = null
+        playerSurface?.release()
+        playerSurface = null
+        texture?.release()
+        texture = null
+    }
+
+    private fun openPlayer(movie: File, result: MethodChannel.Result) {
+        closePlayer()
+        val entry = textures.createSurfaceTexture()
+        val surface = Surface(entry.surfaceTexture())
+        val next = MediaPlayer()
+        texture = entry
+        playerSurface = surface
+        player = next
+        var answered = false
+        next.setSurface(surface)
+        next.setOnPreparedListener {
+            if (player !== next || answered) return@setOnPreparedListener
+            answered = true
+            entry.surfaceTexture().setDefaultBufferSize(next.videoWidth.coerceAtLeast(1), next.videoHeight.coerceAtLeast(1))
+            next.isLooping = false
+            result.success(mapOf("textureId" to entry.id(), "width" to next.videoWidth, "height" to next.videoHeight, "durationMs" to next.duration))
+        }
+        next.setOnErrorListener { _, _, _ ->
+            if (!answered) {
+                answered = true
+                result.error("motionPhotoPreviewFailed", "本机无法播放动态短片", null)
+            }
+            if (player === next) closePlayer()
+            true
+        }
+        try {
+            next.setDataSource(movie.path)
+            next.prepareAsync()
+        } catch (error: Exception) {
+            closePlayer()
+            if (!answered) result.error("motionPhotoPreviewFailed", "本机无法播放动态短片", null)
+        }
+    }
+
+    private fun controlPlayer(call: MethodCall): Map<String, Any> {
+        val id = call.argument<Number>("textureId")?.toLong()
+        require(id != null && texture?.id() == id) { "播放器已关闭，请重新打开 Live" }
+        val current = requireNotNull(player)
+        if (call.method == "playerControl") when (call.argument<String>("action")) {
+            "play" -> current.start()
+            "pause" -> current.pause()
+            "seek" -> {
+                val position = requireNotNull(call.argument<Number>("positionMs")).toLong()
+                require(position in 0..current.duration.toLong())
+                if (Build.VERSION.SDK_INT >= 26) current.seekTo(position, MediaPlayer.SEEK_CLOSEST)
+                else @Suppress("DEPRECATION") current.seekTo(position.toInt())
+            }
+            "dispose" -> { closePlayer(); return emptyMap() }
+            else -> throw IllegalArgumentException("播放器操作无效")
+        }
+        return mapOf("positionMs" to current.currentPosition, "playing" to current.isPlaying, "durationMs" to current.duration)
+    }
+
+    private fun inspectVideo(movie: File): Map<String, Any> {
+        val retriever = MediaMetadataRetriever()
+        try {
+            retriever.setDataSource(movie.path)
+            val duration = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong()
+                ?: throw IllegalArgumentException("无法读取短片时长")
+            require(duration in 1..60_000) { "短片时长无效" }
+            val frames = (0..5).map { index ->
+                val timeUs = (duration * 1000L * index / 5).coerceAtMost(duration * 1000 - 1)
+                val frame = if (Build.VERSION.SDK_INT >= 27) retriever.getScaledFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST, 160, 160)
+                    else retriever.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST)
+                requireNotNull(frame) { "无法读取短片预览" }
+                try {
+                    ByteArrayOutputStream().use { out ->
+                        frame.compress(Bitmap.CompressFormat.JPEG, 70, out)
+                        out.toByteArray()
+                    }
+                } finally { frame.recycle() }
+            }
+            return mapOf("durationMs" to duration, "frames" to frames)
+        } finally { retriever.release() }
+    }
+
+    private fun checkWritePermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+            context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+        ) throw SecurityException("请在系统设置中允许 GRemote 写入相册")
+    }
+
+    private fun safeStem(name: String?): String = name.orEmpty()
+        .substringAfterLast('/').substringAfterLast('\\').substringBeforeLast('.').trim().trimStart('.').trimStart()
+        .replace(Regex("[\\p{Cntrl}]"), "").take(60).trimEnd { it.isHighSurrogate() }.ifBlank { "GRemote" }
 
     private suspend fun export(call: MethodCall): String {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&

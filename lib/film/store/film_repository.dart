@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+import 'package:crypto/crypto.dart';
 import 'package:sqflite/sqflite.dart';
 import '../../camera/http/camera_files.dart';
 import '../model/camera_photo_identity.dart';
@@ -95,6 +96,49 @@ class FilmRepository {
         {'status': 'closed', 'closed_at': _clock().millisecondsSinceEpoch},
         where: 'id=? AND status=?', whereArgs: [id, 'open']);
     if (count == 0) throw StateError('胶卷已结束或不存在');
+  }
+
+  /// Removes App grouping only. MediaStore, SD files and recipes are untouched.
+  Future<void> deleteRollArchive(String id) => db.transaction((tx) async {
+        await tx.delete('film_roll_items', where: 'roll_id=?', whereArgs: [id]);
+        await tx.delete('film_rolls', where: 'id=?', whereArgs: [id]);
+      });
+
+  String _hiddenCameraRollKey(String cameraKey) {
+    if (cameraKey.isEmpty || cameraKey.length > 256)
+      throw const FormatException('相机身份尚未读取');
+    return 'camera.roll.hidden.${sha256.convert(utf8.encode(cameraKey))}';
+  }
+
+  Set<String> _hiddenRollIds(List<Map<String, Object?>> rows) {
+    if (rows.isEmpty) return {};
+    final value = jsonDecode(rows.single['value'] as String);
+    if (value is! List ||
+        value.any(
+            (id) => id is! String || !RegExp(r'^[a-f0-9]{32}$').hasMatch(id)))
+      throw const FormatException('胶卷记录读取失败');
+    return value.cast<String>().toSet();
+  }
+
+  Future<Set<String>> hiddenCameraRolls(String cameraKey) async =>
+      _hiddenRollIds(await db.query('app_kv',
+          where: 'key=?',
+          whereArgs: [_hiddenCameraRollKey(cameraKey)],
+          limit: 1));
+
+  /// Local visibility preference, never a camera journal mutation.
+  Future<void> hideCameraRoll(String cameraKey, String rollId) async {
+    if (!RegExp(r'^[a-f0-9]{32}$').hasMatch(rollId))
+      throw const FormatException('胶卷记录无效');
+    final key = _hiddenCameraRollKey(cameraKey);
+    await db.transaction((tx) async {
+      final ids = _hiddenRollIds(
+          await tx.query('app_kv', where: 'key=?', whereArgs: [key], limit: 1))
+        ..add(rollId);
+      await tx.insert(
+          'app_kv', {'key': key, 'value': jsonEncode(ids.toList()..sort())},
+          conflictAlgorithm: ConflictAlgorithm.replace);
+    });
   }
 
   Future<RollItem> addConfirmedPhoto(

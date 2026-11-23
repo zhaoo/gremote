@@ -16,73 +16,105 @@ class _LocationControlsState extends ConsumerState<LocationControls> {
     final state = ref.watch(locationRecordingProvider);
     final history = ref.watch(shotLocationsProvider);
     return SafeArea(
-        child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+        child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(22, 10, 22, 24),
             child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('位置记录', style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 10),
+                  Text('位置记录',
+                      style: TextStyle(
+                          fontSize: 21,
+                          fontWeight: FontWeight.w600,
+                          color: context.palette.text)),
+                  const SizedBox(height: 16),
                   SwitchListTile(
+                      thumbColor: WidgetStateProperty.resolveWith((states) =>
+                          states.contains(WidgetState.selected)
+                              ? context.palette.onAccent
+                              : context.palette.text),
+                      trackColor: WidgetStateProperty.resolveWith((states) =>
+                          states.contains(WidgetState.selected)
+                              ? context.palette.accent
+                              : context.palette.divider),
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('仅联机拍摄时记录'),
-                      subtitle: Text(state.error ??
-                          (state.active
-                              ? state.fix == null
-                                  ? '正在获取手机位置…'
-                                  : '正在记录 · 精度约 ${state.fix!.accuracy.round()} 米'
+                      title: const Text('联机拍摄时记录位置',
+                          style: TextStyle(fontSize: 14)),
+                      subtitle: state.error != null
+                          ? Text(state.error!,
+                              style: TextStyle(
+                                  color: context.palette.danger, fontSize: 12))
+                          : state.active
+                              ? Text(
+                                  state.fix == null
+                                      ? '正在获取位置…'
+                                      : '记录中 · 精度约 ${state.fix!.accuracy.round()} 米',
+                                  style: const TextStyle(fontSize: 12))
                               : state.enabled
-                                  ? '已开启，等待进入联机拍摄'
-                                  : '关闭')),
+                                  ? const Text('等待联机拍摄',
+                                      style: TextStyle(fontSize: 12))
+                                  : null,
                       value: state.enabled,
                       onChanged: _busy
                           ? null
-                          : (value) async {
+                          : (enabled) async {
                               setState(() => _busy = true);
                               try {
                                 await ref
                                     .read(locationRecordingProvider.notifier)
-                                    .setEnabled(value);
+                                    .setEnabled(enabled);
                               } finally {
                                 if (mounted) setState(() => _busy = false);
                               }
                             }),
-                  Text('将手机位置关联到联机拍摄记录。退出拍摄或切到后台即停止定位，原始照片不会被改写。',
-                      style: TextStyle(
-                          color: context.palette.muted,
-                          fontSize: 12,
-                          height: 1.6)),
-                  const SizedBox(height: 18),
-                  Text('最近拍摄位置',
-                      style:
-                          TextStyle(color: context.palette.text, fontSize: 13)),
                   const SizedBox(height: 8),
-                  SizedBox(
-                      height: 200,
-                      child: history.when(
-                          loading: () =>
-                              const Center(child: CircularProgressIndicator()),
-                          error: (_, __) =>
-                              const Center(child: Text('暂时无法读取位置记录')),
-                          data: (records) => records.isEmpty
-                              ? const Center(child: Text('获得可靠定位后，拍摄的照片会记录在这里'))
-                              : ListView.builder(
-                                  itemCount: records.length,
-                                  itemBuilder: (_, index) {
-                                    final record = records[index];
-                                    final time = record.capturedAt;
-                                    return ListTile(
-                                        contentPadding: EdgeInsets.zero,
-                                        dense: true,
-                                        title: Text(record.baseName),
-                                        subtitle: Text(
-                                            '${record.fix.latitude.toStringAsFixed(5)}, ${record.fix.longitude.toStringAsFixed(5)} · ±${record.fix.accuracy.round()} 米'),
-                                        trailing: Text(
-                                            '${time.month}/${time.day} ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
-                                            style:
-                                                const TextStyle(fontSize: 11)));
-                                  }))),
+                  Text('仅联机拍摄时定位，不改写照片。',
+                      style: TextStyle(
+                          color: context.palette.muted, fontSize: 12)),
+                  const SizedBox(height: 24),
+                  history.when(
+                      loading: () =>
+                          const LinearProgressIndicator(minHeight: 2),
+                      error: (_, __) => Text('位置记录暂时无法读取',
+                          style: TextStyle(
+                              color: context.palette.muted, fontSize: 12)),
+                      data: (records) => records.isEmpty
+                          ? Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              child: Text('暂无拍摄位置',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                      color: context.palette.muted,
+                                      fontSize: 12)))
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                  Text('最近拍摄',
+                                      style: TextStyle(
+                                          color: context.palette.muted,
+                                          fontSize: 12)),
+                                  const SizedBox(height: 10),
+                                  ConstrainedBox(
+                                      constraints:
+                                          const BoxConstraints(maxHeight: 240),
+                                      child: ListView.builder(
+                                          shrinkWrap: true,
+                                          itemCount: records.length,
+                                          itemBuilder: (_, i) {
+                                            final record = records[i],
+                                                time = record.capturedAt;
+                                            return ListTile(
+                                                contentPadding: EdgeInsets.zero,
+                                                dense: true,
+                                                title: Text(record.baseName),
+                                                subtitle: Text(
+                                                    '${record.fix.latitude.toStringAsFixed(5)}, ${record.fix.longitude.toStringAsFixed(5)} · ±${record.fix.accuracy.round()} 米'),
+                                                trailing: Text(
+                                                    '${time.month}/${time.day} ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
+                                                    style: const TextStyle(
+                                                        fontSize: 11)));
+                                          }))
+                                ])),
                 ])));
   }
 }

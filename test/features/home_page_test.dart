@@ -14,6 +14,28 @@ import 'package:gremote/features/shoot/widgets/live_view_surface.dart';
 import 'package:gremote/features/shoot/widgets/shutter_button.dart';
 
 void main() {
+  testWidgets('Bluetooth off is not denied permission and offers Wi-Fi first',
+      (tester) async {
+    var wifi = 0, retry = 0;
+    await _pumpCard(
+        tester,
+        const ConnectionFailed(ConnectionFailure(
+            stage: ConnectionStage.scanning,
+            code: 'bluetoothDisabled',
+            retryable: true,
+            userAction: ConnectionUserAction.retry,
+            redactedDetail: 'bluetoothDisabled')),
+        onManualWifi: () => wifi++,
+        onRetry: () => retry++);
+    expect(find.text('蓝牙未开启'), findsOneWidget);
+    expect(find.textContaining('授予权限'), findsNothing);
+    await tester.tap(find.text('通过 Wi-Fi 连接'));
+    expect(wifi, 1);
+    expect(retry, 0);
+    await tester.tap(find.text('蓝牙开启后重试'));
+    expect(retry, 1);
+  });
+
   testWidgets('connection card renders idle and scanning states',
       (tester) async {
     await _pumpCard(tester, const ConnectionIdle());
@@ -36,7 +58,7 @@ void main() {
   testWidgets('manual Wi-Fi shows network approval guidance', (tester) async {
     await _pumpCard(tester, const ConnectionWifiManualRequesting());
     expect(find.text('正在连接相机 Wi-Fi'), findsOneWidget);
-    expect(find.textContaining('已允许后请等待连接'), findsOneWidget);
+    expect(find.textContaining('允许系统连接提示'), findsOneWidget);
     expect(find.textContaining('无线 LAN'), findsOneWidget);
   });
 

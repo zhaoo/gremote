@@ -118,10 +118,12 @@ void main() {
       (tester) async {
     await show(tester, section: 1);
     expect(find.text('把一天，拍成一卷。'), findsNothing);
-    expect(find.text('新建胶卷'), findsOneWidget);
-    expect(find.text('从相机导入胶卷'), findsOneWidget);
+    await tester.tap(find.byTooltip('胶卷操作'));
+    await tester.pumpAndSettle();
+    expect(find.text('新建手机胶卷'), findsOneWidget);
+    expect(find.text('从相机添加照片'), findsOneWidget);
     expect(find.text('机身滤镜'), findsOneWidget);
-    expect(find.textContaining('自动按卷和帧序归档'), findsOneWidget);
+    expect(find.textContaining('自动按卷和帧序归档'), findsNothing);
     expect(find.text('18 / 36 张'), findsNothing);
     expect(find.text('雨后散步'), findsNothing);
   });

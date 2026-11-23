@@ -85,6 +85,21 @@ class ImportGateway extends FakeMediaGateway {
 }
 
 void main() {
+  testWidgets(
+      'album directly exposes photos rolls and Live without losing local selection',
+      (tester) async {
+    await pumpLibrary(tester, gateway: library());
+    expect(find.byKey(const ValueKey('album-tab-photos')), findsOneWidget);
+    expect(find.byKey(const ValueKey('album-tab-rolls')), findsOneWidget);
+    expect(find.byKey(const ValueKey('album-tab-live')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('album-tab-rolls')));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('胶卷操作'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('album-tab-photos')));
+    await tester.pumpAndSettle();
+    expect(tile(1), findsOneWidget);
+  });
+
   testWidgets('archive entry opens the camera source immediately',
       (tester) async {
     await pumpLibrary(tester, gateway: library(), initialCamera: true);
@@ -252,7 +267,7 @@ void main() {
     await tester.pumpAndSettle();
     gateway.entries = [...gateway.entries, mediaEntry(4)];
     gateway.exif = {...gateway.exif, 4: grMeta()};
-    await tester.tap(find.text('相册').last);
+    await tester.tap(find.text('手机').last);
     await tester.pumpAndSettle();
     expect(tile(4), findsOneWidget);
   });

@@ -23,8 +23,8 @@ void main() {
         child: MaterialApp.router(
             theme: GRemoteTheme.dark, routerConfig: router)));
     await tester.pumpAndSettle();
-    expect(find.textContaining('无需新建胶卷'), findsOneWidget);
-    await tester.tap(find.text('从相机导入胶卷'));
+    expect(find.text('还没有胶卷'), findsOneWidget);
+    await tester.tap(find.text('从相机添加照片'));
     await tester.pumpAndSettle();
     expect(find.text('来源：camera'), findsOneWidget);
   });

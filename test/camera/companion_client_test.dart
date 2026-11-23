@@ -145,69 +145,66 @@ void main() {
         client.capabilities(), throwsA(isA<CompanionException>()));
     expect(client.bootId, isNull);
   });
-  test('Live uses signed exact DCF routes and distinguishes a signed 404',
-      () async {
-    const photo = CameraFile(dir: '100RICOH', file: 'R0000021.JPG');
-    const path = '/m10v/v1/live/100RICOH/R0000021/JPG';
-    final clip = Uint8List.fromList(List.generate(48, (i) => i));
-    final wire = Wire()
-      ..replies[path] = (
-        200,
-        {
-          'version': 1,
-          'jpeg': {
-            'directory': photo.dir,
-            'file': photo.file,
-            'sha256': 'ab' * 32
-          },
-          'clip': {
-            'directory': 'LIVE',
-            'file': 'clip.m10l',
-            'format': 'm10l',
-            'sha256': sha256.convert(clip).toString(),
-            'bytes': 48,
-          },
-          'presentationTimestampUs': 120000,
-        }
-      )
-      ..replies['$path/clip/0'] = (
-        200,
-        {
-          'offset': 0,
-          'bytes': 48,
-          'data': base64Encode(clip.sublist(0, 17)),
-        }
-      )
-      ..replies['$path/clip/17'] = (
-        200,
-        {
-          'offset': 17,
-          'bytes': 48,
-          'data': base64Encode(clip.sublist(17)),
-        }
-      );
+  test('unavailable Live makes no camera requests', () async {
+    final wire = Wire();
     final client = CompanionClient(
         transport: wire, pairingStore: Keys(), identity: identity);
-    final pair = (await client.liveManifest(photo))!;
-    final downloaded = <int>[];
-    await client.liveClip(pair, (chunk) async => downloaded.addAll(chunk));
-    expect(downloaded, clip);
+    await expectLater(
+        client.liveManifest(
+            const CameraFile(dir: '100RICOH', file: 'R0000021.JPG')),
+        throwsA(isA<CompanionException>()
+            .having((e) => e.code, 'code', 'liveUnavailable')));
+    expect(wire.paths, isEmpty);
+  });
+
+  test(
+      'roll index GETs share authenticated session and reject arbitrary targets',
+      () async {
+    final wire = Wire()
+      ..replies['/m10v/v1/rolls/latest'] = (200, {'version': 1, 'latest': null})
+      ..replies['/m10v/v1/rolls/photos/0'] =
+          (200, {'version': 1, 'photos': []});
+    final client = CompanionClient(
+        transport: wire, pairingStore: Keys(), identity: identity);
+    final latest = client.readRollIndex('latest');
+    final photos = client.readRollIndex('photos/0');
+    expect((await latest)['latest'], isNull);
+    expect((await photos)['photos'], isEmpty);
     expect(wire.paths, [
       '/m10v/v1/capabilities',
-      path,
-      '$path/clip/0',
-      '$path/clip/17',
+      '/m10v/v1/rolls/latest',
+      '/m10v/v1/rolls/photos/0'
     ]);
-    wire.replies[path] = (
-      404,
-      {
-        'error': {'code': 'missing'}
-      }
-    );
-    expect(await client.liveManifest(photo), isNull);
+    final before = wire.count;
+    for (final suffix in [
+      '../state',
+      'photos/01',
+      'photos/-1',
+      'latest?reset=1',
+      'latest\n',
+      'photos/4294967296'
+    ]) {
+      await expectLater(
+          client.readRollIndex(suffix), throwsA(isA<CompanionException>()));
+    }
+    expect(wire.count, before);
     wire.tamper = true;
     await expectLater(
-        client.liveManifest(photo), throwsA(isA<CompanionException>()));
+        client.readRollIndex('latest'), throwsA(isA<CompanionException>()));
+    wire.tamper = false;
+    wire.replies['/m10v/v1/rolls/latest'] = (
+      401,
+      {
+        'error': {'code': 'unauthorized'}
+      }
+    );
+    await expectLater(
+        client.readRollIndex('latest'), throwsA(isA<CompanionException>()));
+    expect(client.bootId, isNull);
+    wire.replies['/m10v/v1/rolls/latest'] =
+        (200, {'version': 1, 'latest': null});
+    await client.readRollIndex('latest');
+    expect(wire.paths[wire.paths.length - 2], '/m10v/v1/capabilities');
   });
 
   test('request and response canonical HMAC match independent oracle',

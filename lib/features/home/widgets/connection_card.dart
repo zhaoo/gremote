@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_colors.dart';
@@ -172,17 +173,17 @@ class ConnectionCard extends StatelessWidget {
           const _ConnectionPresentation(
             status: 'Wi-Fi',
             title: '正在连接相机 Wi-Fi',
-            detail: '请确认相机“无线 LAN”已开启（仅开启蓝牙还不够）。如出现系统连接提示，请选择允许；已允许后请等待连接。',
+            detail: '在相机开启“无线 LAN”，并允许系统连接提示。',
           ),
         ConnectionWifiBound() => const _ConnectionPresentation(
             status: 'Wi-Fi 已绑定',
             title: '正在确认相机地址',
-            detail: '仅相机请求会通过这个无互联网网络。',
+            detail: '正在读取相机信息。',
           ),
         ConnectionProbing() => const _ConnectionPresentation(
-            status: '协议探测',
+            status: '确认连接',
             title: '正在读取相机能力',
-            detail: '检查原厂 HTTP API 与实时取景能力。',
+            detail: '请稍候。',
           ),
         _ => const _ConnectionPresentation(
             status: '连接中',
@@ -264,10 +265,15 @@ class _CameraSummary extends StatelessWidget {
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _Header(status: status),
         const SizedBox(height: 8),
-        const _CameraIdentity(),
+        if (title == '连接相机') const _CameraIdentity(),
         if (title != '连接相机') ...[
-          Text(title, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 5),
+          const SizedBox(height: 6),
+          Text(title,
+              style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
+                  color: context.palette.text)),
+          const SizedBox(height: 8),
           Text(detail,
               style: TextStyle(fontSize: 12, color: context.palette.muted)),
         ],
@@ -404,12 +410,21 @@ class _FailureContent extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh, size: 18),
+                onPressed:
+                    failure.code == 'bluetoothDisabled' && onManualWifi != null
+                        ? onManualWifi
+                        : onRetry,
+                icon: Icon(
+                    failure.code == 'bluetoothDisabled' && onManualWifi != null
+                        ? Icons.wifi
+                        : Icons.refresh,
+                    size: 18),
                 label: Text(
-                  failure.userAction == ConnectionUserAction.openSettings
-                      ? '打开设置'
-                      : '重新连接',
+                  failure.code == 'bluetoothDisabled' && onManualWifi != null
+                      ? '通过 Wi-Fi 连接'
+                      : failure.userAction == ConnectionUserAction.openSettings
+                          ? '打开设置'
+                          : '重新连接',
                 ),
               ),
             ),
@@ -417,22 +432,27 @@ class _FailureContent extends StatelessWidget {
           if (onManualWifi != null)
             Center(
               child: TextButton(
-                onPressed: onManualWifi,
-                child: const Text('手动连接 Wi-Fi'),
+                onPressed: failure.code == 'bluetoothDisabled'
+                    ? onRetry
+                    : onManualWifi,
+                child: Text(failure.code == 'bluetoothDisabled'
+                    ? '蓝牙开启后重试'
+                    : '手动连接 Wi-Fi'),
               ),
             ),
           const SizedBox(height: 4),
-          Center(
-            child: TextButton(
-              onPressed: onOpenDiagnostics,
-              style: TextButton.styleFrom(
-                  foregroundColor: context.palette.text,
-                  padding: const EdgeInsets.symmetric(horizontal: 8)),
-              child: const Text('查看连接诊断',
-                  style: TextStyle(
-                      fontSize: 10, decoration: TextDecoration.underline)),
+          if (!kReleaseMode)
+            Center(
+              child: TextButton(
+                onPressed: onOpenDiagnostics,
+                style: TextButton.styleFrom(
+                    foregroundColor: context.palette.text,
+                    padding: const EdgeInsets.symmetric(horizontal: 8)),
+                child: const Text('查看连接诊断',
+                    style: TextStyle(
+                        fontSize: 10, decoration: TextDecoration.underline)),
+              ),
             ),
-          ),
         ],
       );
 
@@ -443,6 +463,7 @@ class _FailureContent extends StatelessWidget {
         'wifiTimeout' => '相机 Wi-Fi 连接超时',
         'bleTimeout' => '蓝牙读取超时',
         'bleDisconnected' => '蓝牙连接中断',
+        'bluetoothDisabled' => '蓝牙未开启',
         'wifiLost' => '相机 Wi-Fi 已断开',
         'permissionDenied' => '缺少连接权限',
         'permissionPermanentlyDenied' => '需要在系统设置中授权',
@@ -450,16 +471,18 @@ class _FailureContent extends StatelessWidget {
       };
 
   String _failureGuidance(ConnectionFailure failure) =>
-      failure.code == 'wifiTimeout'
-          ? '请在相机中开启“无线 LAN”；蓝牙开启不代表 Wi-Fi 已开启。开启后重新连接，并允许系统连接提示。'
-          : failure.code == 'cameraNotFound'
-              ? '请确认相机已开启并靠近手机。'
-              : switch (failure.userAction) {
-                  ConnectionUserAction.openSettings => '打开系统设置授予权限，然后返回重试。',
-                  ConnectionUserAction.confirmWifi => '重试后请在系统弹窗中选择“允许”。',
-                  ConnectionUserAction.retry => '确认相机已开启，然后从失败步骤重试。',
-                  _ => '请查看支持范围或稍后重试。',
-                };
+      failure.code == 'bluetoothDisabled'
+          ? '自动连接需要蓝牙。也可通过 Wi-Fi 直接连接相机。'
+          : failure.code == 'wifiTimeout'
+              ? '请在相机中开启“无线 LAN”；蓝牙开启不代表 Wi-Fi 已开启。开启后重新连接，并允许系统连接提示。'
+              : failure.code == 'cameraNotFound'
+                  ? '请确认相机已开启并靠近手机。'
+                  : switch (failure.userAction) {
+                      ConnectionUserAction.openSettings => '打开系统设置授予权限，然后返回重试。',
+                      ConnectionUserAction.confirmWifi => '重试后请在系统弹窗中选择“允许”。',
+                      ConnectionUserAction.retry => '确认相机已开启，然后从失败步骤重试。',
+                      _ => '请查看支持范围或稍后重试。',
+                    };
 }
 
 class _Fact extends StatelessWidget {

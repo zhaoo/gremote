@@ -144,7 +144,13 @@ class _CameraExtensionsState extends ConsumerState<CameraExtensions> {
                       'filmTexture'
                     }.contains(entry.key)))
                   _field(available ? controller : null, field.key, field.value),
-                if (group.key == '功能') _half(available ? controller : null),
+                if (group.key == '功能') ...[
+                  const ListTile(
+                      enabled: false,
+                      title: Text('Live'),
+                      subtitle: Text('暂不可用')),
+                  _half(available ? controller : null),
+                ],
               ]),
             ),
           const Divider(height: 1),

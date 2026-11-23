@@ -570,17 +570,24 @@ class ConnectionController extends Notifier<CameraConnectionState> {
         'streamEnd',
         'streamConnectIo',
         'streamBodyIo',
+        'streamStopRequested',
+        'streamCancelRequested',
+        'streamClosed',
       };
       const endpoints = {
         '/v1/liveview',
         '/v1/props',
         '/v1/params',
         '/v1/params/device',
+        '/v1/lens/focus',
         '/m10v/v1/hotspot',
         '/m10v/v1/capabilities',
         '/m10v/v1/state',
         '/m10v/v1/extensions/capabilities',
         '/m10v/v1/extensions/state',
+        '/m10v/v1/rolls/latest',
+        '/m10v/v1/rolls/photos',
+        '/m10v/v1/live',
       };
       final phase = payload?['phase'];
       final endpoint = payload?['endpoint'];
@@ -667,7 +674,7 @@ class ConnectionController extends Notifier<CameraConnectionState> {
       PlatformException(code: 'wifiUserRejected') =>
         ConnectionUserAction.confirmWifi,
       PlatformException(code: 'bluetoothDisabled') =>
-        ConnectionUserAction.openSettings,
+        ConnectionUserAction.retry,
       _ConnectionFault(code: 'unsupportedCamera') => ConnectionUserAction.none,
       _ => ConnectionUserAction.retry,
     };

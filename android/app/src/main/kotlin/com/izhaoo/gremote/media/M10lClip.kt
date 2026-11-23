@@ -31,16 +31,16 @@ internal data class M10lClip(
                 width % 2 == 0 && height % 2 == 0) { "M10L 尺寸或帧数无效" }
             val shutter = input.i32()
             val duration = input.i32()
-            require(duration in 1..4_500 && shutter in 0..duration) { "M10L 时长无效" }
+            require(duration in 1..10_000 && shutter in 0..duration) { "M10L 时长无效" }
             require(input.i32() == if (nv12) 1 else 0) { "M10L 帧格式无效" }
             val rawLength = width * height * 3 / 2
             var previous = -1
-            val frames = List(count) { index ->
+            val frames = List(count) { _ ->
                 require(size - input.filePointer >= 8) { "M10L 帧索引被截断" }
                 val timestamp = input.i32()
                 val length = input.i32()
                 val offset = input.filePointer
-                require(timestamp > previous && timestamp < duration && (index != 0 || timestamp == 0)) {
+                require(timestamp > previous && timestamp < duration) {
                     "M10L 帧时间无效"
                 }
                 require(length in 4..MAX_FRAME_BYTES && size - offset >= length) { "M10L 帧长度无效" }

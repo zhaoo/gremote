@@ -32,7 +32,7 @@ class CanvasContactSheetRasterizer implements ContactSheetRasterizer {
     try {
       draw.drawColor(const Color(0xff131a16), BlendMode.src);
       text(roll.name, 48, 42, 36, const Color(0xfff1eadb));
-      text('GREMOTE · 数字胶卷 / ${page.index + 1}', 48, 98, 17,
+      text('GREMOTE · 胶卷 / ${page.index + 1}', 48, 98, 17,
           const Color(0xffbcaa80));
       for (var i = 0; i < cells.length; i++) {
         final cell = cells[i],

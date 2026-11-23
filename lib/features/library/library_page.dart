@@ -27,6 +27,11 @@ import 'camera_gallery.dart';
 import 'widgets/media_grid.dart';
 import 'widgets/recipe_sheet.dart';
 import '../film_workbench/workbench_providers.dart';
+import '../film_workbench/rolls_page.dart';
+import '../../camera/connection/connection_controller.dart';
+import '../../camera/connection/connection_state.dart';
+import 'live_gallery_page.dart';
+import 'album_theme.dart';
 
 final albumPhotoPickerProvider = Provider<Future<List<XFile>> Function()>(
     (ref) => () => openFiles(acceptedTypeGroups: const [
@@ -40,9 +45,15 @@ final albumTemporaryDirectoryProvider =
 
 enum _Source { local, camera }
 
+enum AlbumSection { photos, rolls, live }
+
 class LibraryPage extends ConsumerStatefulWidget {
-  const LibraryPage({super.key, this.initialCamera = false});
+  const LibraryPage(
+      {super.key,
+      this.initialCamera = false,
+      this.initialSection = AlbumSection.photos});
   final bool initialCamera;
+  final AlbumSection initialSection;
 
   @override
   ConsumerState<LibraryPage> createState() => _LibraryPageState();
@@ -50,6 +61,7 @@ class LibraryPage extends ConsumerStatefulWidget {
 
 class _LibraryPageState extends ConsumerState<LibraryPage> {
   late var _source = widget.initialCamera ? _Source.camera : _Source.local;
+  late AlbumSection _section = widget.initialSection;
   bool _busy = false, _selectMode = false;
   late bool _cameraVisited = widget.initialCamera;
   late final AppLifecycleListener _lifecycle;
@@ -83,89 +95,159 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(libraryControllerProvider);
-    return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 12, 4),
-              child: Row(children: [
-                Expanded(
-                    child: Text('相册',
-                        style: Theme.of(context).textTheme.headlineMedium)),
-                IconButton(
-                    tooltip: '导入照片',
-                    onPressed: _busy ? null : _importPhotos,
-                    icon: const Icon(Icons.add)),
-                PopupMenuButton<String>(
-                    tooltip: '更多',
-                    icon: const Icon(Icons.more_horiz),
-                    onSelected: (value) {
-                      if (value == 'select') {
-                        setState(() => _selectMode = true);
-                      } else if (value == 'rolls') {
-                        context.push('/film-workbench?section=1');
-                      } else {
-                        context.push('/darkroom');
-                      }
-                    },
-                    itemBuilder: (_) => const [
-                          PopupMenuItem(value: 'select', child: Text('选择照片')),
-                          PopupMenuItem(value: 'rolls', child: Text('胶卷归档')),
-                          PopupMenuItem(
-                              value: 'resources', child: Text('LUT 与出图方案')),
-                        ]),
-              ]),
-            ),
-            Padding(
-                padding: const EdgeInsets.fromLTRB(6, 0, 6, 8),
-                child: WorkspaceTabs<_Source>(
-                  items: const [(_Source.local, '相册'), (_Source.camera, '相机')],
-                  value: _source,
-                  onChanged: (next) {
-                    if (_source != _Source.local && next == _Source.local) {
-                      unawaited(_controller.refresh());
-                    }
-                    setState(() {
-                      _source = next;
-                      if (next == _Source.camera) _cameraVisited = true;
-                    });
-                  },
-                )),
-            if (_busy) const LinearProgressIndicator(minHeight: 2),
-            Expanded(
-              child: IndexedStack(index: _source.index, children: [
-                _LocalLibrary(
-                    state: state,
-                    controller: _controller,
-                    selecting: _selectMode || state.selecting,
-                    onLongPress: _photoActions),
-                if (_cameraVisited)
-                  const CameraGallery()
-                else
-                  const SizedBox.shrink(),
-              ]),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar:
-          (_selectMode || state.selecting) && _source == _Source.local
-              ? _SelectionBar(
-                  count: state.selected.length,
-                  showConfirm: state.selectedHasUnconfirmedWeak,
-                  onCancel: () {
-                    _controller.clearSelection();
-                    setState(() => _selectMode = false);
-                  },
-                  onExport: _startBatch,
-                  onRecipeExport: _startRecipeBatch,
-                  onConfirm: _controller.confirmSelectedTags,
-                )
-              : null,
-    );
+    final connected =
+        ref.watch(connectionControllerProvider) is ConnectionReady;
+    return Theme(
+        data: albumTheme(context),
+        child: Builder(
+            builder: (context) => Scaffold(
+                  body: SafeArea(
+                    bottom: false,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 16, 12, 4),
+                          child: Row(children: [
+                            const Expanded(
+                                child: Text('相册',
+                                    style: TextStyle(
+                                        fontSize: 27,
+                                        fontWeight: FontWeight.w700))),
+                            Text(connected ? '● 已连接' : '离线',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: context.palette.muted)),
+                            if (_section == AlbumSection.photos)
+                              IconButton(
+                                  tooltip: '导入照片',
+                                  onPressed: _busy ? null : _importPhotos,
+                                  icon: const Icon(Icons.add)),
+                            if (_section == AlbumSection.photos)
+                              PopupMenuButton<String>(
+                                  tooltip: '更多',
+                                  icon: const Icon(Icons.more_horiz),
+                                  onSelected: (value) {
+                                    if (value == 'select') {
+                                      setState(() {
+                                        _section = AlbumSection.photos;
+                                        _source = _Source.local;
+                                        _selectMode = true;
+                                      });
+                                    } else if (value == 'rolls') {
+                                      setState(
+                                          () => _section = AlbumSection.rolls);
+                                    } else {
+                                      context.push('/darkroom');
+                                    }
+                                  },
+                                  itemBuilder: (_) => const [
+                                        PopupMenuItem(
+                                            value: 'select',
+                                            child: Text('选择照片')),
+                                        PopupMenuItem(
+                                            value: 'resources',
+                                            child: Text('LUT 与出图方案')),
+                                      ]),
+                          ]),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                          child: Row(children: [
+                            for (final entry in const [
+                              (AlbumSection.photos, '照片'),
+                              (AlbumSection.rolls, '胶卷'),
+                              (AlbumSection.live, 'Live · 暂不可用')
+                            ])
+                              Padding(
+                                  padding: const EdgeInsets.only(right: 28),
+                                  child: InkWell(
+                                      key: ValueKey(
+                                          'album-tab-${entry.$1.name}'),
+                                      onTap: () =>
+                                          setState(() => _section = entry.$1),
+                                      child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 14),
+                                          decoration: BoxDecoration(
+                                              border: Border(
+                                                  bottom: BorderSide(
+                                                      color: _section == entry.$1
+                                                          ? context
+                                                              .palette.accent
+                                                          : Colors.transparent,
+                                                      width: 2))),
+                                          child: Text(entry.$2,
+                                              style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: _section == entry.$1
+                                                      ? FontWeight.w700
+                                                      : FontWeight.w400,
+                                                  color:
+                                                      _section == entry.$1 ? context.palette.text : context.palette.muted))))),
+                          ]),
+                        ),
+                        if (_section == AlbumSection.photos)
+                          Padding(
+                              padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                              child: WorkspaceTabs<_Source>(
+                                items: const [
+                                  (_Source.local, '手机'),
+                                  (_Source.camera, '相机')
+                                ],
+                                value: _source,
+                                onChanged: (next) {
+                                  if (next == _Source.local) {
+                                    unawaited(_controller.refresh());
+                                  }
+                                  setState(() {
+                                    _source = next;
+                                    if (next == _Source.camera) {
+                                      _cameraVisited = true;
+                                    }
+                                  });
+                                },
+                              )),
+                        if (_busy) const LinearProgressIndicator(minHeight: 2),
+                        Expanded(
+                          child: _section == AlbumSection.rolls
+                              ? const RollsPage()
+                              : _section == AlbumSection.live
+                                  ? const LiveGalleryPage()
+                                  : IndexedStack(
+                                      index: _source.index,
+                                      children: [
+                                          _LocalLibrary(
+                                              state: state,
+                                              controller: _controller,
+                                              selecting: _selectMode ||
+                                                  state.selecting,
+                                              onLongPress: _photoActions),
+                                          if (_cameraVisited)
+                                            const CameraGallery()
+                                          else
+                                            const SizedBox.shrink(),
+                                        ]),
+                        ),
+                      ],
+                    ),
+                  ),
+                  bottomNavigationBar: _section == AlbumSection.photos &&
+                          (_selectMode || state.selecting) &&
+                          _source == _Source.local
+                      ? _SelectionBar(
+                          count: state.selected.length,
+                          showConfirm: state.selectedHasUnconfirmedWeak,
+                          onCancel: () {
+                            _controller.clearSelection();
+                            setState(() => _selectMode = false);
+                          },
+                          onExport: _startBatch,
+                          onRecipeExport: _startRecipeBatch,
+                          onConfirm: _controller.confirmSelectedTags,
+                        )
+                      : null,
+                )));
   }
 
   Future<void> _importPhotos() async {

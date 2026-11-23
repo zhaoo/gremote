@@ -73,7 +73,7 @@ class CameraLiveManifest {
         length > maxClipBytes ||
         (timestamp is int &&
             format == CameraClipFormat.m10l &&
-            timestamp > 4500000)) {
+            timestamp > 10000000)) {
       throw const FormatException('动态短片名称、长度或时间无效');
     }
     return CameraLiveManifest._(expectedJpeg, jpeg['sha256'] as String, format,

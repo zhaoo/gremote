@@ -61,6 +61,16 @@ class MediaStorePublisher(context: Context) {
             else insertLegacy(temp, displayName)
     }
 
+    internal fun publishVideo(temp: File, displayName: String): Uri {
+        require(temp.isFile && temp.length() > 0)
+        val directory = "${Environment.DIRECTORY_MOVIES}/GRemote"
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            insertPending(temp, displayName, directory, video = true)
+        } else {
+            insertLegacy(temp, displayName, directory, video = true)
+        }
+    }
+
     private fun writeExif(temp: File, source: Uri, keepGps: Boolean, width: Int, height: Int, outputSrgb: Boolean) {
         val tags = resolver.openInputStream(source)?.use { stream ->
             val exif = ExifInterface(stream)
@@ -74,15 +84,16 @@ class MediaStorePublisher(context: Context) {
         out.saveAttributes()
     }
 
-    private fun insertPending(temp: File, displayName: String, directory: String = EXPORT_RELATIVE_PATH): Uri {
+    private fun insertPending(temp: File, displayName: String, directory: String = EXPORT_RELATIVE_PATH, video: Boolean = false): Uri {
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
-            put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+            put(MediaStore.MediaColumns.MIME_TYPE, if (video) "video/mp4" else "image/jpeg")
             put(MediaStore.MediaColumns.RELATIVE_PATH, directory)
             put(MediaStore.MediaColumns.IS_PENDING, 1)
         }
         val uri = resolver.insert(
-            MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY),
+            if (video) MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+            else MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY),
             values,
         ) ?: throw MediaException("publishFailed", "MediaStore refused the new entry")
         try {
@@ -103,13 +114,13 @@ class MediaStorePublisher(context: Context) {
     }
 
     @Suppress("DEPRECATION")
-    private fun insertLegacy(temp: File, displayName: String, directory: String = EXPORT_RELATIVE_PATH): Uri {
+    private fun insertLegacy(temp: File, displayName: String, directory: String = EXPORT_RELATIVE_PATH, video: Boolean = false): Uri {
         val dir = File(Environment.getExternalStorageDirectory(), directory)
         if (!dir.isDirectory && !dir.mkdirs()) {
             throw MediaException("publishFailed", "Cannot create $EXPORT_RELATIVE_PATH")
         }
         val target = generateSequence(0) { it + 1 }
-            .map { n -> if (n == 0) displayName else displayName.substringBeforeLast('.') + "_$n.jpg" }
+            .map { n -> if (n == 0) displayName else displayName.substringBeforeLast('.') + "_$n." + displayName.substringAfterLast('.', "jpg") }
             .map { File(dir, it) }
             .first { !it.exists() }
         try {
@@ -117,9 +128,9 @@ class MediaStorePublisher(context: Context) {
             val values = ContentValues().apply {
                 put(MediaStore.MediaColumns.DATA, target.absolutePath)
                 put(MediaStore.MediaColumns.DISPLAY_NAME, target.name)
-                put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+                put(MediaStore.MediaColumns.MIME_TYPE, if (video) "video/mp4" else "image/jpeg")
             }
-            return resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+            return resolver.insert(if (video) MediaStore.Video.Media.EXTERNAL_CONTENT_URI else MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
                 ?: throw MediaException("publishFailed", "MediaStore refused the new entry")
         } catch (error: Throwable) {
             target.delete()

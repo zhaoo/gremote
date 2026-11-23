@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -56,7 +57,9 @@ class HomePage extends ConsumerWidget {
                     itemBuilder: (_) => const [
                       PopupMenuItem(value: 'switch', child: Text('切换相机')),
                       PopupMenuItem(value: 'wifi', child: Text('手动连接 Wi-Fi')),
-                      PopupMenuItem(value: 'diagnostics', child: Text('诊断信息')),
+                      if (!kReleaseMode)
+                        PopupMenuItem(
+                            value: 'diagnostics', child: Text('诊断信息')),
                       PopupMenuItem(value: 'settings', child: Text('设置')),
                     ],
                   ),

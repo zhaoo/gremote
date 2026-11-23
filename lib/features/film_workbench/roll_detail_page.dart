@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import '../library/album_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../darkroom/darkroom_providers.dart';
 import '../../film/capture/active_roll_context.dart';
@@ -9,6 +10,9 @@ import '../../media/local/media_gateway.dart';
 import 'roll_export_page.dart';
 import 'workbench_providers.dart';
 import 'widgets/workbench_style.dart';
+import '../library/live_gallery_page.dart';
+import 'roll_archive_actions.dart';
+import 'roll_photo_page.dart';
 
 final rollThumbnailProvider =
     FutureProvider.autoDispose.family<Uint8List?, RollItem>((ref, item) async {
@@ -26,8 +30,10 @@ final rollThumbnailProvider =
 });
 
 class RollDetailPage extends ConsumerStatefulWidget {
-  const RollDetailPage({super.key, required this.rollId});
+  const RollDetailPage(
+      {super.key, required this.rollId, this.openExport = false});
   final String rollId;
+  final bool openExport;
   @override
   ConsumerState<RollDetailPage> createState() => _RollDetailPageState();
 }
@@ -35,6 +41,7 @@ class RollDetailPage extends ConsumerStatefulWidget {
 class _RollDetailPageState extends ConsumerState<RollDetailPage> {
   String? _error;
   bool _busy = false;
+  bool _openedExport = false;
   Future<void> _import(FilmRoll roll) async {
     final fingerprint = roll.recipeFingerprint;
     if (fingerprint == null) return;
@@ -124,196 +131,279 @@ class _RollDetailPageState extends ConsumerState<RollDetailPage> {
   @override
   Widget build(BuildContext context) {
     final rolls = ref.watch(filmRollsProvider),
-        items = ref.watch(rollItemsProvider(widget.rollId));
-    return Scaffold(
-        backgroundColor: context.palette.background,
-        appBar: AppBar(
-            title: const Text('胶卷详情'),
-            backgroundColor: context.palette.background),
-        body: rolls.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => Center(child: Text('$error')),
-            data: (rolls) {
-              final found = rolls.where((r) => r.id == widget.rollId);
-              if (found.isEmpty) return const Center(child: Text('胶卷不存在'));
-              final roll = found.single;
-              return items.when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (error, _) => Center(child: Text('照片读取失败：$error')),
-                  data: (items) => CustomScrollView(slivers: [
-                        SliverToBoxAdapter(
-                            child: Padding(
-                                padding: const EdgeInsets.all(22),
-                                child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(roll.name,
-                                          style: TextStyle(
-                                              fontSize: 30,
-                                              fontWeight: FontWeight.w700,
-                                              color: context.palette.text)),
-                                      const SizedBox(height: 12),
-                                      Text(
-                                          '${items.length} / ${roll.targetCount} 张 · ${roll.statusLabel}',
-                                          style: TextStyle(
-                                              color: context.palette.accent)),
-                                      const SizedBox(height: 24),
-                                      if (items.isEmpty)
-                                        Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 32),
-                                            child: Text(
-                                                '这一卷还没有照片。\n导入真实照片，开始整理今天的片段。',
+        entries = ref.watch(rollItemsProvider(widget.rollId));
+    return Theme(
+        data: albumTheme(context),
+        child: Builder(
+            builder: (context) => rolls.when(
+                  loading: () => const Scaffold(
+                      body: Center(child: CircularProgressIndicator())),
+                  error: (error, _) => Scaffold(
+                      appBar: AppBar(title: const Text('胶卷')),
+                      body: Center(child: Text('胶卷读取失败：$error'))),
+                  data: (rolls) {
+                    final roll =
+                        rolls.where((r) => r.id == widget.rollId).firstOrNull;
+                    if (roll == null) {
+                      return Scaffold(
+                          appBar: AppBar(title: const Text('胶卷')),
+                          body: const Center(child: Text('胶卷记录已删除')));
+                    }
+                    return entries.when(
+                        loading: () => const Scaffold(
+                            body: Center(child: CircularProgressIndicator())),
+                        error: (error, _) => Scaffold(
+                            appBar: AppBar(title: const Text('胶卷')),
+                            body: Center(child: Text('照片读取失败：$error'))),
+                        data: (items) {
+                          if (widget.openExport &&
+                              !_openedExport &&
+                              items.isNotEmpty) {
+                            _openedExport = true;
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) _export(roll, items);
+                            });
+                          }
+                          return Scaffold(
+                              appBar: AppBar(
+                                  title: const Text('胶卷',
+                                      style: TextStyle(fontSize: 18)),
+                                  centerTitle: true,
+                                  actions: [
+                                    PopupMenuButton<String>(
+                                        tooltip: '胶卷更多',
+                                        icon: const Icon(Icons.more_horiz),
+                                        onSelected: (value) async {
+                                          if (value == 'import') {
+                                            await _import(roll);
+                                          } else if (value == 'export') {
+                                            await _export(roll, items);
+                                          } else if (value == 'close') {
+                                            await _close(roll);
+                                          } else if (value == 'delete') {
+                                            try {
+                                              final deleted =
+                                                  await deleteLocalRollArchive(
+                                                      context, ref, roll.id);
+                                              if (deleted && context.mounted) {
+                                                Navigator.of(context)
+                                                    .maybePop();
+                                              }
+                                            } catch (_) {
+                                              if (mounted) {
+                                                setState(
+                                                    () => _error = '删除失败，请重试');
+                                              }
+                                            }
+                                          }
+                                        },
+                                        itemBuilder: (_) => [
+                                              if (roll.recipeFingerprint !=
+                                                  null)
+                                                PopupMenuItem(
+                                                    value: 'import',
+                                                    enabled: !_busy,
+                                                    child: const Text('添加照片')),
+                                              PopupMenuItem(
+                                                  value: 'export',
+                                                  enabled: !_busy &&
+                                                      items.isNotEmpty,
+                                                  child: const Text('导出印样')),
+                                              if (roll.status ==
+                                                  FilmRollStatus.open)
+                                                PopupMenuItem(
+                                                    value: 'close',
+                                                    enabled: !_busy,
+                                                    child: const Text('结束这一卷')),
+                                              const PopupMenuDivider(),
+                                              PopupMenuItem(
+                                                  value: 'delete',
+                                                  enabled: !_busy,
+                                                  child: const Text('删除胶卷')),
+                                            ])
+                                  ]),
+                              body: CustomScrollView(slivers: [
+                                SliverToBoxAdapter(
+                                    child: Padding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                            22, 20, 22, 26),
+                                        child: Row(children: [
+                                          Expanded(
+                                              child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                Text(roll.name,
+                                                    style: const TextStyle(
+                                                        fontSize: 25,
+                                                        fontWeight:
+                                                            FontWeight.w600)),
+                                                const SizedBox(height: 8),
+                                                Text(
+                                                    '${items.length} / ${roll.targetCount} 张 · ${roll.statusLabel}',
+                                                    style: TextStyle(
+                                                        color: context
+                                                            .palette.muted,
+                                                        fontSize: 12))
+                                              ])),
+                                          const AlbumTag('手机'),
+                                        ]))),
+                                if (_busy)
+                                  const SliverToBoxAdapter(
+                                      child: LinearProgressIndicator(
+                                          minHeight: 2)),
+                                if (_error != null)
+                                  SliverToBoxAdapter(
+                                      child: AlbumNotice(_error!)),
+                                if (items.isEmpty)
+                                  SliverToBoxAdapter(
+                                      child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 58, horizontal: 24),
+                                          child: Column(children: [
+                                            Text('还没有照片',
                                                 style: TextStyle(
+                                                    fontSize: 14,
                                                     color:
-                                                        context.palette.muted,
-                                                    height: 1.8))),
-                                      Wrap(
-                                          spacing: 10,
-                                          runSpacing: 8,
-                                          children: [
+                                                        context.palette.muted)),
+                                            const SizedBox(height: 12),
                                             if (roll.recipeFingerprint != null)
                                               OutlinedButton.icon(
                                                   onPressed: _busy
                                                       ? null
                                                       : () => _import(roll),
-                                                  icon: const Icon(Icons
-                                                      .add_photo_alternate_outlined),
-                                                  label: Text(_busy
-                                                      ? '正在归档…'
-                                                      : '导入照片')),
-                                            FilledButton.icon(
-                                                onPressed: () =>
-                                                    _export(roll, items),
-                                                icon: const Icon(
-                                                    Icons.grid_on_outlined),
-                                                label: Text(
-                                                    roll.recipeFingerprint ==
-                                                            null
-                                                        ? '联系印样'
-                                                        : '联系印样 / 配方卡'))
-                                          ]),
-                                      if (roll.status == FilmRollStatus.open)
-                                        TextButton(
-                                            onPressed: _busy
-                                                ? null
-                                                : () => _close(roll),
-                                            child: const Text('结束这一卷，去冲洗 ↗')),
-                                      if (_error != null)
-                                        Padding(
-                                            padding:
-                                                const EdgeInsets.only(top: 12),
-                                            child: Text(_error!,
-                                                style: TextStyle(
-                                                    color: context
-                                                        .palette.accent))),
-                                      const SizedBox(height: 8),
-                                      Text('点按星标加入精选 · 导入不改变原片色彩',
-                                          style: TextStyle(
-                                              color: context.palette.muted,
-                                              fontSize: 11)),
-                                    ]))),
-                        SliverPadding(
-                            padding: const EdgeInsets.fromLTRB(18, 0, 18, 28),
-                            sliver: SliverGrid(
-                                delegate:
-                                    SliverChildBuilderDelegate((context, i) {
-                                  final item = items[i],
-                                      thumb = ref
-                                          .watch(rollThumbnailProvider(item));
-                                  return Container(
-                                      color: context.palette.raised,
-                                      child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Expanded(
-                                                child: SizedBox(
-                                                    width: double.infinity,
-                                                    child: thumb.when(
-                                                        loading: () => Center(
-                                                            child: Icon(Icons.photo_outlined,
-                                                                color: context
-                                                                    .palette
-                                                                    .muted)),
-                                                        error: (_, __) =>
-                                                            const Center(
-                                                                child: Icon(Icons
-                                                                    .broken_image_outlined)),
-                                                        data: (bytes) => bytes == null
-                                                            ? Center(child: Icon(Icons.hide_image_outlined, color: context.palette.muted))
-                                                            : Image.memory(bytes, fit: BoxFit.cover, cacheWidth: 384)))),
-                                            Row(children: [
-                                              Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                          left: 8),
-                                                  child: Text(
-                                                      '${item.frameNumber ?? i + 1}'
-                                                          .padLeft(2, '0'),
-                                                      style: TextStyle(
-                                                          color: context
-                                                              .palette.accent,
-                                                          fontSize: 11))),
-                                              const Spacer(),
-                                              IconButton(
-                                                  tooltip: item.selected
-                                                      ? '取消精选'
-                                                      : '加入精选',
-                                                  onPressed: () async {
-                                                    await ref
-                                                        .read(
-                                                            filmRepositoryProvider)
-                                                        .setSelected(item.id,
-                                                            !item.selected);
-                                                    ref
-                                                        .read(
-                                                            filmRollRevisionProvider
-                                                                .notifier)
-                                                        .state++;
-                                                  },
-                                                  icon: Icon(
-                                                      item.selected
-                                                          ? Icons.star_rounded
-                                                          : Icons
-                                                              .star_border_rounded,
-                                                      color: context
-                                                          .palette.accent,
-                                                      size: 20))
-                                            ]),
-                                            Padding(
-                                                padding:
-                                                    const EdgeInsets.fromLTRB(
-                                                        8, 0, 8, 8),
-                                                child: Text(
-                                                    switch (item.confidence) {
-                                                      RecipeConfidence
-                                                            .cameraConfirmed =>
-                                                        '相机已确认',
-                                                      RecipeConfidence
-                                                            .userAssigned =>
-                                                        '用户指定配方',
-                                                      RecipeConfidence
-                                                            .unverified =>
-                                                        '配方未验证'
-                                                    },
-                                                    maxLines: 1,
-                                                    style: TextStyle(
-                                                        color: context
-                                                            .palette.muted,
-                                                        fontSize: 9))),
-                                          ]));
-                                }, childCount: items.length),
-                                gridDelegate:
-                                    const SliverGridDelegateWithMaxCrossAxisExtent(
-                                        maxCrossAxisExtent: 180,
-                                        childAspectRatio: .85,
-                                        crossAxisSpacing: 8,
-                                        mainAxisSpacing: 8))),
-                      ]));
-            }));
+                                                  icon: const Icon(
+                                                      Icons
+                                                          .add_photo_alternate_outlined,
+                                                      size: 18),
+                                                  label: const Text('添加照片'))
+                                          ]))),
+                                SliverPadding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                        20, 0, 20, 24),
+                                    sliver: SliverGrid(
+                                        gridDelegate:
+                                            const SliverGridDelegateWithFixedCrossAxisCount(
+                                                crossAxisCount: 3,
+                                                childAspectRatio: .72,
+                                                mainAxisSpacing: 6,
+                                                crossAxisSpacing: 6),
+                                        delegate: SliverChildBuilderDelegate(
+                                            (context, i) {
+                                          final item = items[i],
+                                              thumb = ref.watch(
+                                                  rollThumbnailProvider(
+                                                      items[i]));
+                                          final rawOnly = item
+                                                  .files.isNotEmpty &&
+                                              item.files.every((file) => file
+                                                  .toUpperCase()
+                                                  .endsWith('.DNG'));
+                                          return ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(3),
+                                              child: Container(
+                                                  color: context.palette.raised,
+                                                  child: Column(children: [
+                                                    Expanded(
+                                                        child: InkWell(
+                                                            key: ValueKey(
+                                                                'roll-photo-${item.id}'),
+                                                            onTap: item.mediaId ==
+                                                                    null
+                                                                ? null
+                                                                : () => Navigator.of(
+                                                                        context)
+                                                                    .push(MaterialPageRoute<
+                                                                            void>(
+                                                                        builder: (_) =>
+                                                                            RollPhotoPage(
+                                                                                item))),
+                                                            child: Stack(
+                                                                fit: StackFit
+                                                                    .expand,
+                                                                children: [
+                                                                  thumb.when(
+                                                                      loading: () => const Center(
+                                                                          child: Icon(Icons
+                                                                              .photo_outlined)),
+                                                                      error: (_, __) => Center(
+                                                                          child: Icon(rawOnly
+                                                                              ? Icons
+                                                                                  .raw_on_outlined
+                                                                              : Icons
+                                                                                  .broken_image_outlined)),
+                                                                      data: (data) => data ==
+                                                                              null
+                                                                          ? Center(
+                                                                              child: Icon(rawOnly ? Icons.raw_on_outlined : Icons.hide_image_outlined))
+                                                                          : Image.memory(data, fit: BoxFit.cover, cacheWidth: 384, errorBuilder: (_, __, ___) => Center(child: Icon(rawOnly ? Icons.raw_on_outlined : Icons.broken_image_outlined)))),
+                                                                  if (rawOnly)
+                                                                    const Positioned(
+                                                                        top: 5,
+                                                                        right:
+                                                                            5,
+                                                                        child: AlbumTag(
+                                                                            'RAW')),
+                                                                ]))),
+                                                    Row(children: [
+                                                      Padding(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .only(
+                                                                  left: 7),
+                                                          child: Text(
+                                                              '${item.frameNumber ?? i + 1}'
+                                                                  .padLeft(
+                                                                      2, '0'),
+                                                              style: TextStyle(
+                                                                  fontSize: 10,
+                                                                  color: context
+                                                                      .palette
+                                                                      .muted))),
+                                                      const Spacer(),
+                                                      SizedBox(
+                                                          width: 34,
+                                                          height: 34,
+                                                          child: IconButton(
+                                                              padding:
+                                                                  EdgeInsets
+                                                                      .zero,
+                                                              tooltip:
+                                                                  item.selected
+                                                                      ? '取消精选'
+                                                                      : '加入精选',
+                                                              onPressed:
+                                                                  () async {
+                                                                await ref
+                                                                    .read(
+                                                                        filmRepositoryProvider)
+                                                                    .setSelected(
+                                                                        item.id,
+                                                                        !item
+                                                                            .selected);
+                                                                ref
+                                                                    .read(filmRollRevisionProvider
+                                                                        .notifier)
+                                                                    .state++;
+                                                              },
+                                                              icon: Icon(
+                                                                  item.selected
+                                                                      ? Icons
+                                                                          .star
+                                                                      : Icons
+                                                                          .star_border,
+                                                                  size: 18,
+                                                                  color: context
+                                                                      .palette
+                                                                      .accent)))
+                                                    ])
+                                                  ])));
+                                        }, childCount: items.length))),
+                              ]));
+                        });
+                  },
+                )));
   }
 }
 

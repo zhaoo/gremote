@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
@@ -7,10 +8,18 @@ import 'package:path_provider/path_provider.dart';
 
 import 'diagnostic_event.dart';
 import 'diagnostic_redactor.dart';
+import '../platform/app_package_info.dart';
 
-final diagnosticStoreProvider = Provider<DiagnosticStore>(
-  (_) => DiagnosticStore(persistence: const AppFileDiagnosticPersistence()),
-);
+final diagnosticStoreProvider = Provider<DiagnosticStore>((_) {
+  final store =
+      DiagnosticStore(persistence: const AppFileDiagnosticPersistence());
+  unawaited(AppPackageInfo.fromPlatform().then<void>((info) {
+    store.setAppIdentity(version: info.version, buildNumber: info.buildNumber);
+  }, onError: (Object _, StackTrace __) {
+    // Diagnostics remain usable when a host has no app-info bridge.
+  }));
+  return store;
+});
 
 abstract interface class DiagnosticPersistence {
   Future<void> write(String json);
@@ -25,6 +34,11 @@ class DiagnosticStore {
 
   final DiagnosticPersistence _persistence;
   final ListQueue<DiagnosticEvent> _events = ListQueue();
+  Map<String, String>? _appIdentity;
+
+  void setAppIdentity({required String version, required String buildNumber}) {
+    _appIdentity = {'version': version, 'buildNumber': buildNumber};
+  }
 
   int get length => _events.length;
 
@@ -56,6 +70,7 @@ class DiagnosticStore {
 
   Map<String, Object?> _payload(Iterable<DiagnosticEvent> events) => {
         'schema': 'gremote-diagnostics/1',
+        if (_appIdentity != null) 'app': _appIdentity,
         'events': events.map(DiagnosticRedactor.redact).toList(growable: false),
       };
 }

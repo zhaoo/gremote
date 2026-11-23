@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -43,7 +44,12 @@ final appRouter = GoRouter(
                 path: '/library',
                 builder: (_, state) => LibraryPage(
                     initialCamera:
-                        state.uri.queryParameters['source'] == 'camera')),
+                        state.uri.queryParameters['source'] == 'camera',
+                    initialSection: switch (state.uri.queryParameters['tab']) {
+                      'rolls' => AlbumSection.rolls,
+                      'live' => AlbumSection.live,
+                      _ => AlbumSection.photos
+                    })),
           ],
         ),
         StatefulShellBranch(
@@ -75,7 +81,8 @@ final appRouter = GoRouter(
             initialSection:
                 int.tryParse(state.uri.queryParameters['section'] ?? '') ?? 0)),
     GoRoute(path: '/settings', builder: (_, __) => const AppSettingsPage()),
-    GoRoute(path: '/probe', builder: (_, __) => const ProtocolProbePage()),
+    if (!kReleaseMode)
+      GoRoute(path: '/probe', builder: (_, __) => const ProtocolProbePage()),
     GoRoute(
       path: '/edit/:mediaId',
       builder: (_, state) => EditorPage(

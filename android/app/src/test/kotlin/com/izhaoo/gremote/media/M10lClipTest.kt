@@ -42,6 +42,21 @@ class M10lClipTest {
     }
 
     @Test
+    fun preservesRealLeadingBlackoutAndRejectsUnboundedDuration() {
+        val bytes = nv12Fixture()
+        val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
+        buffer.putInt(12, 0).putInt(16, 6501)
+        buffer.putInt(24, 5000).putInt(24 + 36872, 6400)
+        val file = folder.newFile().apply { writeBytes(bytes) }
+        val clip = M10lClip.read(file)
+        assertEquals(listOf(5_000_000L, 6_400_000L), clip.frames.map { it.timestampUs })
+        assertEquals(0L, clip.shutterUs)
+        buffer.putInt(16, 10001)
+        file.writeBytes(bytes)
+        assertThrows(IllegalArgumentException::class.java) { M10lClip.read(file) }
+    }
+
+    @Test
     fun rejectsVersionTwoWrongFormatOrFrameSize() {
         val file = folder.newFile()
         val truncated = nv12Fixture().let { it.copyOf(it.size - 1) }

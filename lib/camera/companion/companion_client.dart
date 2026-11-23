@@ -1,3 +1,4 @@
+import '../../app/release_policy.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
@@ -94,9 +95,14 @@ class CompanionClient
 
   Future<Map<String, dynamic>> _request(String method, String path,
       {Object? payload, Uint8List? binary, bool bootstrap = false}) async {
+    if (!cameraLiveAvailable && path.startsWith('/m10v/v1/live/')) {
+      throw const CompanionException('liveUnavailable');
+    }
     final epoch = _epoch;
     final isLive = method == 'GET' && _livePath.hasMatch(path);
+    final isRollIndex = method == 'GET' && _rollIndexPath(path);
     if (!isLive &&
+        !isRollIndex &&
         !RegExp(r'^/m10v/v1/(capabilities|state|extensions/(capabilities|state|operations(/[a-f0-9]{32})?)|operations(/[a-f0-9]{32})?|films/stage(/[a-f0-9]{32}(/(verify|chunks/[0-2]))?)?)$')
             .hasMatch(path)) {
       throw const CompanionException('invalidCompanionTarget');
@@ -211,6 +217,8 @@ class CompanionClient
   @override
   Future<CameraLiveManifest?> liveManifest(CameraFile jpeg) =>
       _serial(() async {
+        if (!cameraLiveAvailable)
+          throw const CompanionException('liveUnavailable');
         final path = CameraLiveManifest.pathFor(jpeg);
         if (_boot == null) {
           await _request('GET', '/m10v/v1/capabilities', bootstrap: true);
@@ -237,6 +245,31 @@ class CompanionClient
             await receive(chunk);
             offset += chunk.length;
           }
+        } on CompanionException catch (error) {
+          if (error.code == 'unauthorized') invalidate();
+          rethrow;
+        }
+      });
+
+  static bool _rollIndexPath(String path) =>
+      RegExp(r'^/m10v/v1/rolls/(latest|photos/(0|[1-9][0-9]{0,9}))$')
+          .firstMatch(path)
+          ?.end ==
+      path.length;
+
+  /// Authenticated, serialized, strictly read-only camera archive access.
+  Future<Map<String, dynamic>> readRollIndex(String suffix) =>
+      _serial(() async {
+        if (!_rollIndexPath('/m10v/v1/rolls/$suffix') ||
+            (suffix.startsWith('photos/') &&
+                int.parse(suffix.substring(7)) > 0xffffffff)) {
+          throw const CompanionException('invalidCompanionTarget');
+        }
+        if (_boot == null) {
+          await _request('GET', '/m10v/v1/capabilities', bootstrap: true);
+        }
+        try {
+          return await _request('GET', '/m10v/v1/rolls/$suffix');
         } on CompanionException catch (error) {
           if (error.code == 'unauthorized') invalidate();
           rethrow;

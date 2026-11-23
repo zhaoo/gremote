@@ -140,7 +140,7 @@ class BoundCameraTransport(
             .build()
 
         val diagnosticPath = path.substringBefore('?').takeIf {
-            it in setOf("/v1/props", "/v1/params", "/v1/params/device")
+            it in setOf("/v1/props", "/v1/params", "/v1/params/device", "/v1/lens/focus")
         }
         diagnosticPath?.let { trace("requestBegin", it) }
         try {
@@ -330,6 +330,7 @@ class BoundCameraTransport(
         call.enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 clearLiveViewCall(call)
+                trace("streamClosed", "/v1/liveview")
                 if (!call.isCanceled()) {
                     trace("streamConnectIo", "/v1/liveview")
                     emitEvent("liveView", "{\"state\":\"failed\"}")
@@ -368,17 +369,20 @@ class BoundCameraTransport(
                     }
                 } finally {
                     clearLiveViewCall(call)
+                    trace("streamClosed", "/v1/liveview")
                 }
             }
         })
     }
 
     fun stopLiveView() {
+        trace("streamStopRequested", "/v1/liveview")
         val call = synchronized(liveViewLock) {
             liveViewCall.also { liveViewCall = null }
         }
         call?.cancel()
         if (call != null) {
+            trace("streamCancelRequested", "/v1/liveview")
             emitEvent("liveView", "{\"state\":\"stopped\"}")
         }
     }

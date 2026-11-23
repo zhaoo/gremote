@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_colors.dart';
@@ -15,22 +16,23 @@ class MoreGrid extends StatelessWidget {
           Text('工具',
               style: TextStyle(color: context.palette.muted, fontSize: 11)),
           const SizedBox(height: 8),
-          InkWell(
-            onTap: onProbe,
-            borderRadius: BorderRadius.circular(12),
-            child: SizedBox(
-              width: 76,
-              height: 66,
-              child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.manage_search_outlined,
-                        color: context.palette.accent),
-                    const SizedBox(height: 5),
-                    const Text('协议探测', style: TextStyle(fontSize: 10)),
-                  ]),
+          if (!kReleaseMode)
+            InkWell(
+              onTap: onProbe,
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                width: 76,
+                height: 66,
+                child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.manage_search_outlined,
+                          color: context.palette.accent),
+                      const SizedBox(height: 5),
+                      const Text('协议探测', style: TextStyle(fontSize: 10)),
+                    ]),
+              ),
             ),
-          ),
         ]),
       );
 }

@@ -25,7 +25,8 @@ class BoundCompanionTransport internal constructor(
     suspend fun request(method: String, path: String, headers: Map<String, String>, body: ByteArray?): NativeHttpResponse = withContext(Dispatchers.IO) {
         if (!host.matches(Regex("(?:[0-9]{1,3}\\.){3}[0-9]{1,3}")) || host.split('.').any { it.toInt() > 255 }) invalid()
         val isLive = method == "GET" && livePath.matches(path)
-        if (!isLive && (method !in setOf("GET", "POST", "PUT") || !path.matches(Regex("/m10v/v1/(?:hotspot|capabilities|state|extensions/(?:capabilities|state|operations(?:/[a-f0-9]{32})?)|operations(?:/[a-f0-9]{32})?|films/stage(?:/[a-f0-9]{32}(?:/(?:verify|chunks/[0-2]))?)?)")))) invalid()
+        val isRollIndex = method == "GET" && path.matches(Regex("/m10v/v1/rolls/(?:latest|photos/(?:0|[1-9][0-9]{0,9}))"))
+        if (!isLive && !isRollIndex && (method !in setOf("GET", "POST", "PUT") || !path.matches(Regex("/m10v/v1/(?:hotspot|capabilities|state|extensions/(?:capabilities|state|operations(?:/[a-f0-9]{32})?)|operations(?:/[a-f0-9]{32})?|films/stage(?:/[a-f0-9]{32}(?:/(?:verify|chunks/[0-2]))?)?)")))) invalid()
         if (path == "/m10v/v1/hotspot" &&
             (host != "192.168.0.1" || method != "GET" || headers != mapOf("X-M10V-Hotspot" to "1"))) invalid()
         val allowed = setOf("x-m10v-hotspot", "x-m10v-keyid", "x-m10v-nonce", "x-m10v-boot", "x-m10v-session", "x-m10v-seq", "x-m10v-signature", "x-m10v-chunk-hash", "content-type")
@@ -34,9 +35,11 @@ class BoundCompanionTransport internal constructor(
         val builder = Request.Builder().url("http://$host:18743$path")
         headers.forEach { (key, value) -> builder.header(key, value) }
         builder.method(method, if (method == "GET") null else (body ?: byteArrayOf()).toRequestBody())
-        val diagnosticPath = when (path) {
-            "/m10v/v1/hotspot", "/m10v/v1/capabilities", "/m10v/v1/state",
-            "/m10v/v1/extensions/capabilities", "/m10v/v1/extensions/state" -> path
+        val diagnosticPath = when {
+            path in setOf("/m10v/v1/hotspot", "/m10v/v1/capabilities", "/m10v/v1/state",
+                "/m10v/v1/extensions/capabilities", "/m10v/v1/extensions/state", "/m10v/v1/rolls/latest") -> path
+            path.startsWith("/m10v/v1/rolls/photos/") -> "/m10v/v1/rolls/photos"
+            path.startsWith("/m10v/v1/live/") -> "/m10v/v1/live"
             else -> null
         }
         diagnosticPath?.let { trace("requestBegin", it, null) }

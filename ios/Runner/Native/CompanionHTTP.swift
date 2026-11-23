@@ -47,7 +47,8 @@ enum CompanionWire {
     "x-m10v-session", "x-m10v-seq", "x-m10v-signature", "x-m10v-chunk-hash", "content-type"])
 
   static func request(method: String, path: String, headers: [String?: String?], body: Data) throws -> Data {
-    guard ["GET", "POST", "PUT"].contains(method), path.range(of: route, options: .regularExpression) != nil,
+    let rollIndex = method == "GET" && path.range(of: #"\A/m10v/v1/rolls/(?:latest|photos/(?:0|[1-9][0-9]{0,9}))\z"#, options: .regularExpression) != nil
+    guard ["GET", "POST", "PUT"].contains(method), (rollIndex || path.range(of: route, options: .regularExpression) != nil),
           headers.count <= 8, body.count <= maxBody, method != "GET" || body.isEmpty
     else { throw Failure.request }
 

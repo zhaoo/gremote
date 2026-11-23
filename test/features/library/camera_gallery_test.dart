@@ -30,10 +30,11 @@ class GalleryFixture extends CameraGalleryService {
         CameraFile(dir: '100RICOH', file: 'R002.JPG'),
       ];
   @override
-  Future<Uint8List> thumbnail(CameraFile file) async =>
+  Future<Uint8List> thumbnail(CameraFile file,
+          {bool Function()? isCurrent}) async =>
       throw StateError('no preview');
   @override
-  Future<String> download(CameraFile file) async {
+  Future<String> download(CameraFile file, {bool Function()? isCurrent}) async {
     downloaded.add(file.remoteId);
     if (pending != null) return pending!.future;
     if (file.file == 'R001.JPG') throw StateError('disk full');
@@ -64,6 +65,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('R001'));
     await tester.pumpAndSettle();
+    expect(find.text('读取动态照片'), findsNothing);
     await tester.tap(find.byTooltip('下载 DNG'));
     await tester.pump();
     expect(fixture.downloaded, ['100RICOH/R001.DNG']);
@@ -110,7 +112,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('保存原图'));
     await tester.pump();
-    await tester.tap(find.text('相册').last);
+    await tester.tap(find.text('手机').last);
     await tester.pump();
     gateway.entries = [mediaEntry(900)];
     gateway.exif = {900: grMeta()};
